@@ -285,7 +285,7 @@ function App() {
                       <Loader2 className="w-12 h-12 mx-auto text-primary animate-spin mb-4" />
                       <h2 className="text-xl font-medium mb-2">Preparing Your Quiz</h2>
                       <p className="text-muted-foreground">
-                        AI is generating {selectedSubject} questions for {studentData?.grade} {studentData?.board}...
+                        UNKLASS is bringing important questions for your Exam
                       </p>
                     </CardContent>
                   </Card>
