@@ -2,12 +2,13 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { GraduationCap, ArrowRight, UserPlus } from "lucide-react";
+import { ArrowRight, UserPlus } from "lucide-react";
+import logoImage from "@assets/Screenshot_2025-12-11_at_12.16.26_AM_1765392397522.png";
 
 const loginSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -66,12 +67,19 @@ export default function StudentOnboardingForm({ onSubmit, onLogin }: StudentOnbo
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-background">
         <Card className="w-full max-w-md">
-          <CardHeader className="text-center space-y-2">
-            <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-2">
-              <GraduationCap className="w-6 h-6 text-primary" />
+          <CardHeader className="text-center space-y-3">
+            <div className="flex flex-col items-center gap-2 mb-2">
+              <img 
+                src={logoImage} 
+                alt="Unklass" 
+                className="h-10 dark:invert" 
+                data-testid="img-logo"
+              />
+              <p className="text-sm text-muted-foreground italic" data-testid="text-tagline">
+                Learning Beyond Classroom
+              </p>
             </div>
-            <CardTitle className="text-2xl font-semibold">Welcome Back!</CardTitle>
-            <CardDescription>
+            <CardDescription className="text-base">
               Enter your details to continue learning
             </CardDescription>
           </CardHeader>
@@ -154,12 +162,19 @@ export default function StudentOnboardingForm({ onSubmit, onLogin }: StudentOnbo
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center space-y-2">
-          <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-2">
-            <GraduationCap className="w-6 h-6 text-primary" />
+        <CardHeader className="text-center space-y-3">
+          <div className="flex flex-col items-center gap-2 mb-2">
+            <img 
+              src={logoImage} 
+              alt="Unklass" 
+              className="h-10 dark:invert" 
+              data-testid="img-logo"
+            />
+            <p className="text-sm text-muted-foreground italic" data-testid="text-tagline">
+              Learning Beyond Classroom
+            </p>
           </div>
-          <CardTitle className="text-2xl font-semibold">Welcome to QuizGenius</CardTitle>
-          <CardDescription>
+          <CardDescription className="text-base">
             Let's get to know you before we start your learning journey
           </CardDescription>
         </CardHeader>
