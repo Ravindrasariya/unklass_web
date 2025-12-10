@@ -84,7 +84,7 @@ export default function StudentOnboardingForm({ onSubmit, onLogin }: StudentOnbo
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Form {...loginForm}>
+            <Form {...loginForm} key="login-form">
               <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
                 <FormField
                   control={loginForm.control}
@@ -143,7 +143,13 @@ export default function StudentOnboardingForm({ onSubmit, onLogin }: StudentOnbo
                     type="button"
                     variant="outline"
                     className="w-full"
-                    onClick={() => setIsNewStudent(true)}
+                    onClick={() => {
+                      // Transfer login form values to registration form
+                      const loginValues = loginForm.getValues();
+                      form.setValue("name", loginValues.name);
+                      form.setValue("mobile", loginValues.mobile);
+                      setIsNewStudent(true);
+                    }}
                     data-testid="button-new-student"
                   >
                     <UserPlus className="w-4 h-4 mr-2" />
@@ -179,7 +185,7 @@ export default function StudentOnboardingForm({ onSubmit, onLogin }: StudentOnbo
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Form {...form}>
+          <Form {...form} key="registration-form">
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
