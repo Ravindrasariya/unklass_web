@@ -123,7 +123,22 @@ ${pdfContent.substring(0, 15000)}`;
       throw new Error("No questions in OpenAI response");
     }
 
-    return questions.map((q: any, index: number) => ({
+    // Validate and filter questions that have all required fields
+    const validQuestions = questions.filter((q: any) => 
+      q.question && 
+      Array.isArray(q.options) && 
+      q.options.length >= 2 &&
+      (q.correctAnswer !== undefined || q.correct_answer !== undefined || q.answer !== undefined)
+    );
+
+    if (validQuestions.length === 0) {
+      console.error("No valid questions in OpenAI response. Sample:", JSON.stringify(questions[0]).substring(0, 300));
+      throw new Error("OpenAI response missing required question fields");
+    }
+
+    console.log(`Generated ${validQuestions.length} valid questions from PDF content`);
+
+    return validQuestions.map((q: any, index: number) => ({
       id: index + 1,
       question: q.question,
       options: q.options,
