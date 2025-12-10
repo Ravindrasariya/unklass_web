@@ -76,6 +76,25 @@ function App() {
     }
   }, [toast]);
 
+  const handleLogin = useCallback(async (data: { name: string; mobile: string }): Promise<boolean> => {
+    try {
+      const response = await apiRequest("POST", "/api/students/login", {
+        name: data.name,
+        mobileNumber: data.mobile,
+      });
+      const student = await response.json();
+      if (student && student.id) {
+        setStudentData(student);
+        setAppState("ready");
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Login error:", error);
+      return false;
+    }
+  }, []);
+
   const handleStartQuiz = useCallback(async () => {
     if (!selectedSubject || !studentData) return;
     
@@ -193,7 +212,7 @@ function App() {
               )}
 
               {appState === "onboarding" && (
-                <StudentOnboardingForm onSubmit={handleOnboardingSubmit} />
+                <StudentOnboardingForm onSubmit={handleOnboardingSubmit} onLogin={handleLogin} />
               )}
 
               {appState === "ready" && (

@@ -52,6 +52,27 @@ export async function registerRoutes(
     }
   });
 
+  // Student login (for returning students)
+  app.post("/api/students/login", async (req, res) => {
+    try {
+      const { mobileNumber } = req.body;
+      
+      if (!mobileNumber) {
+        return res.status(400).json({ error: "Mobile number is required" });
+      }
+      
+      const student = await storage.getStudentByMobile(mobileNumber);
+      if (!student) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+      
+      res.json(student);
+    } catch (error) {
+      console.error("Error logging in student:", error);
+      res.status(500).json({ error: "Failed to login" });
+    }
+  });
+
   // Get student by ID
   app.get("/api/students/:id", async (req, res) => {
     try {

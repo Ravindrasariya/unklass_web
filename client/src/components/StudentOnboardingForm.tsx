@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -6,7 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { GraduationCap, ArrowRight } from "lucide-react";
+import { GraduationCap, ArrowRight, UserPlus } from "lucide-react";
+
+const loginSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  mobile: z.string().regex(/^[0-9]{10}$/, "Please enter a valid 10-digit mobile number"),
+});
 
 const studentSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -17,12 +23,25 @@ const studentSchema = z.object({
 });
 
 export type StudentData = z.infer<typeof studentSchema>;
+type LoginData = z.infer<typeof loginSchema>;
 
 interface StudentOnboardingFormProps {
   onSubmit: (data: StudentData) => void;
+  onLogin: (data: LoginData) => Promise<boolean>;
 }
 
-export default function StudentOnboardingForm({ onSubmit }: StudentOnboardingFormProps) {
+export default function StudentOnboardingForm({ onSubmit, onLogin }: StudentOnboardingFormProps) {
+  const [isNewStudent, setIsNewStudent] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+
+  const loginForm = useForm<LoginData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      name: "",
+      mobile: "",
+    },
+  });
+
   const form = useForm<StudentData>({
     resolver: zodResolver(studentSchema),
     defaultValues: {
@@ -34,6 +53,104 @@ export default function StudentOnboardingForm({ onSubmit }: StudentOnboardingFor
     },
   });
 
+  const handleLogin = async (data: LoginData) => {
+    setLoginError(null);
+    const found = await onLogin(data);
+    if (!found) {
+      setLoginError("Student not found. Please register as a new student.");
+    }
+  };
+
+  // Login form for returning students
+  if (!isNewStudent) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center space-y-2">
+            <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-2">
+              <GraduationCap className="w-6 h-6 text-primary" />
+            </div>
+            <CardTitle className="text-2xl font-semibold">Welcome Back!</CardTitle>
+            <CardDescription>
+              Enter your details to continue learning
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...loginForm}>
+              <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
+                <FormField
+                  control={loginForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Full Name</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Enter your full name" 
+                          data-testid="input-name"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={loginForm.control}
+                  name="mobile"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Mobile Number</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Enter 10-digit mobile number" 
+                          type="tel"
+                          maxLength={10}
+                          data-testid="input-mobile"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {loginError && (
+                  <p className="text-sm text-destructive" data-testid="text-login-error">{loginError}</p>
+                )}
+
+                <Button 
+                  type="submit" 
+                  className="w-full mt-6" 
+                  data-testid="button-continue"
+                >
+                  Continue
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+
+                <div className="text-center pt-4 border-t">
+                  <p className="text-sm text-muted-foreground mb-2">New student?</p>
+                  <Button 
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => setIsNewStudent(true)}
+                    data-testid="button-new-student"
+                  >
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Register as New Student
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Full registration form for new students
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       <Card className="w-full max-w-md">
@@ -158,6 +275,19 @@ export default function StudentOnboardingForm({ onSubmit }: StudentOnboardingFor
                 Start Learning
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
+
+              <div className="text-center pt-4 border-t">
+                <p className="text-sm text-muted-foreground mb-2">Already registered?</p>
+                <Button 
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setIsNewStudent(false)}
+                  data-testid="button-existing-student"
+                >
+                  Login with Mobile Number
+                </Button>
+              </div>
             </form>
           </Form>
         </CardContent>
