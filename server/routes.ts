@@ -1,11 +1,13 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { createRequire } from "module";
 import { storage } from "./storage";
 import { insertStudentSchema, type Question } from "@shared/schema";
 import { generateQuizQuestions, generateAnswerFeedback } from "./openai";
-// @ts-ignore - pdf-parse types issue
-import pdfParse from "pdf-parse";
 import multer from "multer";
+
+const require = createRequire(import.meta.url);
+const pdfParse = require("pdf-parse");
 
 // Configure multer for PDF uploads
 const upload = multer({
