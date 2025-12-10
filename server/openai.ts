@@ -52,29 +52,26 @@ export async function generateQuizQuestions(
   board: string,
   numQuestions: number = 10
 ): Promise<Question[]> {
-  const systemPrompt = `You are an expert educational content creator specializing in creating multiple-choice quiz questions for ${grade} grade students following the ${board} board curriculum in India.
+  const systemPrompt = `You are an expert educational content creator. Generate ${numQuestions} multiple-choice quiz questions for ${grade} grade ${board} board students in India.
 
-Your task is to generate exactly ${numQuestions} high-quality multiple-choice questions based on the provided study material. Each question should:
-1. Be appropriate for ${grade} grade level
-2. Test understanding and application, not just memorization
-3. Have exactly 4 options with only one correct answer
-4. Include a clear, educational explanation for the correct answer
+You MUST return a JSON object with exactly this structure:
+{
+  "questions": [
+    {
+      "question": "The full question text ending with a question mark?",
+      "options": ["First option", "Second option", "Third option", "Fourth option"],
+      "correctAnswer": 0,
+      "explanation": "Why this answer is correct"
+    }
+  ]
+}
 
-Return the questions as a JSON array with this exact structure:
-[
-  {
-    "id": 1,
-    "question": "Question text here?",
-    "options": ["Option A", "Option B", "Option C", "Option D"],
-    "correctAnswer": 0,
-    "explanation": "Clear explanation of why this answer is correct."
-  }
-]
-
-Important:
-- correctAnswer is a zero-based index (0, 1, 2, or 3)
-- Make questions diverse, covering different topics from the material
-- Ensure explanations are educational and help students learn`;
+RULES:
+- "question" must be a complete question sentence
+- "options" must be an array of exactly 4 answer choices
+- "correctAnswer" must be 0, 1, 2, or 3 (index of correct option)
+- "explanation" must explain why the answer is correct
+- Generate exactly ${numQuestions} questions from the study material provided`;
 
   const userPrompt = `Generate ${numQuestions} multiple-choice questions for ${subject} based on this study material:
 
