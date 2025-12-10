@@ -97,18 +97,38 @@ ${pdfContent.substring(0, 15000)}`;
     }
 
     const parsed = JSON.parse(content);
-    const questions = parsed.questions || parsed;
     
-    if (!Array.isArray(questions) || questions.length === 0) {
-      throw new Error("Invalid response format from OpenAI");
+    // Handle various response formats from OpenAI
+    let questions: any[];
+    if (Array.isArray(parsed)) {
+      questions = parsed;
+    } else if (parsed.questions && Array.isArray(parsed.questions)) {
+      questions = parsed.questions;
+    } else if (parsed.quiz && Array.isArray(parsed.quiz)) {
+      questions = parsed.quiz;
+    } else if (parsed.data && Array.isArray(parsed.data)) {
+      questions = parsed.data;
+    } else {
+      // Try to find any array in the response
+      const arrayKey = Object.keys(parsed).find(key => Array.isArray(parsed[key]));
+      if (arrayKey) {
+        questions = parsed[arrayKey];
+      } else {
+        console.error("Unexpected OpenAI response format:", JSON.stringify(parsed).substring(0, 500));
+        throw new Error("Invalid response format from OpenAI");
+      }
+    }
+    
+    if (questions.length === 0) {
+      throw new Error("No questions in OpenAI response");
     }
 
-    return questions.map((q: Question, index: number) => ({
+    return questions.map((q: any, index: number) => ({
       id: index + 1,
       question: q.question,
       options: q.options,
-      correctAnswer: q.correctAnswer,
-      explanation: q.explanation,
+      correctAnswer: q.correctAnswer ?? q.correct_answer ?? q.answer ?? 0,
+      explanation: q.explanation ?? q.reason ?? "Review this topic for better understanding.",
     }));
   } catch (error) {
     console.error("Error generating questions with OpenAI, using fallback:", error);
