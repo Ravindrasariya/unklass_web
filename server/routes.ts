@@ -32,6 +32,28 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  // Admin login
+  app.post("/api/admin/login", async (req, res) => {
+    try {
+      const { password } = req.body;
+      const adminPassword = process.env.ADMIN_PASSWORD;
+      
+      if (!adminPassword) {
+        console.error("ADMIN_PASSWORD environment variable not set");
+        return res.status(500).json({ success: false, error: "Admin password not configured" });
+      }
+      
+      if (password === adminPassword) {
+        res.json({ success: true });
+      } else {
+        res.json({ success: false });
+      }
+    } catch (error) {
+      console.error("Admin login error:", error);
+      res.status(500).json({ success: false, error: "Authentication failed" });
+    }
+  });
+
   // Student registration
   app.post("/api/students/register", async (req, res) => {
     try {

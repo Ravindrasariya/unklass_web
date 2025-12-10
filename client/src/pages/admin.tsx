@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Upload, FileText, Trash2, AlertCircle, CheckCircle2, Eye, X } from "lucide-react";
+import { Upload, FileText, Trash2, AlertCircle, CheckCircle2, Eye, X, Lock, LogOut } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -36,10 +36,41 @@ interface PdfPreview {
 
 export default function AdminPage() {
   const { toast } = useToast();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [password, setPassword] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [previewPdf, setPreviewPdf] = useState<PdfPreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError("");
+    setIsAuthenticating(true);
+    
+    try {
+      const response = await apiRequest("POST", "/api/admin/login", { password });
+      const data = await response.json();
+      
+      if (data.success) {
+        setIsAuthenticated(true);
+        setPassword("");
+      } else {
+        setAuthError("Incorrect password");
+      }
+    } catch (error) {
+      setAuthError("Authentication failed. Please try again.");
+    } finally {
+      setIsAuthenticating(false);
+    }
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setPassword("");
+  };
 
   const { data: pdfs, isLoading } = useQuery<Pdf[]>({
     queryKey: ["/api/admin/pdfs"],
@@ -172,14 +203,72 @@ export default function AdminPage() {
   const filenameValidation = selectedFile ? validateFilename(selectedFile.name) : { isValid: true };
   const isValidFilename = filenameValidation.isValid;
 
+  // Show login screen if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+        <Card className="w-full max-w-sm">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-2">
+              <Lock className="h-6 w-6 text-primary" />
+            </div>
+            <CardTitle>Admin Access</CardTitle>
+            <CardDescription>
+              Enter the admin password to access the dashboard
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleAdminLogin} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="admin-password">Password</Label>
+                <Input
+                  id="admin-password"
+                  type="password"
+                  placeholder="Enter admin password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  data-testid="input-admin-password"
+                />
+                {authError && (
+                  <p className="text-sm text-destructive flex items-center gap-1">
+                    <AlertCircle className="h-4 w-4" />
+                    {authError}
+                  </p>
+                )}
+              </div>
+              <Button 
+                type="submit" 
+                className="w-full"
+                disabled={!password || isAuthenticating}
+                data-testid="button-admin-login"
+              >
+                {isAuthenticating ? "Verifying..." : "Access Dashboard"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-4xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-          <p className="text-muted-foreground mt-1">
-            Upload and manage PDF study materials for quiz generation
-          </p>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+            <p className="text-muted-foreground mt-1">
+              Upload and manage PDF study materials for quiz generation
+            </p>
+          </div>
+          <Button 
+            variant="outline" 
+            onClick={handleLogout}
+            data-testid="button-admin-logout"
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            Logout
+          </Button>
         </div>
 
         <Card>
