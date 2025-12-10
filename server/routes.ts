@@ -10,8 +10,8 @@ import multer from "multer";
 const require = createRequire(import.meta.url);
 
 async function parsePdf(buffer: Buffer): Promise<string> {
-  const { PDFParse } = require("pdf-parse");
-  const parser = new PDFParse();
+  const { PDFParse, VerbosityLevel } = require("pdf-parse");
+  const parser = new PDFParse({ verbosity: VerbosityLevel.ERRORS });
   await parser.load(buffer);
   const text = await parser.getText();
   return text;
