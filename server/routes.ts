@@ -371,5 +371,32 @@ export async function registerRoutes(
     }
   });
 
+  // Get detailed quiz session for review (includes questions and answers)
+  app.get("/api/quiz/:sessionId/review", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      const session = await storage.getQuizSession(sessionId);
+      
+      if (!session) {
+        return res.status(404).json({ error: "Quiz session not found" });
+      }
+      
+      res.json({
+        id: session.id,
+        subject: session.subject,
+        grade: session.grade,
+        board: session.board,
+        score: session.score,
+        totalQuestions: session.totalQuestions,
+        questions: session.questions,
+        answers: session.answers,
+        completedAt: session.completedAt,
+      });
+    } catch (error) {
+      console.error("Error fetching quiz for review:", error);
+      res.status(500).json({ error: "Failed to fetch quiz details" });
+    }
+  });
+
   return httpServer;
 }

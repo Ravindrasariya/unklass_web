@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import StudentOnboardingForm, { type StudentData } from "@/components/StudentOnboardingForm";
 import QuizQuestion, { type Question } from "@/components/QuizQuestion";
 import QuizResults from "@/components/QuizResults";
+import QuizHistory from "@/components/QuizHistory";
 import AppHeader from "@/components/AppHeader";
 import AdminPage from "@/pages/admin";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,7 +18,7 @@ import { Loader2 } from "lucide-react";
 import logoIcon from "@assets/Unklass_-_1_1765392666171.png";
 import { useToast } from "@/hooks/use-toast";
 
-type AppState = "onboarding" | "ready" | "loading" | "quiz" | "results";
+type AppState = "onboarding" | "ready" | "loading" | "quiz" | "results" | "history";
 
 interface QuizAnswer {
   questionId: number;
@@ -303,6 +304,15 @@ function App() {
                         >
                           Start Quiz
                         </Button>
+
+                        <Button 
+                          variant="outline"
+                          className="w-full" 
+                          onClick={() => setAppState("history")}
+                          data-testid="button-view-history"
+                        >
+                          View Quiz History
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -339,6 +349,13 @@ function App() {
                   totalQuestions={questions.length}
                   onRetakeQuiz={handleRetakeQuiz}
                   onTryAnotherSubject={handleTryAnotherSubject}
+                />
+              )}
+
+              {appState === "history" && studentData && (
+                <QuizHistory
+                  studentId={studentData.id}
+                  onBack={() => setAppState("ready")}
                 />
               )}
             </div>
