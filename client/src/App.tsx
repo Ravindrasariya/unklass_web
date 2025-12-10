@@ -1,7 +1,7 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Switch, Route } from "wouter";
 import { queryClient, apiRequest } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import StudentOnboardingForm, { type StudentData } from "@/components/StudentOnboardingForm";
@@ -53,7 +53,23 @@ function App() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<QuizAnswer[]>([]);
   const [sessionId, setSessionId] = useState<number | null>(null);
+  const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
   const { toast } = useToast();
+
+  // Fetch available subjects when student is ready
+  useEffect(() => {
+    if (studentData && appState === "ready") {
+      fetch(`/api/available-subjects?grade=${encodeURIComponent(studentData.grade)}&board=${encodeURIComponent(studentData.board)}`)
+        .then(res => res.json())
+        .then(data => {
+          setAvailableSubjects(data.subjects || []);
+        })
+        .catch(err => {
+          console.error("Failed to fetch available subjects:", err);
+          setAvailableSubjects([]);
+        });
+    }
+  }, [studentData, appState]);
 
   const handleOnboardingSubmit = useCallback(async (data: StudentData) => {
     try {
@@ -238,21 +254,36 @@ function App() {
                       <div className="space-y-4">
                         <div className="space-y-2">
                           <Label htmlFor="subject">Subject</Label>
-                          <Select 
-                            value={selectedSubject} 
-                            onValueChange={setSelectedSubject}
-                          >
-                            <SelectTrigger id="subject" data-testid="select-subject">
-                              <SelectValue placeholder="Select a subject" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {SUBJECTS.map((subject) => (
-                                <SelectItem key={subject} value={subject}>
-                                  {subject}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          {availableSubjects.length === 0 ? (
+                            <div className="p-4 text-center text-muted-foreground border rounded-md bg-muted/30">
+                              <p className="text-sm">No study materials available for {studentData?.grade} {studentData?.board} yet.</p>
+                              <p className="text-xs mt-1">Please check back later or contact your administrator.</p>
+                            </div>
+                          ) : (
+                            <Select 
+                              value={selectedSubject} 
+                              onValueChange={setSelectedSubject}
+                            >
+                              <SelectTrigger id="subject" data-testid="select-subject">
+                                <SelectValue placeholder="Select a subject" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {SUBJECTS.map((subject) => {
+                                  const isAvailable = availableSubjects.includes(subject);
+                                  return (
+                                    <SelectItem 
+                                      key={subject} 
+                                      value={subject}
+                                      disabled={!isAvailable}
+                                      className={!isAvailable ? "opacity-40" : ""}
+                                    >
+                                      {subject} {!isAvailable && "(Not Available)"}
+                                    </SelectItem>
+                                  );
+                                })}
+                              </SelectContent>
+                            </Select>
+                          )}
                         </div>
 
                         {studentData && (

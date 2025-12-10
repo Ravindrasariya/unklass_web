@@ -87,6 +87,27 @@ export async function registerRoutes(
     }
   });
 
+  // Get available subjects for a grade and board (subjects that have PDFs uploaded)
+  app.get("/api/available-subjects", async (req, res) => {
+    try {
+      const { grade, board } = req.query;
+      
+      if (!grade || !board) {
+        return res.status(400).json({ error: "Grade and board are required" });
+      }
+      
+      const allPdfs = await storage.getAllPdfs();
+      const availableSubjects = allPdfs
+        .filter(pdf => pdf.grade === grade && pdf.board === board)
+        .map(pdf => pdf.subject);
+      
+      res.json({ subjects: availableSubjects });
+    } catch (error) {
+      console.error("Error fetching available subjects:", error);
+      res.status(500).json({ error: "Failed to fetch available subjects" });
+    }
+  });
+
   // Admin: Upload PDF
   app.post("/api/admin/upload-pdf", upload.single("pdf"), async (req, res) => {
     try {
