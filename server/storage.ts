@@ -26,6 +26,7 @@ export interface IStorage {
   updateQuizSession(id: number, updates: Partial<QuizSession>): Promise<QuizSession | undefined>;
   getQuizSession(id: number): Promise<QuizSession | undefined>;
   getStudentQuizSessions(studentId: number): Promise<QuizSession[]>;
+  getStudentPreviousQuestions(studentId: number, subject: string): Promise<string[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -103,6 +104,27 @@ export class DatabaseStorage implements IStorage {
 
   async getStudentQuizSessions(studentId: number): Promise<QuizSession[]> {
     return await db.select().from(quizSessions).where(eq(quizSessions.studentId, studentId));
+  }
+
+  async getStudentPreviousQuestions(studentId: number, subject: string): Promise<string[]> {
+    const sessions = await db.select().from(quizSessions).where(
+      and(
+        eq(quizSessions.studentId, studentId),
+        eq(quizSessions.subject, subject)
+      )
+    );
+    
+    const previousQuestions: string[] = [];
+    for (const session of sessions) {
+      if (session.questions && Array.isArray(session.questions)) {
+        for (const q of session.questions as any[]) {
+          if (q.question) {
+            previousQuestions.push(q.question);
+          }
+        }
+      }
+    }
+    return previousQuestions;
   }
 }
 

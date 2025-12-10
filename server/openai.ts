@@ -50,8 +50,13 @@ export async function generateQuizQuestions(
   subject: string,
   grade: string,
   board: string,
-  numQuestions: number = 10
+  numQuestions: number = 10,
+  previousQuestions: string[] = []
 ): Promise<Question[]> {
+  const excludeSection = previousQuestions.length > 0 
+    ? `\n\nIMPORTANT - DO NOT generate questions similar to these previously asked questions:\n${previousQuestions.slice(-50).map((q, i) => `${i + 1}. ${q}`).join('\n')}\n\nGenerate COMPLETELY DIFFERENT questions on different topics or aspects.`
+    : '';
+
   const systemPrompt = `You are an expert educational content creator. Generate ${numQuestions} multiple-choice quiz questions for ${grade} grade ${board} board students in India.
 
 You MUST return a JSON object with exactly this structure:
@@ -71,11 +76,12 @@ RULES:
 - "options" must be an array of exactly 4 answer choices
 - "correctAnswer" must be 0, 1, 2, or 3 (index of correct option)
 - "explanation" must explain why the answer is correct
-- Generate exactly ${numQuestions} questions from the study material provided`;
+- Generate exactly ${numQuestions} questions from the study material provided
+- Each question must be UNIQUE and cover different concepts${excludeSection}`;
 
-  const userPrompt = `Generate ${numQuestions} multiple-choice questions for ${subject} based on this study material:
+  const userPrompt = `Generate ${numQuestions} NEW and UNIQUE multiple-choice questions for ${subject} based on this study material:
 
-${pdfContent.substring(0, 15000)}`;
+${pdfContent.substring(0, 12000)}`;
 
   try {
     const response = await openai.chat.completions.create({
@@ -146,8 +152,21 @@ ${pdfContent.substring(0, 15000)}`;
     console.error("Error generating questions with OpenAI, using fallback:", error);
     // Return fallback questions when OpenAI is unavailable
     const fallback = FALLBACK_QUESTIONS[subject] || FALLBACK_QUESTIONS.default;
-    // Shuffle the questions to provide variety
-    return [...fallback].sort(() => Math.random() - 0.5);
+    
+    // Filter out questions that match previous ones
+    const previousSet = new Set(previousQuestions.map(q => q.toLowerCase().trim()));
+    let availableQuestions = fallback.filter(q => 
+      !previousSet.has(q.question.toLowerCase().trim())
+    );
+    
+    // If we've used most questions, reset and use all
+    if (availableQuestions.length < numQuestions) {
+      console.log("Not enough unique fallback questions, reusing with shuffle");
+      availableQuestions = fallback;
+    }
+    
+    // Shuffle and return
+    return [...availableQuestions].sort(() => Math.random() - 0.5).slice(0, numQuestions);
   }
 }
 

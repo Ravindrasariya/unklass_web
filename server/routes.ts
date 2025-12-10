@@ -204,6 +204,10 @@ export async function registerRoutes(
       // Find the PDF for this grade/board/subject
       const pdf = await storage.getPdfByGradeBoardSubject(grade, board.toUpperCase(), subject);
       
+      // Get previous questions to avoid duplicates
+      const previousQuestions = await storage.getStudentPreviousQuestions(studentId, subject);
+      console.log(`Student ${studentId} has ${previousQuestions.length} previous questions for ${subject}`);
+      
       let questions: Question[];
       
       if (pdf) {
@@ -213,7 +217,8 @@ export async function registerRoutes(
           subject,
           grade,
           board,
-          10
+          10,
+          previousQuestions
         );
       } else {
         // Generate general questions for the subject (fallback when no PDF uploaded)
@@ -222,7 +227,8 @@ export async function registerRoutes(
           subject,
           grade,
           board,
-          10
+          10,
+          previousQuestions
         );
       }
 
