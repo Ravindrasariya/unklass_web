@@ -1,17 +1,19 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trophy, Award, BookOpen, RefreshCw } from "lucide-react";
+import { Trophy, Award, BookOpen, RefreshCw, BookMarked } from "lucide-react";
 
 interface QuizResultsProps {
   score: number;
   totalQuestions: number;
   onRetakeQuiz: () => void;
+  onTryAnotherSubject: () => void;
 }
 
 export default function QuizResults({ 
   score, 
   totalQuestions, 
   onRetakeQuiz,
+  onTryAnotherSubject,
 }: QuizResultsProps) {
   const percentage = Math.round((score / totalQuestions) * 100);
 
@@ -79,14 +81,25 @@ export default function QuizResults({
             />
           </div>
 
-          <Button 
-            className="w-full" 
-            onClick={onRetakeQuiz}
-            data-testid="button-retake-quiz"
-          >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Try Another Test
-          </Button>
+          <div className="space-y-3">
+            <Button 
+              className="w-full" 
+              onClick={onRetakeQuiz}
+              data-testid="button-retake-quiz"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Try Another Test
+            </Button>
+            <Button 
+              variant="outline"
+              className="w-full" 
+              onClick={onTryAnotherSubject}
+              data-testid="button-another-subject"
+            >
+              <BookMarked className="w-4 h-4 mr-2" />
+              Choose Different Subject
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

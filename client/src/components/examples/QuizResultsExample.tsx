@@ -6,7 +6,7 @@ export default function QuizResultsExample() {
       score={9}
       totalQuestions={10}
       onRetakeQuiz={() => console.log("Retake quiz clicked")}
-      onUploadNew={() => console.log("Upload new document clicked")}
+      onTryAnotherSubject={() => console.log("Try another subject clicked")}
     />
   );
 }

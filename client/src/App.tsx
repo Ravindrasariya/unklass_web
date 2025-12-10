@@ -9,6 +9,8 @@ import QuizResults from "@/components/QuizResults";
 import AppHeader from "@/components/AppHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { Loader2, Sparkles } from "lucide-react";
 
 type AppState = "onboarding" | "ready" | "loading" | "quiz" | "results";
@@ -18,6 +20,17 @@ interface QuizAnswer {
   selectedOption: number;
   isCorrect: boolean;
 }
+
+const SUBJECTS = [
+  "Mathematics",
+  "Science",
+  "SST",
+  "Hindi",
+  "English",
+  "Physics",
+  "Chemistry",
+  "Biology",
+] as const;
 
 // todo: remove mock functionality - replace with actual API call
 const mockQuestions: Question[] = [
@@ -96,6 +109,7 @@ const mockQuestions: Question[] = [
 function App() {
   const [appState, setAppState] = useState<AppState>("onboarding");
   const [studentData, setStudentData] = useState<StudentData | null>(null);
+  const [selectedSubject, setSelectedSubject] = useState<string>("");
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<QuizAnswer[]>([]);
@@ -106,14 +120,21 @@ function App() {
   }, []);
 
   const handleStartQuiz = useCallback(async () => {
+    if (!selectedSubject || !studentData) return;
+    
     setAppState("loading");
-    // todo: remove mock functionality - replace with actual API call to get questions
+    // todo: remove mock functionality - replace with actual API call
+    // PDF name will be: {grade}_{board}_{subject}.pdf
+    // e.g., 10th_MP_Mathematics.pdf
+    const pdfName = `${studentData.grade}_${studentData.board}_${selectedSubject}.pdf`;
+    console.log("Fetching questions from PDF:", pdfName);
+    
     await new Promise(resolve => setTimeout(resolve, 1500));
     setQuestions(mockQuestions);
     setCurrentQuestionIndex(0);
     setAnswers([]);
     setAppState("quiz");
-  }, []);
+  }, [selectedSubject, studentData]);
 
   const handleAnswer = useCallback((selectedOption: number, isCorrect: boolean) => {
     const currentQuestion = questions[currentQuestionIndex];
@@ -142,6 +163,14 @@ function App() {
     setAppState("quiz");
   }, []);
 
+  const handleTryAnotherSubject = useCallback(() => {
+    setSelectedSubject("");
+    setQuestions([]);
+    setCurrentQuestionIndex(0);
+    setAnswers([]);
+    setAppState("ready");
+  }, []);
+
   const score = answers.filter(a => a.isCorrect).length;
 
   return (
@@ -158,22 +187,56 @@ function App() {
 
           {appState === "ready" && (
             <div className="min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center p-4">
-              <Card className="w-full max-w-md text-center">
+              <Card className="w-full max-w-md">
                 <CardContent className="p-8">
-                  <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center mb-6">
-                    <Sparkles className="w-8 h-8 text-primary" />
+                  <div className="text-center mb-6">
+                    <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                      <Sparkles className="w-8 h-8 text-primary" />
+                    </div>
+                    <h1 className="text-2xl font-semibold mb-2">Select Your Subject</h1>
+                    <p className="text-muted-foreground text-sm">
+                      Choose a subject to start your quiz. You'll be presented with 10 multiple choice questions.
+                    </p>
                   </div>
-                  <h1 className="text-2xl font-semibold mb-2">Ready to Test Your Knowledge?</h1>
-                  <p className="text-muted-foreground mb-6">
-                    You'll be presented with 10 multiple choice questions. After each answer, you'll see whether you got it right along with an explanation.
-                  </p>
-                  <Button 
-                    className="w-full" 
-                    onClick={handleStartQuiz}
-                    data-testid="button-start-quiz"
-                  >
-                    Start Quiz
-                  </Button>
+
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="subject">Subject</Label>
+                      <Select 
+                        value={selectedSubject} 
+                        onValueChange={setSelectedSubject}
+                      >
+                        <SelectTrigger id="subject" data-testid="select-subject">
+                          <SelectValue placeholder="Select a subject" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SUBJECTS.map((subject) => (
+                            <SelectItem key={subject} value={subject}>
+                              {subject}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {studentData && (
+                      <div className="p-3 bg-muted/50 rounded-lg text-sm">
+                        <p className="text-muted-foreground">
+                          <span className="font-medium text-foreground">Grade:</span> {studentData.grade} | 
+                          <span className="font-medium text-foreground ml-2">Board:</span> {studentData.board}
+                        </p>
+                      </div>
+                    )}
+
+                    <Button 
+                      className="w-full" 
+                      onClick={handleStartQuiz}
+                      disabled={!selectedSubject}
+                      data-testid="button-start-quiz"
+                    >
+                      Start Quiz
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -186,7 +249,7 @@ function App() {
                   <Loader2 className="w-12 h-12 mx-auto text-primary animate-spin mb-4" />
                   <h2 className="text-xl font-medium mb-2">Preparing Your Quiz</h2>
                   <p className="text-muted-foreground">
-                    Generating questions just for you...
+                    Generating {selectedSubject} questions for {studentData?.grade} {studentData?.board}...
                   </p>
                 </CardContent>
               </Card>
@@ -208,6 +271,7 @@ function App() {
               score={score}
               totalQuestions={questions.length}
               onRetakeQuiz={handleRetakeQuiz}
+              onTryAnotherSubject={handleTryAnotherSubject}
             />
           )}
         </div>
