@@ -6,8 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Upload, FileText, Trash2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Upload, FileText, Trash2, AlertCircle, CheckCircle2, Eye, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const VALID_GRADES = ["8th", "10th", "12th"];
 const VALID_BOARDS = ["MP", "CBSE"];
@@ -22,14 +24,43 @@ interface Pdf {
   createdAt: string;
 }
 
+interface PdfPreview {
+  id: number;
+  filename: string;
+  grade: string;
+  board: string;
+  subject: string;
+  content: string;
+  contentLength: number;
+}
+
 export default function AdminPage() {
   const { toast } = useToast();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [previewPdf, setPreviewPdf] = useState<PdfPreview | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   const { data: pdfs, isLoading } = useQuery<Pdf[]>({
     queryKey: ["/api/admin/pdfs"],
   });
+
+  const handlePreview = async (pdfId: number) => {
+    setPreviewLoading(true);
+    try {
+      const response = await apiRequest("GET", `/api/admin/pdfs/${pdfId}`);
+      const data = await response.json();
+      setPreviewPdf(data);
+    } catch (error) {
+      toast({
+        title: "Preview Failed",
+        description: "Could not load PDF preview.",
+        variant: "destructive",
+      });
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
 
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -276,15 +307,26 @@ export default function AdminPage() {
                         </Badge>
                       </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => deleteMutation.mutate(pdf.id)}
-                      disabled={deleteMutation.isPending}
-                      data-testid={`button-delete-pdf-${pdf.id}`}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handlePreview(pdf.id)}
+                        disabled={previewLoading}
+                        data-testid={`button-preview-pdf-${pdf.id}`}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => deleteMutation.mutate(pdf.id)}
+                        disabled={deleteMutation.isPending}
+                        data-testid={`button-delete-pdf-${pdf.id}`}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -292,6 +334,30 @@ export default function AdminPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={!!previewPdf} onOpenChange={(open) => !open && setPreviewPdf(null)}>
+        <DialogContent className="max-w-3xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              {previewPdf?.filename}
+            </DialogTitle>
+            <DialogDescription>
+              <div className="flex flex-wrap gap-2 mt-2">
+                <Badge variant="secondary">{previewPdf?.grade}</Badge>
+                <Badge variant="secondary">{previewPdf?.board}</Badge>
+                <Badge variant="secondary">{previewPdf?.subject}</Badge>
+                <Badge variant="outline">{previewPdf?.contentLength.toLocaleString()} characters</Badge>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="h-[50vh] mt-4">
+            <div className="text-sm whitespace-pre-wrap font-mono bg-muted p-4 rounded-lg">
+              {previewPdf?.content}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

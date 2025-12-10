@@ -136,6 +136,33 @@ export async function registerRoutes(
     }
   });
 
+  // Get single PDF with content (admin preview)
+  app.get("/api/admin/pdfs/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid PDF ID" });
+      }
+      const pdf = await storage.getPdf(id);
+      if (!pdf) {
+        return res.status(404).json({ error: "PDF not found" });
+      }
+      res.json({
+        id: pdf.id,
+        filename: pdf.filename,
+        grade: pdf.grade,
+        board: pdf.board,
+        subject: pdf.subject,
+        content: pdf.content,
+        contentLength: pdf.content.length,
+        uploadedAt: pdf.uploadedAt,
+      });
+    } catch (error) {
+      console.error("Error fetching PDF:", error);
+      res.status(500).json({ error: "Failed to fetch PDF" });
+    }
+  });
+
   // Delete PDF (admin)
   app.delete("/api/admin/pdfs/:id", async (req, res) => {
     try {
