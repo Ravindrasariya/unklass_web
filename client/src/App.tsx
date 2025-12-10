@@ -13,7 +13,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import logoIcon from "@assets/Unklass_-_1_1765392666171.png";
 import { useToast } from "@/hooks/use-toast";
 
 type AppState = "onboarding" | "ready" | "loading" | "quiz" | "results";
@@ -220,8 +221,13 @@ function App() {
                   <Card className="w-full max-w-md">
                     <CardContent className="p-8">
                       <div className="text-center mb-6">
-                        <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                          <Sparkles className="w-8 h-8 text-primary" />
+                        <div className="w-16 h-16 mx-auto rounded-lg overflow-hidden mb-4">
+                          <img 
+                            src={logoIcon} 
+                            alt="Unklass" 
+                            className="w-full h-full object-cover"
+                            data-testid="img-logo-icon"
+                          />
                         </div>
                         <h1 className="text-2xl font-semibold mb-2">Select Your Subject</h1>
                         <p className="text-muted-foreground text-sm">
