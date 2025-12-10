@@ -10,11 +10,9 @@ import multer from "multer";
 const require = createRequire(import.meta.url);
 
 async function parsePdf(buffer: Buffer): Promise<string> {
-  const { PDFParse, VerbosityLevel } = require("pdf-parse");
-  const parser = new PDFParse({ verbosity: VerbosityLevel.ERRORS });
-  await parser.load(buffer);
-  const text = await parser.getText();
-  return text;
+  const pdfParse = require("pdf-parse");
+  const data = await pdfParse(buffer);
+  return data.text;
 }
 
 // Configure multer for PDF uploads
