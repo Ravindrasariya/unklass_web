@@ -19,6 +19,7 @@ export interface IStorage {
   getPdfByGradeBoardSubject(grade: string, board: string, subject: string): Promise<Pdf | undefined>;
   createPdf(pdf: InsertPdf): Promise<Pdf>;
   getAllPdfs(): Promise<Pdf[]>;
+  deletePdf(id: number): Promise<boolean>;
 
   // Quiz Sessions
   createQuizSession(session: InsertQuizSession): Promise<QuizSession>;
@@ -73,6 +74,11 @@ export class DatabaseStorage implements IStorage {
 
   async getAllPdfs(): Promise<Pdf[]> {
     return await db.select().from(pdfs);
+  }
+
+  async deletePdf(id: number): Promise<boolean> {
+    const result = await db.delete(pdfs).where(eq(pdfs.id, id)).returning();
+    return result.length > 0;
   }
 
   // Quiz Sessions

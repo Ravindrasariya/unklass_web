@@ -136,6 +136,24 @@ export async function registerRoutes(
     }
   });
 
+  // Delete PDF (admin)
+  app.delete("/api/admin/pdfs/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid PDF ID" });
+      }
+      const deleted = await storage.deletePdf(id);
+      if (!deleted) {
+        return res.status(404).json({ error: "PDF not found" });
+      }
+      res.json({ message: "PDF deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting PDF:", error);
+      res.status(500).json({ error: "Failed to delete PDF" });
+    }
+  });
+
   // Generate quiz questions
   app.post("/api/quiz/generate", async (req, res) => {
     try {

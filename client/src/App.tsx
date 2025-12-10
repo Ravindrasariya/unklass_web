@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { Switch, Route } from "wouter";
 import { queryClient, apiRequest } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -7,6 +8,7 @@ import StudentOnboardingForm, { type StudentData } from "@/components/StudentOnb
 import QuizQuestion, { type Question } from "@/components/QuizQuestion";
 import QuizResults from "@/components/QuizResults";
 import AppHeader from "@/components/AppHeader";
+import AdminPage from "@/pages/admin";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -182,105 +184,110 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <div className="min-h-screen bg-background">
-          {appState !== "onboarding" && (
-            <AppHeader studentName={studentData?.name} />
-          )}
+        <Switch>
+          <Route path="/admin" component={AdminPage} />
+          <Route path="/">
+            <div className="min-h-screen bg-background">
+              {appState !== "onboarding" && (
+                <AppHeader studentName={studentData?.name} />
+              )}
 
-          {appState === "onboarding" && (
-            <StudentOnboardingForm onSubmit={handleOnboardingSubmit} />
-          )}
+              {appState === "onboarding" && (
+                <StudentOnboardingForm onSubmit={handleOnboardingSubmit} />
+              )}
 
-          {appState === "ready" && (
-            <div className="min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center p-4">
-              <Card className="w-full max-w-md">
-                <CardContent className="p-8">
-                  <div className="text-center mb-6">
-                    <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                      <Sparkles className="w-8 h-8 text-primary" />
-                    </div>
-                    <h1 className="text-2xl font-semibold mb-2">Select Your Subject</h1>
-                    <p className="text-muted-foreground text-sm">
-                      Choose a subject to start your quiz. You'll be presented with 10 multiple choice questions.
-                    </p>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="subject">Subject</Label>
-                      <Select 
-                        value={selectedSubject} 
-                        onValueChange={setSelectedSubject}
-                      >
-                        <SelectTrigger id="subject" data-testid="select-subject">
-                          <SelectValue placeholder="Select a subject" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {SUBJECTS.map((subject) => (
-                            <SelectItem key={subject} value={subject}>
-                              {subject}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {studentData && (
-                      <div className="p-3 bg-muted/50 rounded-lg text-sm">
-                        <p className="text-muted-foreground">
-                          <span className="font-medium text-foreground">Grade:</span> {studentData.grade} | 
-                          <span className="font-medium text-foreground ml-2">Board:</span> {studentData.board}
+              {appState === "ready" && (
+                <div className="min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center p-4">
+                  <Card className="w-full max-w-md">
+                    <CardContent className="p-8">
+                      <div className="text-center mb-6">
+                        <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                          <Sparkles className="w-8 h-8 text-primary" />
+                        </div>
+                        <h1 className="text-2xl font-semibold mb-2">Select Your Subject</h1>
+                        <p className="text-muted-foreground text-sm">
+                          Choose a subject to start your quiz. You'll be presented with 10 multiple choice questions.
                         </p>
                       </div>
-                    )}
 
-                    <Button 
-                      className="w-full" 
-                      onClick={handleStartQuiz}
-                      disabled={!selectedSubject}
-                      data-testid="button-start-quiz"
-                    >
-                      Start Quiz
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="subject">Subject</Label>
+                          <Select 
+                            value={selectedSubject} 
+                            onValueChange={setSelectedSubject}
+                          >
+                            <SelectTrigger id="subject" data-testid="select-subject">
+                              <SelectValue placeholder="Select a subject" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {SUBJECTS.map((subject) => (
+                                <SelectItem key={subject} value={subject}>
+                                  {subject}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {studentData && (
+                          <div className="p-3 bg-muted/50 rounded-lg text-sm">
+                            <p className="text-muted-foreground">
+                              <span className="font-medium text-foreground">Grade:</span> {studentData.grade} | 
+                              <span className="font-medium text-foreground ml-2">Board:</span> {studentData.board}
+                            </p>
+                          </div>
+                        )}
+
+                        <Button 
+                          className="w-full" 
+                          onClick={handleStartQuiz}
+                          disabled={!selectedSubject}
+                          data-testid="button-start-quiz"
+                        >
+                          Start Quiz
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {appState === "loading" && (
+                <div className="min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center p-4">
+                  <Card className="w-full max-w-md text-center">
+                    <CardContent className="p-8">
+                      <Loader2 className="w-12 h-12 mx-auto text-primary animate-spin mb-4" />
+                      <h2 className="text-xl font-medium mb-2">Preparing Your Quiz</h2>
+                      <p className="text-muted-foreground">
+                        AI is generating {selectedSubject} questions for {studentData?.grade} {studentData?.board}...
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {appState === "quiz" && questions.length > 0 && (
+                <QuizQuestion
+                  question={questions[currentQuestionIndex]}
+                  currentQuestion={currentQuestionIndex + 1}
+                  totalQuestions={questions.length}
+                  onAnswer={handleAnswer}
+                  onNext={handleNextQuestion}
+                />
+              )}
+
+              {appState === "results" && (
+                <QuizResults
+                  score={score}
+                  totalQuestions={questions.length}
+                  onRetakeQuiz={handleRetakeQuiz}
+                  onTryAnotherSubject={handleTryAnotherSubject}
+                />
+              )}
             </div>
-          )}
-
-          {appState === "loading" && (
-            <div className="min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center p-4">
-              <Card className="w-full max-w-md text-center">
-                <CardContent className="p-8">
-                  <Loader2 className="w-12 h-12 mx-auto text-primary animate-spin mb-4" />
-                  <h2 className="text-xl font-medium mb-2">Preparing Your Quiz</h2>
-                  <p className="text-muted-foreground">
-                    AI is generating {selectedSubject} questions for {studentData?.grade} {studentData?.board}...
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {appState === "quiz" && questions.length > 0 && (
-            <QuizQuestion
-              question={questions[currentQuestionIndex]}
-              currentQuestion={currentQuestionIndex + 1}
-              totalQuestions={questions.length}
-              onAnswer={handleAnswer}
-              onNext={handleNextQuestion}
-            />
-          )}
-
-          {appState === "results" && (
-            <QuizResults
-              score={score}
-              totalQuestions={questions.length}
-              onRetakeQuiz={handleRetakeQuiz}
-              onTryAnotherSubject={handleTryAnotherSubject}
-            />
-          )}
-        </div>
+          </Route>
+        </Switch>
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
