@@ -11,8 +11,10 @@ const require = createRequire(import.meta.url);
 
 async function parsePdf(buffer: Buffer): Promise<string> {
   const { PDFParse } = require("pdf-parse");
-  const data = await PDFParse(buffer);
-  return data.text;
+  const parser = new PDFParse();
+  await parser.load(buffer);
+  const text = await parser.getText();
+  return text;
 }
 
 // Configure multer for PDF uploads
