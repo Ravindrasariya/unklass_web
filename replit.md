@@ -2,7 +2,7 @@
 
 ## Overview
 
-QuizGenius is an AI-powered educational quiz platform that generates intelligent multiple-choice questions from PDF study materials. The application targets students preparing for 8th, 10th, and 12th grade exams following Indian education boards (MP Board, CBSE). Users register with their details, upload study material PDFs, and receive AI-generated quizzes with explanations and feedback.
+QuizGenius is an AI-powered educational quiz platform that generates intelligent multiple-choice questions from PDF study materials. The application targets students preparing for 8th, 10th, and 12th grade exams following Indian education boards (MP Board, CBSE). Students register with their details, select subjects, and take AI-generated quizzes with instant feedback and explanations.
 
 ## User Preferences
 
@@ -25,23 +25,35 @@ Preferred communication style: Simple, everyday language.
 - **API Pattern**: RESTful JSON API under `/api/` prefix
 - **File Uploads**: Multer for PDF handling (10MB limit, memory storage)
 - **PDF Processing**: pdf-parse for text extraction
-- **AI Integration**: OpenAI GPT-4o for quiz question generation
+- **AI Integration**: OpenAI GPT-4o for quiz question generation with fallback questions
 
 ### Data Storage
 - **Database**: PostgreSQL via Drizzle ORM
 - **Schema Location**: `shared/schema.ts` (shared between frontend/backend)
 - **Migrations**: Drizzle Kit with `migrations/` output directory
 - **Tables**:
-  - `students`: User registration data (name, grade, board, location, mobile)
-  - `pdfs`: Uploaded PDF metadata and extracted content
+  - `students`: User registration data (name, grade, board, location, mobile_number)
+  - `pdfs`: Uploaded PDF metadata and extracted content (admin functionality)
   - `quiz_sessions`: Quiz attempts, generated questions, answers, and scores
 
+### API Endpoints
+- `POST /api/students/register` - Register new student
+- `GET /api/students/:id` - Get student by ID
+- `POST /api/admin/upload-pdf` - Upload PDF (admin only, follows {grade}_{board}_{subject}.pdf naming)
+- `GET /api/admin/pdfs` - List all uploaded PDFs
+- `POST /api/quiz/generate` - Generate quiz questions for student
+- `POST /api/quiz/submit` - Submit quiz results
+- `GET /api/students/:studentId/quiz-history` - Get student's quiz history
+
 ### Application Flow
-1. Student registers with personal details and education info
-2. Student selects subject and optionally uploads PDF study material
-3. OpenAI generates 10 MCQ questions based on content and curriculum
+1. Student registers with personal details (name, grade, board, location, mobile)
+2. Student selects subject from available options (Math, Science, SST, Hindi, English, Physics, Chemistry, Biology)
+3. AI generates 10 MCQ questions (uses fallback questions if OpenAI quota exceeded)
 4. Student answers questions with immediate feedback and explanations
-5. Results displayed with performance analysis and retry options
+5. Results displayed with performance messages:
+   - Score > 8: "Excellent!"
+   - Score > 6: "Good Job!"
+   - Otherwise: "Keep Learning!"
 
 ### Design System
 - **Typography**: Inter (primary), Poppins (headings) via Google Fonts
@@ -52,8 +64,9 @@ Preferred communication style: Simple, everyday language.
 ## External Dependencies
 
 ### AI Services
-- **OpenAI API**: GPT-4o model for generating quiz questions and answer feedback
+- **OpenAI API**: GPT-4o model for generating quiz questions
   - Requires `OPENAI_API_KEY` environment variable
+  - Falls back to pre-defined questions when quota exceeded
   - Uses JSON response format for structured question output
 
 ### Database
@@ -64,10 +77,12 @@ Preferred communication style: Simple, everyday language.
 ### Third-Party Libraries
 - **Radix UI**: Accessible component primitives (dialogs, selects, toasts, etc.)
 - **Lucide React**: Icon library
-- **date-fns**: Date formatting utilities
+- **Multer**: File upload handling
+- **pdf-parse**: PDF text extraction
 - **Zod**: Runtime schema validation (shared between client/server via drizzle-zod)
 - **class-variance-authority**: Component variant management
-- **embla-carousel**: Carousel functionality
-- **react-day-picker**: Calendar component
-- **vaul**: Drawer component
-- **recharts**: Chart components
+
+## Security Notes
+- Admin PDF upload endpoint is currently unauthenticated - should be secured before production
+- OpenAI API key stored in Replit Secrets (encrypted)
+- Database credentials managed via environment variables
