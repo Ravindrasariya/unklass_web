@@ -1,16 +1,14 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { createRequire } from "module";
 import { storage } from "./storage";
 import { insertStudentSchema, type Question } from "@shared/schema";
 import { generateQuizQuestions, generateAnswerFeedback } from "./openai";
 import multer from "multer";
 
-// Use createRequire for CommonJS pdf-parse module
-const require = createRequire(import.meta.url);
-
 async function parsePdf(buffer: Buffer): Promise<string> {
-  const pdfParse = require("pdf-parse");
+  // Use dynamic import to handle both ESM and bundled CJS environments
+  const pdfParseModule = await import("pdf-parse");
+  const pdfParse = pdfParseModule.default ?? pdfParseModule;
   const data = await pdfParse(buffer);
   return data.text;
 }
