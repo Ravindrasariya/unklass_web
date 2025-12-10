@@ -68,14 +68,14 @@ export default function StudentOnboardingForm({ onSubmit, onLogin }: StudentOnbo
       <div className="min-h-screen flex items-center justify-center p-4 bg-background">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center space-y-3">
-            <div className="flex flex-col items-center gap-2 mb-2">
+            <div className="flex flex-col items-center gap-1 mb-2">
               <img 
                 src={logoImage} 
                 alt="Unklass" 
                 className="h-10 dark:invert" 
                 data-testid="img-logo"
               />
-              <p className="text-sm text-muted-foreground italic" data-testid="text-tagline">
+              <p className="text-sm text-muted-foreground" data-testid="text-tagline">
                 Learning Beyond Classroom
               </p>
             </div>
@@ -163,14 +163,14 @@ export default function StudentOnboardingForm({ onSubmit, onLogin }: StudentOnbo
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-3">
-          <div className="flex flex-col items-center gap-2 mb-2">
+          <div className="flex flex-col items-center gap-1 mb-2">
             <img 
               src={logoImage} 
               alt="Unklass" 
               className="h-10 dark:invert" 
               data-testid="img-logo"
             />
-            <p className="text-sm text-muted-foreground italic" data-testid="text-tagline">
+            <p className="text-sm text-muted-foreground" data-testid="text-tagline">
               Learning Beyond Classroom
             </p>
           </div>
