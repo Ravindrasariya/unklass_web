@@ -4,12 +4,14 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import StudentOnboardingForm, { type StudentData } from "@/components/StudentOnboardingForm";
-import PdfUploader from "@/components/PdfUploader";
 import QuizQuestion, { type Question } from "@/components/QuizQuestion";
 import QuizResults from "@/components/QuizResults";
 import AppHeader from "@/components/AppHeader";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Loader2, Sparkles } from "lucide-react";
 
-type AppState = "onboarding" | "upload" | "quiz" | "results";
+type AppState = "onboarding" | "ready" | "loading" | "quiz" | "results";
 
 interface QuizAnswer {
   questionId: number;
@@ -94,29 +96,22 @@ const mockQuestions: Question[] = [
 function App() {
   const [appState, setAppState] = useState<AppState>("onboarding");
   const [studentData, setStudentData] = useState<StudentData | null>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<QuizAnswer[]>([]);
 
   const handleOnboardingSubmit = useCallback((data: StudentData) => {
     setStudentData(data);
-    setAppState("upload");
+    setAppState("ready");
   }, []);
 
-  const handleFileSelect = useCallback((file: File) => {
-    setSelectedFile(file);
-  }, []);
-
-  const handleGenerateQuiz = useCallback(async () => {
-    setIsGenerating(true);
-    // todo: remove mock functionality - replace with actual API call to generate questions from PDF
-    await new Promise(resolve => setTimeout(resolve, 2000));
+  const handleStartQuiz = useCallback(async () => {
+    setAppState("loading");
+    // todo: remove mock functionality - replace with actual API call to get questions
+    await new Promise(resolve => setTimeout(resolve, 1500));
     setQuestions(mockQuestions);
     setCurrentQuestionIndex(0);
     setAnswers([]);
-    setIsGenerating(false);
     setAppState("quiz");
   }, []);
 
@@ -137,20 +132,14 @@ function App() {
     }
   }, [currentQuestionIndex, questions.length]);
 
-  const handleRetakeQuiz = useCallback(() => {
-    // todo: remove mock functionality - in real app, regenerate questions from same PDF
+  const handleRetakeQuiz = useCallback(async () => {
+    setAppState("loading");
+    // todo: remove mock functionality - in real app, fetch new questions from API
+    await new Promise(resolve => setTimeout(resolve, 1500));
     setQuestions([...mockQuestions].sort(() => Math.random() - 0.5));
     setCurrentQuestionIndex(0);
     setAnswers([]);
     setAppState("quiz");
-  }, []);
-
-  const handleUploadNew = useCallback(() => {
-    setSelectedFile(null);
-    setQuestions([]);
-    setCurrentQuestionIndex(0);
-    setAnswers([]);
-    setAppState("upload");
   }, []);
 
   const score = answers.filter(a => a.isCorrect).length;
@@ -167,12 +156,41 @@ function App() {
             <StudentOnboardingForm onSubmit={handleOnboardingSubmit} />
           )}
 
-          {appState === "upload" && (
-            <PdfUploader
-              onFileSelect={handleFileSelect}
-              onGenerateQuiz={handleGenerateQuiz}
-              isGenerating={isGenerating}
-            />
+          {appState === "ready" && (
+            <div className="min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center p-4">
+              <Card className="w-full max-w-md text-center">
+                <CardContent className="p-8">
+                  <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center mb-6">
+                    <Sparkles className="w-8 h-8 text-primary" />
+                  </div>
+                  <h1 className="text-2xl font-semibold mb-2">Ready to Test Your Knowledge?</h1>
+                  <p className="text-muted-foreground mb-6">
+                    You'll be presented with 10 multiple choice questions. After each answer, you'll see whether you got it right along with an explanation.
+                  </p>
+                  <Button 
+                    className="w-full" 
+                    onClick={handleStartQuiz}
+                    data-testid="button-start-quiz"
+                  >
+                    Start Quiz
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {appState === "loading" && (
+            <div className="min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center p-4">
+              <Card className="w-full max-w-md text-center">
+                <CardContent className="p-8">
+                  <Loader2 className="w-12 h-12 mx-auto text-primary animate-spin mb-4" />
+                  <h2 className="text-xl font-medium mb-2">Preparing Your Quiz</h2>
+                  <p className="text-muted-foreground">
+                    Generating questions just for you...
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
           )}
 
           {appState === "quiz" && questions.length > 0 && (
@@ -190,7 +208,6 @@ function App() {
               score={score}
               totalQuestions={questions.length}
               onRetakeQuiz={handleRetakeQuiz}
-              onUploadNew={handleUploadNew}
             />
           )}
         </div>

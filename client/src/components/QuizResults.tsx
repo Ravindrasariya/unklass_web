@@ -1,19 +1,17 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trophy, Award, BookOpen, RefreshCw, FileUp } from "lucide-react";
+import { Trophy, Award, BookOpen, RefreshCw } from "lucide-react";
 
 interface QuizResultsProps {
   score: number;
   totalQuestions: number;
   onRetakeQuiz: () => void;
-  onUploadNew: () => void;
 }
 
 export default function QuizResults({ 
   score, 
   totalQuestions, 
-  onRetakeQuiz, 
-  onUploadNew 
+  onRetakeQuiz,
 }: QuizResultsProps) {
   const percentage = Math.round((score / totalQuestions) * 100);
 
@@ -49,7 +47,7 @@ export default function QuizResults({
   const Icon = performance.icon;
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
+    <div className="min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center p-4 bg-background">
       <Card className="w-full max-w-lg">
         <CardContent className="p-8 text-center">
           <div className={`w-20 h-20 mx-auto rounded-full ${performance.bgColor} flex items-center justify-center mb-6`}>
@@ -81,25 +79,14 @@ export default function QuizResults({
             />
           </div>
 
-          <div className="space-y-3">
-            <Button 
-              className="w-full" 
-              onClick={onRetakeQuiz}
-              data-testid="button-retake-quiz"
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Try Another Test
-            </Button>
-            <Button 
-              variant="outline" 
-              className="w-full" 
-              onClick={onUploadNew}
-              data-testid="button-upload-new"
-            >
-              <FileUp className="w-4 h-4 mr-2" />
-              Upload New Document
-            </Button>
-          </div>
+          <Button 
+            className="w-full" 
+            onClick={onRetakeQuiz}
+            data-testid="button-retake-quiz"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Try Another Test
+          </Button>
         </CardContent>
       </Card>
     </div>
