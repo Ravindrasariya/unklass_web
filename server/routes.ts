@@ -6,8 +6,14 @@ import { insertStudentSchema, type Question } from "@shared/schema";
 import { generateQuizQuestions, generateAnswerFeedback } from "./openai";
 import multer from "multer";
 
+// Use createRequire for CommonJS pdf-parse module
 const require = createRequire(import.meta.url);
-const pdfParse = require("pdf-parse");
+
+async function parsePdf(buffer: Buffer): Promise<string> {
+  const pdfParse = require("pdf-parse");
+  const data = await pdfParse(buffer);
+  return data.text;
+}
 
 // Configure multer for PDF uploads
 const upload = multer({
@@ -85,8 +91,7 @@ export async function registerRoutes(
       }
 
       // Extract text from PDF
-      const pdfData = await pdfParse(req.file.buffer);
-      const content = pdfData.text;
+      const content = await parsePdf(req.file.buffer);
 
       if (!content || content.trim().length < 100) {
         return res.status(400).json({ error: "PDF appears to be empty or contains too little text" });
