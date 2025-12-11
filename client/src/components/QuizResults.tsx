@@ -1,6 +1,22 @@
+import { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trophy, Award, BookOpen, RefreshCw, BookMarked } from "lucide-react";
+import { Trophy, Award, BookOpen, RefreshCw, BookMarked, Quote } from "lucide-react";
+
+const MOTIVATIONAL_QUOTES = [
+  { text: "Success is not final, failure is not fatal: it is the courage to continue that counts.", language: "English" },
+  { text: "The only way to do great work is to love what you do.", language: "English" },
+  { text: "Education is the most powerful weapon which you can use to change the world.", language: "English" },
+  { text: "Every expert was once a beginner.", language: "English" },
+  { text: "The future belongs to those who believe in the beauty of their dreams.", language: "English" },
+  { text: "कोशिश करने वालों की कभी हार नहीं होती।", language: "Hindi" },
+  { text: "मेहनत इतनी खामोशी से करो कि सफलता शोर मचा दे।", language: "Hindi" },
+  { text: "शिक्षा सबसे शक्तिशाली हथियार है जिससे आप दुनिया बदल सकते हैं।", language: "Hindi" },
+  { text: "हर विशेषज्ञ कभी एक शुरुआती था।", language: "Hindi" },
+  { text: "सपने वो नहीं जो सोते हुए आएं, सपने वो हैं जो सोने न दें।", language: "Hindi" },
+  { text: "गिरकर सीखना, संभलकर चलना, यही है जीवन का सार।", language: "Hindi" },
+  { text: "Believe you can and you're halfway there.", language: "English" },
+];
 
 interface QuizResultsProps {
   score: number;
@@ -16,6 +32,11 @@ export default function QuizResults({
   onTryAnotherSubject,
 }: QuizResultsProps) {
   const percentage = Math.round((score / totalQuestions) * 100);
+
+  const randomQuote = useMemo(() => {
+    const randomIndex = Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length);
+    return MOTIVATIONAL_QUOTES[randomIndex];
+  }, []);
 
   const getPerformanceData = () => {
     if (score > 8) {
@@ -72,13 +93,24 @@ export default function QuizResults({
             </p>
           </div>
 
-          <div className="w-full bg-muted rounded-full h-3 mb-8 overflow-hidden">
+          <div className="w-full bg-muted rounded-full h-3 mb-6 overflow-hidden">
             <div 
               className={`h-full rounded-full transition-all duration-500 ${
                 score > 8 ? "bg-yellow-500" : score > 6 ? "bg-blue-500" : "bg-orange-500"
               }`}
               style={{ width: `${percentage}%` }}
             />
+          </div>
+
+          <div className="mb-8 p-4 bg-muted/50 rounded-md" data-testid="motivational-quote">
+            <div className="flex items-start gap-2">
+              <Quote className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm italic text-muted-foreground">
+                  "{randomQuote.text}"
+                </p>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-3">
