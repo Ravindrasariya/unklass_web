@@ -76,11 +76,14 @@ RULES:
 - "options" must be an array of exactly 4 answer choices
 - "correctAnswer" must be 0, 1, 2, or 3 (index of correct option)
 - "explanation" must explain why the answer is correct
-- Generate exactly ${numQuestions} questions from the study material provided
+- Generate exactly ${numQuestions} questions based on the CONCEPTS covered in the study material
+- Questions should TEST UNDERSTANDING of concepts, not just repeat exact text from the material
+- Create application-based, analytical, and conceptual questions that assess deep understanding
 - Each question must be UNIQUE and cover different concepts${excludeSection}`;
 
-  const userPrompt = `Generate ${numQuestions} NEW and UNIQUE multiple-choice questions for ${subject} based on this study material:
+  const userPrompt = `Generate ${numQuestions} NEW and UNIQUE multiple-choice questions for ${subject} based on the CONCEPTS covered in this study material. Questions should test understanding and application of concepts, not just memorization of exact text.
 
+Study Material:
 ${pdfContent.substring(0, 12000)}`;
 
   try {
