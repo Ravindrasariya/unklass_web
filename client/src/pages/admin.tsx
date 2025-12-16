@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Upload, FileText, Trash2, AlertCircle, CheckCircle2, Eye, X, Lock, LogOut } from "lucide-react";
+import { Upload, FileText, Trash2, AlertCircle, CheckCircle2, Eye, Lock, LogOut, Users, Download, ChevronDown, ChevronUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const VALID_GRADES = ["8th", "10th", "12th"];
 const VALID_BOARDS = ["MP", "CBSE"];
@@ -34,6 +35,27 @@ interface PdfPreview {
   contentLength: number;
 }
 
+interface StudentSession {
+  id: number;
+  subject: string;
+  score: number | null;
+  totalQuestions: number | null;
+  completedAt: string | null;
+}
+
+interface StudentProgress {
+  id: number;
+  name: string;
+  grade: string;
+  board: string;
+  location: string;
+  mobileNumber: string;
+  totalQuizzes: number;
+  averageScore: number;
+  subjectsAttempted: string[];
+  sessions: StudentSession[];
+}
+
 export default function AdminPage() {
   const { toast } = useToast();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -44,6 +66,8 @@ export default function AdminPage() {
   const [dragActive, setDragActive] = useState(false);
   const [previewPdf, setPreviewPdf] = useState<PdfPreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [selectedStudents, setSelectedStudents] = useState<number[]>([]);
+  const [expandedStudent, setExpandedStudent] = useState<number | null>(null);
 
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,6 +99,34 @@ export default function AdminPage() {
   const { data: pdfs, isLoading } = useQuery<Pdf[]>({
     queryKey: ["/api/admin/pdfs"],
   });
+
+  const { data: students, isLoading: studentsLoading } = useQuery<StudentProgress[]>({
+    queryKey: ["/api/admin/students"],
+    enabled: isAuthenticated,
+  });
+
+  const handleToggleStudent = (studentId: number) => {
+    setSelectedStudents(prev => 
+      prev.includes(studentId) 
+        ? prev.filter(id => id !== studentId)
+        : [...prev, studentId]
+    );
+  };
+
+  const handleSelectAllStudents = () => {
+    if (students && selectedStudents.length === students.length) {
+      setSelectedStudents([]);
+    } else if (students) {
+      setSelectedStudents(students.map(s => s.id));
+    }
+  };
+
+  const handleDownloadCSV = (studentIds?: number[]) => {
+    const params = studentIds && studentIds.length > 0 
+      ? `?studentIds=${studentIds.join(",")}`
+      : "";
+    window.open(`/api/admin/students/csv${params}`, "_blank");
+  };
 
   const handlePreview = async (pdfId: number) => {
     setPreviewLoading(true);
@@ -418,6 +470,155 @@ export default function AdminPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Student Progress
+                </CardTitle>
+                <CardDescription>
+                  View student performance and download progress reports
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button
+                  variant="outline"
+                  onClick={() => handleDownloadCSV(selectedStudents)}
+                  disabled={selectedStudents.length === 0}
+                  data-testid="button-download-selected-csv"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Selected ({selectedStudents.length})
+                </Button>
+                <Button
+                  variant="default"
+                  onClick={() => handleDownloadCSV()}
+                  data-testid="button-download-all-csv"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download All
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {studentsLoading ? (
+              <p className="text-muted-foreground text-center py-8">Loading students...</p>
+            ) : !students || students.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">
+                No students registered yet.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 pb-2 border-b">
+                  <Checkbox
+                    checked={students.length > 0 && selectedStudents.length === students.length}
+                    onCheckedChange={handleSelectAllStudents}
+                    data-testid="checkbox-select-all-students"
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    Select all ({students.length} students)
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {students.map((student) => (
+                    <div
+                      key={student.id}
+                      className="border rounded-lg overflow-hidden"
+                      data-testid={`student-row-${student.id}`}
+                    >
+                      <div 
+                        className="flex items-center gap-3 p-3 bg-muted/50 cursor-pointer"
+                        onClick={() => setExpandedStudent(expandedStudent === student.id ? null : student.id)}
+                      >
+                        <Checkbox
+                          checked={selectedStudents.includes(student.id)}
+                          onCheckedChange={() => handleToggleStudent(student.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          data-testid={`checkbox-student-${student.id}`}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-medium">{student.name}</p>
+                            <Badge variant="secondary" className="text-xs">{student.grade}</Badge>
+                            <Badge variant="secondary" className="text-xs">{student.board}</Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">{student.mobileNumber}</p>
+                        </div>
+                        <div className="text-right mr-2">
+                          <p className="font-medium">{student.totalQuizzes} quizzes</p>
+                          <p className="text-sm text-muted-foreground">
+                            {student.averageScore}% avg
+                          </p>
+                        </div>
+                        {expandedStudent === student.id ? (
+                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </div>
+                      {expandedStudent === student.id && (
+                        <div className="p-3 border-t bg-background">
+                          <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+                            <div>
+                              <span className="text-muted-foreground">Location:</span> {student.location}
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Subjects:</span>{" "}
+                              {student.subjectsAttempted.length > 0 
+                                ? student.subjectsAttempted.join(", ")
+                                : "None yet"}
+                            </div>
+                          </div>
+                          {student.sessions.length > 0 ? (
+                            <div className="space-y-1">
+                              <p className="text-sm font-medium mb-2">Quiz History:</p>
+                              {student.sessions.map((session) => (
+                                <div 
+                                  key={session.id}
+                                  className="flex items-center justify-between text-sm p-2 bg-muted rounded"
+                                >
+                                  <span>{session.subject}</span>
+                                  <div className="flex items-center gap-4">
+                                    <span>
+                                      {session.score}/{session.totalQuestions} 
+                                      ({session.totalQuestions ? Math.round((session.score || 0) / session.totalQuestions * 100) : 0}%)
+                                    </span>
+                                    <span className="text-muted-foreground">
+                                      {session.completedAt 
+                                        ? new Date(session.completedAt).toLocaleDateString("en-IN")
+                                        : "In progress"}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">No quizzes completed yet.</p>
+                          )}
+                          <div className="mt-3 pt-2 border-t">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDownloadCSV([student.id])}
+                              data-testid={`button-download-student-${student.id}`}
+                            >
+                              <Download className="h-3 w-3 mr-2" />
+                              Download Report
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </CardContent>

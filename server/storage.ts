@@ -12,6 +12,7 @@ export interface IStorage {
   getStudent(id: number): Promise<Student | undefined>;
   getStudentByMobile(mobileNumber: string): Promise<Student | undefined>;
   createStudent(student: InsertStudent): Promise<Student>;
+  getAllStudents(): Promise<Student[]>;
 
   // PDFs
   getPdf(id: number): Promise<Pdf | undefined>;
@@ -44,6 +45,10 @@ export class DatabaseStorage implements IStorage {
   async createStudent(insertStudent: InsertStudent): Promise<Student> {
     const [student] = await db.insert(students).values(insertStudent).returning();
     return student;
+  }
+
+  async getAllStudents(): Promise<Student[]> {
+    return await db.select().from(students);
   }
 
   // PDFs

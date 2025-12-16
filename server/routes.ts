@@ -418,5 +418,104 @@ export async function registerRoutes(
     }
   });
 
+  // Admin: Get all students with their progress
+  app.get("/api/admin/students", async (req, res) => {
+    try {
+      const allStudents = await storage.getAllStudents();
+      
+      // Get quiz data for each student
+      const studentsWithProgress = await Promise.all(
+        allStudents.map(async (student) => {
+          const sessions = await storage.getStudentQuizSessions(student.id);
+          const completedSessions = sessions.filter(s => s.completedAt);
+          const totalQuizzes = completedSessions.length;
+          const totalScore = completedSessions.reduce((sum, s) => sum + (s.score || 0), 0);
+          const totalQuestions = completedSessions.reduce((sum, s) => sum + (s.totalQuestions || 10), 0);
+          const averageScore = totalQuizzes > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
+          
+          // Get subjects attempted
+          const subjectsAttempted = Array.from(new Set(completedSessions.map(s => s.subject)));
+          
+          return {
+            id: student.id,
+            name: student.name,
+            grade: student.grade,
+            board: student.board,
+            location: student.location,
+            mobileNumber: student.mobileNumber,
+            totalQuizzes,
+            averageScore,
+            subjectsAttempted,
+            sessions: completedSessions.map(s => ({
+              id: s.id,
+              subject: s.subject,
+              score: s.score,
+              totalQuestions: s.totalQuestions,
+              completedAt: s.completedAt,
+            })),
+          };
+        })
+      );
+      
+      res.json(studentsWithProgress);
+    } catch (error) {
+      console.error("Error fetching students:", error);
+      res.status(500).json({ error: "Failed to fetch students" });
+    }
+  });
+
+  // Admin: Download student progress as CSV
+  app.get("/api/admin/students/csv", async (req, res) => {
+    try {
+      const { studentIds } = req.query;
+      
+      const allStudents = await storage.getAllStudents();
+      
+      // Filter by student IDs if provided
+      let filteredStudents = allStudents;
+      if (studentIds && typeof studentIds === "string") {
+        const ids = studentIds.split(",").map(id => parseInt(id.trim()));
+        filteredStudents = allStudents.filter(s => ids.includes(s.id));
+      }
+      
+      // Build CSV data
+      const csvRows: string[] = [];
+      csvRows.push("Student Name,Grade,Board,Location,Mobile,Subject,Quiz Date,Score,Total Questions,Percentage");
+      
+      for (const student of filteredStudents) {
+        const sessions = await storage.getStudentQuizSessions(student.id);
+        const completedSessions = sessions.filter(s => s.completedAt);
+        
+        if (completedSessions.length === 0) {
+          // Include student even if no quizzes taken
+          csvRows.push(
+            `"${student.name}","${student.grade}","${student.board}","${student.location}","${student.mobileNumber}","No quizzes taken","","","",""`
+          );
+        } else {
+          for (const session of completedSessions) {
+            const percentage = session.totalQuestions 
+              ? Math.round(((session.score || 0) / session.totalQuestions) * 100)
+              : 0;
+            const dateStr = session.completedAt 
+              ? new Date(session.completedAt).toLocaleDateString("en-IN")
+              : "";
+            csvRows.push(
+              `"${student.name}","${student.grade}","${student.board}","${student.location}","${student.mobileNumber}","${session.subject}","${dateStr}","${session.score || 0}","${session.totalQuestions}","${percentage}%"`
+            );
+          }
+        }
+      }
+      
+      const csv = csvRows.join("\n");
+      
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", `attachment; filename="student_progress_${new Date().toISOString().split("T")[0]}.csv"`);
+      res.send(csv);
+    } catch (error) {
+      console.error("Error generating CSV:", error);
+      res.status(500).json({ error: "Failed to generate CSV" });
+    }
+  });
+
   return httpServer;
 }
