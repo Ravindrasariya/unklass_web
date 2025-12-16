@@ -93,7 +93,15 @@ RULES:
 - Generate exactly ${numQuestions} questions based on the CONCEPTS covered in the study material
 - Questions should TEST UNDERSTANDING of concepts, not just repeat exact text from the material
 - Create application-based, analytical, and conceptual questions that assess deep understanding
-- Each question must be UNIQUE and cover different concepts${excludeSection}`;
+- Each question must be UNIQUE and cover different concepts
+
+QUESTION TYPES TO INCLUDE:
+1. DIAGRAM-BASED: If the material mentions diagrams (e.g., neuron, cell, circuit, plant structure), ask about specific PARTS and their FUNCTIONS (e.g., "What is the function of dendrites in a neuron?", "Which part of a cell contains genetic material?")
+2. NUMERICAL/FORMULA-BASED: Include calculation questions using formulas from the material (e.g., "Calculate the speed if distance is 100m and time is 20s", "Find the area of a circle with radius 7cm")
+3. CONCEPTUAL: Ask why/how questions that test understanding
+4. APPLICATION: Real-world problem-solving using concepts from the material
+
+Aim for a MIX of question types: at least 2-3 numerical/formula-based, 2-3 diagram/parts-based, and the rest conceptual/application questions.${excludeSection}`;
 
   const userPrompt = `Generate ${numQuestions} NEW and UNIQUE multiple-choice questions for ${subject} based on the CONCEPTS covered in this study material. Questions should test understanding and application of concepts, not just memorization of exact text.
 
