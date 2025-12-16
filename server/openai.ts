@@ -103,7 +103,14 @@ QUESTION TYPES TO INCLUDE:
 
 Aim for a MIX of question types: at least 2-3 numerical/formula-based, 2-3 diagram/parts-based, and the rest conceptual/application questions.${excludeSection}`;
 
-  const userPrompt = `Generate ${numQuestions} NEW and UNIQUE multiple-choice questions for ${subject} based on the CONCEPTS covered in this study material. Questions should test understanding and application of concepts, not just memorization of exact text.
+  const userPrompt = `Generate ${numQuestions} NEW and UNIQUE multiple-choice questions for ${subject}.
+
+IMPORTANT: All questions MUST be based ONLY on the concepts, topics, formulas, diagrams, and facts mentioned in the study material below. Do NOT introduce concepts or topics that are not covered in this material.
+
+- If the material covers a formula, create numerical problems using that formula
+- If the material mentions a diagram (e.g., neuron, cell), ask about its labeled parts
+- If the material explains a process, ask about steps or components of that process
+- Questions can be worded differently but must test concepts FROM THIS MATERIAL ONLY
 
 Study Material:
 ${pdfContent.substring(0, 12000)}`;
