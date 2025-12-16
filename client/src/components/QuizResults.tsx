@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Trophy, Award, BookOpen, RefreshCw, BookMarked, Quote } from "lucide-react";
@@ -33,10 +33,10 @@ export default function QuizResults({
 }: QuizResultsProps) {
   const percentage = Math.round((score / totalQuestions) * 100);
 
-  const randomQuote = useMemo(() => {
+  const [randomQuote] = useState(() => {
     const randomIndex = Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length);
     return MOTIVATIONAL_QUOTES[randomIndex];
-  }, []);
+  });
 
   const getPerformanceData = () => {
     if (score > 8) {
