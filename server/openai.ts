@@ -53,9 +53,23 @@ export async function generateQuizQuestions(
   numQuestions: number = 10,
   previousQuestions: string[] = []
 ): Promise<Question[]> {
-  const excludeSection = previousQuestions.length > 0 
-    ? `\n\nIMPORTANT - DO NOT generate questions similar to these previously asked questions:\n${previousQuestions.slice(-50).map((q, i) => `${i + 1}. ${q}`).join('\n')}\n\nGenerate COMPLETELY DIFFERENT questions on different topics or aspects.`
-    : '';
+  let excludeSection = '';
+  if (previousQuestions.length > 0) {
+    excludeSection = `
+
+CRITICAL INSTRUCTION - QUESTION VARIETY:
+The student has already been asked ${previousQuestions.length} questions on this subject.
+You MUST generate questions on DIFFERENT topics/concepts than these previously asked questions:
+
+${previousQuestions.map((q, i) => `${i + 1}. ${q}`).join('\n')}
+
+RULES FOR NEW QUESTIONS:
+1. Each new question MUST cover a DIFFERENT concept or topic from the study material
+2. Do NOT ask about the same formulas, definitions, or facts already covered above
+3. If most topics are covered, go DEEPER into subtopics or ask application-based questions
+4. Focus on aspects NOT yet tested: different chapters, different types of problems, different difficulty levels
+5. Only when ALL possible topics from the material are exhausted, you may revisit topics with significantly different question formats`;
+  }
 
   const systemPrompt = `You are an expert educational content creator. Generate ${numQuestions} multiple-choice quiz questions for ${grade} grade ${board} board students in India.
 
