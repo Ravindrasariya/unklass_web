@@ -38,9 +38,8 @@ const sliderContent = [
 ];
 
 export default function LandingPage({ onBoardExamClick, onCPCTClick }: LandingPageProps) {
-  // Start with a random quote each time the page loads
-  const [currentSlide, setCurrentSlide] = useState(() => Math.floor(Math.random() * sliderContent.length));
-  const [currentClassroom, setCurrentClassroom] = useState(() => Math.floor(Math.random() * classroomImages.length));
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [currentClassroom, setCurrentClassroom] = useState(0);
 
   useEffect(() => {
     const timer = setInterval(() => {
