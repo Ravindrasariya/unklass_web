@@ -14,10 +14,18 @@ const sliderContent = [
   {
     text: "Empowering the remotest parts of India with quality education through technology",
     lang: "en",
+    author: null,
   },
   {
     text: "प्रौद्योगिकी के माध्यम से भारत के सबसे दूरदराज़ क्षेत्रों को गुणवत्तापूर्ण शिक्षा से सशक्त बनाना।",
     lang: "hi",
+    author: null,
+  },
+  {
+    text: "Developed India will be a network of prosperous villages empowered with various connectivity with both physical and virtual",
+    lang: "en",
+    author: "Dr. APJ Abdul Kalam",
+    title: "Hon'ble Former President of India",
   },
 ];
 
@@ -81,20 +89,30 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick }: LandingPa
           <div className="absolute inset-0 bg-black/10"></div>
           <div className="max-w-4xl mx-auto px-4 py-6 md:py-8 relative z-10">
             <div className="text-center">
-              <div className="relative min-h-[60px] md:min-h-[70px] flex items-center justify-center">
+              <div className="relative min-h-[80px] md:min-h-[100px] flex items-center justify-center">
                 <div className="relative w-full">
                   {sliderContent.map((slide, index) => (
-                    <p
+                    <div
                       key={index}
-                      className={`text-base md:text-lg lg:text-xl font-medium leading-relaxed transition-all duration-500 ${
+                      className={`transition-all duration-500 ${
                         currentSlide === index 
                           ? "opacity-100 translate-x-0" 
                           : "opacity-0 absolute top-0 left-0 right-0 translate-x-4"
                       }`}
                       data-testid={`slider-text-${index}`}
                     >
-                      {slide.text}
-                    </p>
+                      <p className="text-base md:text-lg lg:text-xl font-medium leading-relaxed">
+                        {slide.author ? `"${slide.text}"` : slide.text}
+                      </p>
+                      {slide.author && (
+                        <div className="mt-2 text-sm md:text-base">
+                          <p className="font-semibold">{slide.author}</p>
+                          {'title' in slide && slide.title && (
+                            <p className="text-white/80 text-xs md:text-sm">{slide.title}</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>
