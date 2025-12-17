@@ -4,9 +4,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link } from "wouter";
-import { Mail, Phone, Send } from "lucide-react";
+import { Mail, Send } from "lucide-react";
 import { SiWhatsapp } from "react-icons/si";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import logoImage from "@assets/Screenshot_2025-12-11_at_12.16.26_AM_1765392397522.png";
 
 export default function ContactPage() {
@@ -19,17 +20,28 @@ export default function ContactPage() {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Simulate form submission
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    toast({
-      title: "Request Submitted",
-      description: "Thank you! We'll contact you soon to schedule your free trial.",
-    });
-    
-    setName("");
-    setContactNumber("");
-    setIsSubmitting(false);
+    try {
+      await apiRequest("POST", "/api/contact-submissions", {
+        name,
+        contactNumber,
+      });
+      
+      toast({
+        title: "Request Submitted",
+        description: "Thank you! We'll contact you soon to schedule your free trial.",
+      });
+      
+      setName("");
+      setContactNumber("");
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to submit form. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

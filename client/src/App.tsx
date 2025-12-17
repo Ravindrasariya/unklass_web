@@ -68,6 +68,27 @@ function App() {
   const [answers, setAnswers] = useState<QuizAnswer[]>([]);
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
+
+  // Track website visits
+  useEffect(() => {
+    const trackVisit = async () => {
+      const today = new Date().toISOString().split('T')[0];
+      const visitKey = `unklass_visit_${today}`;
+      
+      // Check if already tracked today
+      if (!localStorage.getItem(visitKey)) {
+        try {
+          await apiRequest("POST", "/api/analytics/visit", {});
+          localStorage.setItem(visitKey, "true");
+        } catch (error) {
+          // Silently fail - visitor tracking is not critical
+          console.log("Visit tracking failed");
+        }
+      }
+    };
+    
+    trackVisit();
+  }, []);
   
   // CPCT state
   const [cpctStudentData, setCpctStudentData] = useState<RegisteredCpctStudent | null>(null);

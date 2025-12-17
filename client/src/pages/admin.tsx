@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Upload, FileText, Trash2, AlertCircle, CheckCircle2, Eye, Lock, LogOut, Users, Download, ChevronDown, ChevronUp } from "lucide-react";
+import { Upload, FileText, Trash2, AlertCircle, CheckCircle2, Eye, Lock, LogOut, Users, Download, ChevronDown, ChevronUp, MessageSquare, TrendingUp, Phone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -56,6 +56,19 @@ interface StudentProgress {
   sessions: StudentSession[];
 }
 
+interface ContactSubmission {
+  id: number;
+  name: string;
+  contactNumber: string;
+  createdAt: string;
+}
+
+interface VisitorStats {
+  totalVisitors: number;
+  todayVisitors: number;
+  dailyStats: Array<{ date: string; totalVisitors: number }>;
+}
+
 export default function AdminPage() {
   const { toast } = useToast();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -102,6 +115,16 @@ export default function AdminPage() {
 
   const { data: students, isLoading: studentsLoading } = useQuery<StudentProgress[]>({
     queryKey: ["/api/admin/students"],
+    enabled: isAuthenticated,
+  });
+
+  const { data: contactSubmissions, isLoading: contactsLoading } = useQuery<ContactSubmission[]>({
+    queryKey: ["/api/admin/contact-submissions"],
+    enabled: isAuthenticated,
+  });
+
+  const { data: visitorStats, isLoading: visitorStatsLoading } = useQuery<VisitorStats>({
+    queryKey: ["/api/admin/analytics/visitors"],
     enabled: isAuthenticated,
   });
 
@@ -632,6 +655,107 @@ export default function AdminPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Visitor Stats & Contact Submissions */}
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Visitor Stats */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5" />
+                Website Analytics
+              </CardTitle>
+              <CardDescription>
+                Track website visitors
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {visitorStatsLoading ? (
+                <p className="text-muted-foreground">Loading...</p>
+              ) : visitorStats ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 bg-muted rounded-lg text-center">
+                      <p className="text-3xl font-bold">{visitorStats.totalVisitors}</p>
+                      <p className="text-sm text-muted-foreground">Total Visitors</p>
+                    </div>
+                    <div className="p-4 bg-muted rounded-lg text-center">
+                      <p className="text-3xl font-bold">{visitorStats.todayVisitors}</p>
+                      <p className="text-sm text-muted-foreground">Today</p>
+                    </div>
+                  </div>
+                  {visitorStats.dailyStats.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Recent Days</p>
+                      <div className="space-y-1 max-h-32 overflow-y-auto">
+                        {visitorStats.dailyStats.slice(0, 7).map((stat) => (
+                          <div key={stat.date} className="flex justify-between text-sm p-2 bg-muted/50 rounded">
+                            <span>{new Date(stat.date).toLocaleDateString("en-IN", { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                            <span className="font-medium">{stat.totalVisitors} visitors</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-muted-foreground">No visitor data yet.</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Contact Submissions */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5" />
+                Contact Form Submissions
+              </CardTitle>
+              <CardDescription>
+                Trial requests from the contact page
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {contactsLoading ? (
+                <p className="text-muted-foreground">Loading...</p>
+              ) : contactSubmissions && contactSubmissions.length > 0 ? (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {contactSubmissions.map((submission) => (
+                    <div 
+                      key={submission.id} 
+                      className="p-3 bg-muted rounded-lg"
+                      data-testid={`contact-submission-${submission.id}`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="font-medium">{submission.name}</p>
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Phone className="h-3 w-3" />
+                            <span>{submission.contactNumber}</span>
+                          </div>
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          {submission.createdAt 
+                            ? new Date(submission.createdAt).toLocaleDateString("en-IN", { 
+                                month: 'short', 
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })
+                            : ""}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-center py-4">
+                  No contact form submissions yet.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <Dialog open={!!previewPdf} onOpenChange={(open) => !open && setPreviewPdf(null)}>

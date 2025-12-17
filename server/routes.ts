@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertStudentSchema, insertCpctStudentSchema, type Question } from "@shared/schema";
+import { insertStudentSchema, insertCpctStudentSchema, insertContactSubmissionSchema, type Question } from "@shared/schema";
 import { generateQuizQuestions, generateAnswerFeedback, generateCpctQuizQuestions } from "./openai";
 import multer from "multer";
 
@@ -827,6 +827,64 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching CPCT students:", error);
       res.status(500).json({ error: "Failed to fetch students" });
+    }
+  });
+
+  // Contact form submission
+  app.post("/api/contact-submissions", async (req, res) => {
+    try {
+      const validatedData = insertContactSubmissionSchema.parse(req.body);
+      const submission = await storage.createContactSubmission(validatedData);
+      res.json(submission);
+    } catch (error: unknown) {
+      console.error("Error creating contact submission:", error);
+      const message = error instanceof Error ? error.message : "Failed to submit contact form";
+      res.status(400).json({ error: message });
+    }
+  });
+
+  // Admin: Get all contact submissions
+  app.get("/api/admin/contact-submissions", async (req, res) => {
+    try {
+      const submissions = await storage.getAllContactSubmissions();
+      res.json(submissions);
+    } catch (error) {
+      console.error("Error fetching contact submissions:", error);
+      res.status(500).json({ error: "Failed to fetch contact submissions" });
+    }
+  });
+
+  // Track website visit
+  app.post("/api/analytics/visit", async (req, res) => {
+    try {
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      const stats = await storage.incrementVisitorCount(today);
+      res.json({ success: true, date: today, count: stats.totalVisitors });
+    } catch (error) {
+      console.error("Error tracking visit:", error);
+      res.status(500).json({ error: "Failed to track visit" });
+    }
+  });
+
+  // Admin: Get visitor stats
+  app.get("/api/admin/analytics/visitors", async (req, res) => {
+    try {
+      const stats = await storage.getVisitorStats();
+      const totalVisitors = await storage.getTotalVisitors();
+      
+      // Get today's visitors
+      const today = new Date().toISOString().split('T')[0];
+      const todayStats = stats.find(s => s.date === today);
+      const todayVisitors = todayStats?.totalVisitors || 0;
+      
+      res.json({
+        totalVisitors,
+        todayVisitors,
+        dailyStats: stats.slice(0, 30), // Last 30 days
+      });
+    } catch (error) {
+      console.error("Error fetching visitor stats:", error);
+      res.status(500).json({ error: "Failed to fetch visitor stats" });
     }
   });
 

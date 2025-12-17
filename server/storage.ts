@@ -1,13 +1,16 @@
 import { 
   students, pdfs, quizSessions, cpctStudents, cpctQuizSessions,
+  contactSubmissions, visitorStats,
   type Student, type InsertStudent,
   type Pdf, type InsertPdf,
   type QuizSession, type InsertQuizSession,
   type CpctStudent, type InsertCpctStudent,
-  type CpctQuizSession, type InsertCpctQuizSession
+  type CpctQuizSession, type InsertCpctQuizSession,
+  type ContactSubmission, type InsertContactSubmission,
+  type VisitorStats, type InsertVisitorStats
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, like } from "drizzle-orm";
+import { eq, and, like, sql, desc } from "drizzle-orm";
 
 export interface IStorage {
   // Students
@@ -44,6 +47,15 @@ export interface IStorage {
   getCpctStudentQuizSessions(studentId: number): Promise<CpctQuizSession[]>;
   getCpctStudentPreviousQuestions(studentId: number): Promise<string[]>;
   getCpctPdf(year: string): Promise<Pdf | undefined>;
+
+  // Contact Submissions
+  createContactSubmission(submission: InsertContactSubmission): Promise<ContactSubmission>;
+  getAllContactSubmissions(): Promise<ContactSubmission[]>;
+
+  // Visitor Stats
+  incrementVisitorCount(date: string): Promise<VisitorStats>;
+  getVisitorStats(): Promise<VisitorStats[]>;
+  getTotalVisitors(): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -213,6 +225,43 @@ export class DatabaseStorage implements IStorage {
     const filename = `CPCT_${year}.pdf`;
     const [pdf] = await db.select().from(pdfs).where(eq(pdfs.filename, filename));
     return pdf || undefined;
+  }
+
+  // Contact Submissions
+  async createContactSubmission(insertSubmission: InsertContactSubmission): Promise<ContactSubmission> {
+    const [submission] = await db.insert(contactSubmissions).values(insertSubmission).returning();
+    return submission;
+  }
+
+  async getAllContactSubmissions(): Promise<ContactSubmission[]> {
+    return await db.select().from(contactSubmissions).orderBy(desc(contactSubmissions.createdAt));
+  }
+
+  // Visitor Stats
+  async incrementVisitorCount(date: string): Promise<VisitorStats> {
+    // Try to update existing record first
+    const existing = await db.select().from(visitorStats).where(eq(visitorStats.date, date));
+    
+    if (existing.length > 0) {
+      const [updated] = await db
+        .update(visitorStats)
+        .set({ totalVisitors: sql`${visitorStats.totalVisitors} + 1` })
+        .where(eq(visitorStats.date, date))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(visitorStats).values({ date, totalVisitors: 1 }).returning();
+      return created;
+    }
+  }
+
+  async getVisitorStats(): Promise<VisitorStats[]> {
+    return await db.select().from(visitorStats).orderBy(desc(visitorStats.date));
+  }
+
+  async getTotalVisitors(): Promise<number> {
+    const result = await db.select({ total: sql<number>`COALESCE(SUM(${visitorStats.totalVisitors}), 0)` }).from(visitorStats);
+    return result[0]?.total || 0;
   }
 }
 

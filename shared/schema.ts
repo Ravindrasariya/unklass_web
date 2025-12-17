@@ -140,6 +140,38 @@ export type QuizSession = typeof quizSessions.$inferSelect;
 export type InsertCpctQuizSession = z.infer<typeof insertCpctQuizSessionSchema>;
 export type CpctQuizSession = typeof cpctQuizSessions.$inferSelect;
 
+// Contact submissions table - stores contact form submissions
+export const contactSubmissions = pgTable("contact_submissions", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  contactNumber: varchar("contact_number", { length: 15 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Visitor stats table - stores daily visitor counts
+export const visitorStats = pgTable("visitor_stats", {
+  id: serial("id").primaryKey(),
+  date: varchar("date", { length: 10 }).notNull().unique(), // YYYY-MM-DD format
+  totalVisitors: integer("total_visitors").default(0),
+});
+
+// Insert schemas for new tables
+export const insertContactSubmissionSchema = createInsertSchema(contactSubmissions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertVisitorStatsSchema = createInsertSchema(visitorStats).omit({
+  id: true,
+});
+
+// Types for new tables
+export type InsertContactSubmission = z.infer<typeof insertContactSubmissionSchema>;
+export type ContactSubmission = typeof contactSubmissions.$inferSelect;
+
+export type InsertVisitorStats = z.infer<typeof insertVisitorStatsSchema>;
+export type VisitorStats = typeof visitorStats.$inferSelect;
+
 // Question type for the quiz
 export const questionSchema = z.object({
   id: z.number(),
