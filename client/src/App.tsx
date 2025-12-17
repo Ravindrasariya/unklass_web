@@ -12,6 +12,8 @@ import QuizResults from "@/components/QuizResults";
 import QuizHistory from "@/components/QuizHistory";
 import AppHeader from "@/components/AppHeader";
 import AdminPage from "@/pages/admin";
+import AboutPage from "@/pages/about";
+import ContactPage from "@/pages/contact";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -374,6 +376,8 @@ function App() {
       <TooltipProvider>
         <Switch>
           <Route path="/admin" component={AdminPage} />
+          <Route path="/about" component={AboutPage} />
+          <Route path="/contact" component={ContactPage} />
           <Route path="/">
             <div className="min-h-screen bg-background">
               {appState !== "onboarding" && appState !== "landing" && appState !== "cpct-onboarding" && (

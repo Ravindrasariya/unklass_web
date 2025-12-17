@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Link } from "wouter";
 import logoImage from "@assets/Screenshot_2025-12-11_at_12.16.26_AM_1765392397522.png";
 import studentImage from "@assets/Screenshot_2025-12-17_at_6.41.41_AM_1765934337756.png";
 
@@ -44,17 +45,34 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick }: LandingPa
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      <header className="bg-white border-b border-gray-100 py-3 px-4 sticky top-0 z-50">
+      <header className="bg-white border-b border-gray-100 py-4 px-4 sticky top-0 z-50">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col items-start">
             <img 
               src={logoImage} 
               alt="Unklass" 
-              className="h-8"
+              className="h-12 md:h-14"
               data-testid="img-logo-header"
             />
-            <span className="text-sm text-gray-600 tracking-tight">Learning Beyond Classroom</span>
+            <span className="text-xs md:text-sm text-gray-600 tracking-tight mt-1">Learning Beyond Classroom</span>
           </div>
+          <nav className="flex items-center gap-2 md:gap-4">
+            <Link href="/">
+              <Button variant="ghost" className="text-gray-700 font-medium" data-testid="nav-home">
+                Home
+              </Button>
+            </Link>
+            <Link href="/about">
+              <Button variant="ghost" className="text-gray-700 font-medium" data-testid="nav-about">
+                About Us
+              </Button>
+            </Link>
+            <Link href="/contact">
+              <Button variant="ghost" className="text-gray-700 font-medium" data-testid="nav-contact">
+                Contact Us
+              </Button>
+            </Link>
+          </nav>
         </div>
       </header>
 
@@ -190,20 +208,43 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick }: LandingPa
         </section>
       </main>
 
-      <footer className="bg-gray-900 text-white py-6">
-        <div className="max-w-6xl mx-auto px-4 text-center">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <img 
-              src={logoImage} 
-              alt="Unklass" 
-              className="h-6 invert"
-              data-testid="img-logo-footer"
-            />
-            <span className="text-sm text-gray-400 tracking-tight">Learning Beyond Classroom</span>
+      <footer className="bg-gray-900 text-white py-8">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex flex-col items-center md:items-start">
+              <img 
+                src={logoImage} 
+                alt="Unklass" 
+                className="h-10 invert"
+                data-testid="img-logo-footer"
+              />
+              <span className="text-sm text-gray-400 tracking-tight mt-2">Learning Beyond Classroom</span>
+            </div>
+            
+            <nav className="flex items-center gap-6">
+              <Link href="/">
+                <span className="text-gray-400 hover:text-white transition-colors cursor-pointer text-sm" data-testid="footer-home">
+                  Home
+                </span>
+              </Link>
+              <Link href="/about">
+                <span className="text-gray-400 hover:text-white transition-colors cursor-pointer text-sm" data-testid="footer-about">
+                  About Us
+                </span>
+              </Link>
+              <Link href="/contact">
+                <span className="text-gray-400 hover:text-white transition-colors cursor-pointer text-sm" data-testid="footer-contact">
+                  Contact Us
+                </span>
+              </Link>
+            </nav>
           </div>
-          <p className="text-gray-500 text-sm">
-            Empowering students across India with quality education
-          </p>
+          
+          <div className="border-t border-gray-800 mt-6 pt-6 text-center">
+            <p className="text-gray-500 text-sm">
+              Empowering students across India with quality education
+            </p>
+          </div>
         </div>
       </footer>
     </div>
