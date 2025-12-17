@@ -561,7 +561,7 @@ function App() {
                       <Loader2 className="w-12 h-12 mx-auto text-primary animate-spin mb-4" />
                       <h2 className="text-xl font-medium mb-2">Preparing Your CPCT Quiz</h2>
                       <p className="text-muted-foreground">
-                        Generating questions in {cpctStudentData?.medium || "your selected"} medium...
+                        UNKLASS provides carefully selected important questions based on exam trends
                       </p>
                     </CardContent>
                   </Card>
