@@ -55,6 +55,18 @@ Preferred communication style: Simple, everyday language.
    - Score > 6: "Good Job!"
    - Otherwise: "Keep Learning!"
 
+### Question Rotation Rules (IMPORTANT)
+- **All questions must be covered at least once before repeating**: The system tracks all previously asked questions per student and ensures new questions are generated each time until all unique questions have been shown.
+- **Equal distribution**: Each question should come an equal number of times across all quiz attempts.
+- **Implementation**: The backend stores all previous questions in quiz_sessions and passes them to the OpenAI prompt to avoid duplicates. The AI is instructed to generate completely new questions that are different from the previous ones.
+
+### CPCT Exam Prep
+- **Separate student table**: `cpctStudents` with fields (name, medium, location, mobileNumber)
+- **Medium selection**: Hindi or English - questions, answers, and explanations are rendered in the selected medium
+- **PDF format**: CPCT_Year.pdf (e.g., CPCT_2024.pdf)
+- **Direct quiz start**: After login/registration, quiz starts immediately without year selection
+- **Quiz history**: Students can view their CPCT quiz history and review past questions
+
 ### Design System
 - **Typography**: Inter (primary), Poppins (headings) via Google Fonts
 - **Layout**: Max-width containers (3xl for quiz, md for forms)
