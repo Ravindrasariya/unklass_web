@@ -1,11 +1,13 @@
 import { 
-  students, pdfs, quizSessions,
+  students, pdfs, quizSessions, cpctStudents, cpctQuizSessions,
   type Student, type InsertStudent,
   type Pdf, type InsertPdf,
-  type QuizSession, type InsertQuizSession
+  type QuizSession, type InsertQuizSession,
+  type CpctStudent, type InsertCpctStudent,
+  type CpctQuizSession, type InsertCpctQuizSession
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, like } from "drizzle-orm";
 
 export interface IStorage {
   // Students
@@ -28,6 +30,20 @@ export interface IStorage {
   getQuizSession(id: number): Promise<QuizSession | undefined>;
   getStudentQuizSessions(studentId: number): Promise<QuizSession[]>;
   getStudentPreviousQuestions(studentId: number, subject: string): Promise<string[]>;
+
+  // CPCT Students
+  getCpctStudent(id: number): Promise<CpctStudent | undefined>;
+  getCpctStudentByMobile(mobileNumber: string): Promise<CpctStudent | undefined>;
+  createCpctStudent(student: InsertCpctStudent): Promise<CpctStudent>;
+  getAllCpctStudents(): Promise<CpctStudent[]>;
+
+  // CPCT Quiz Sessions
+  createCpctQuizSession(session: InsertCpctQuizSession): Promise<CpctQuizSession>;
+  updateCpctQuizSession(id: number, updates: Partial<CpctQuizSession>): Promise<CpctQuizSession | undefined>;
+  getCpctQuizSession(id: number): Promise<CpctQuizSession | undefined>;
+  getCpctStudentQuizSessions(studentId: number): Promise<CpctQuizSession[]>;
+  getCpctStudentPreviousQuestions(studentId: number): Promise<string[]>;
+  getCpctPdf(year: string): Promise<Pdf | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -130,6 +146,73 @@ export class DatabaseStorage implements IStorage {
       }
     }
     return previousQuestions;
+  }
+
+  // CPCT Students
+  async getCpctStudent(id: number): Promise<CpctStudent | undefined> {
+    const [student] = await db.select().from(cpctStudents).where(eq(cpctStudents.id, id));
+    return student || undefined;
+  }
+
+  async getCpctStudentByMobile(mobileNumber: string): Promise<CpctStudent | undefined> {
+    const [student] = await db.select().from(cpctStudents).where(eq(cpctStudents.mobileNumber, mobileNumber));
+    return student || undefined;
+  }
+
+  async createCpctStudent(insertStudent: InsertCpctStudent): Promise<CpctStudent> {
+    const [student] = await db.insert(cpctStudents).values(insertStudent).returning();
+    return student;
+  }
+
+  async getAllCpctStudents(): Promise<CpctStudent[]> {
+    return await db.select().from(cpctStudents);
+  }
+
+  // CPCT Quiz Sessions
+  async createCpctQuizSession(insertSession: InsertCpctQuizSession): Promise<CpctQuizSession> {
+    const [session] = await db.insert(cpctQuizSessions).values(insertSession).returning();
+    return session;
+  }
+
+  async updateCpctQuizSession(id: number, updates: Partial<CpctQuizSession>): Promise<CpctQuizSession | undefined> {
+    const [session] = await db
+      .update(cpctQuizSessions)
+      .set(updates)
+      .where(eq(cpctQuizSessions.id, id))
+      .returning();
+    return session || undefined;
+  }
+
+  async getCpctQuizSession(id: number): Promise<CpctQuizSession | undefined> {
+    const [session] = await db.select().from(cpctQuizSessions).where(eq(cpctQuizSessions.id, id));
+    return session || undefined;
+  }
+
+  async getCpctStudentQuizSessions(studentId: number): Promise<CpctQuizSession[]> {
+    return await db.select().from(cpctQuizSessions).where(eq(cpctQuizSessions.studentId, studentId));
+  }
+
+  async getCpctStudentPreviousQuestions(studentId: number): Promise<string[]> {
+    const sessions = await db.select().from(cpctQuizSessions).where(eq(cpctQuizSessions.studentId, studentId));
+    
+    const previousQuestions: string[] = [];
+    for (const session of sessions) {
+      if (session.questions && Array.isArray(session.questions)) {
+        for (const q of session.questions as any[]) {
+          if (q.question) {
+            previousQuestions.push(q.question);
+          }
+        }
+      }
+    }
+    return previousQuestions;
+  }
+
+  async getCpctPdf(year: string): Promise<Pdf | undefined> {
+    // Look for CPCT_Year.pdf format
+    const filename = `CPCT_${year}.pdf`;
+    const [pdf] = await db.select().from(pdfs).where(eq(pdfs.filename, filename));
+    return pdf || undefined;
   }
 }
 

@@ -202,6 +202,167 @@ ${pdfContent.substring(0, 12000)}`;
   }
 }
 
+// CPCT Fallback questions (basic computer knowledge)
+const CPCT_FALLBACK_QUESTIONS: { Hindi: Question[]; English: Question[] } = {
+  English: [
+    { id: 1, question: "What does CPU stand for?", options: ["Central Processing Unit", "Computer Personal Unit", "Central Personal Unit", "Computer Processing Unit"], correctAnswer: 0, explanation: "CPU stands for Central Processing Unit, which is the brain of the computer." },
+    { id: 2, question: "Which device is used to input text into a computer?", options: ["Monitor", "Mouse", "Keyboard", "Printer"], correctAnswer: 2, explanation: "A keyboard is an input device used to type text and commands." },
+    { id: 3, question: "What is the full form of RAM?", options: ["Read Access Memory", "Random Access Memory", "Run Access Memory", "Random Allowed Memory"], correctAnswer: 1, explanation: "RAM stands for Random Access Memory, used for temporary data storage." },
+    { id: 4, question: "Which of the following is an output device?", options: ["Keyboard", "Mouse", "Monitor", "Scanner"], correctAnswer: 2, explanation: "A monitor is an output device that displays visual information." },
+    { id: 5, question: "What does 'www' stand for in a website address?", options: ["World Wide Web", "World Wide Work", "Web Wide World", "Wide World Web"], correctAnswer: 0, explanation: "WWW stands for World Wide Web, the system of interlinked hypertext documents." },
+    { id: 6, question: "Which software is used to browse the internet?", options: ["Microsoft Word", "Web Browser", "Calculator", "Paint"], correctAnswer: 1, explanation: "A web browser like Chrome or Firefox is used to access websites." },
+    { id: 7, question: "What is 1 KB equal to?", options: ["1000 Bytes", "1024 Bytes", "100 Bytes", "512 Bytes"], correctAnswer: 1, explanation: "1 Kilobyte (KB) equals 1024 bytes in binary computing." },
+    { id: 8, question: "Which key is used to delete characters to the left of cursor?", options: ["Delete", "Backspace", "Enter", "Shift"], correctAnswer: 1, explanation: "The Backspace key deletes characters to the left of the cursor." },
+    { id: 9, question: "What type of software is MS Excel?", options: ["Word Processor", "Spreadsheet", "Presentation", "Database"], correctAnswer: 1, explanation: "MS Excel is a spreadsheet software used for calculations and data analysis." },
+    { id: 10, question: "Which device stores data permanently?", options: ["RAM", "Hard Disk", "Cache", "Register"], correctAnswer: 1, explanation: "A hard disk is a permanent storage device that retains data when powered off." }
+  ],
+  Hindi: [
+    { id: 1, question: "CPU का पूर्ण रूप क्या है?", options: ["सेंट्रल प्रोसेसिंग यूनिट", "कंप्यूटर पर्सनल यूनिट", "सेंट्रल पर्सनल यूनिट", "कंप्यूटर प्रोसेसिंग यूनिट"], correctAnswer: 0, explanation: "CPU का अर्थ है सेंट्रल प्रोसेसिंग यूनिट, जो कंप्यूटर का दिमाग है।" },
+    { id: 2, question: "कंप्यूटर में टेक्स्ट इनपुट करने के लिए किस डिवाइस का उपयोग किया जाता है?", options: ["मॉनिटर", "माउस", "कीबोर्ड", "प्रिंटर"], correctAnswer: 2, explanation: "कीबोर्ड एक इनपुट डिवाइस है जिसका उपयोग टेक्स्ट और कमांड टाइप करने के लिए किया जाता है।" },
+    { id: 3, question: "RAM का पूर्ण रूप क्या है?", options: ["रीड एक्सेस मेमोरी", "रैंडम एक्सेस मेमोरी", "रन एक्सेस मेमोरी", "रैंडम अलाउड मेमोरी"], correctAnswer: 1, explanation: "RAM का अर्थ है रैंडम एक्सेस मेमोरी, जो अस्थायी डेटा संग्रहण के लिए उपयोग की जाती है।" },
+    { id: 4, question: "निम्नलिखित में से कौन सा आउटपुट डिवाइस है?", options: ["कीबोर्ड", "माउस", "मॉनिटर", "स्कैनर"], correctAnswer: 2, explanation: "मॉनिटर एक आउटपुट डिवाइस है जो विजुअल जानकारी प्रदर्शित करता है।" },
+    { id: 5, question: "वेबसाइट एड्रेस में 'www' का पूर्ण रूप क्या है?", options: ["वर्ल्ड वाइड वेब", "वर्ल्ड वाइड वर्क", "वेब वाइड वर्ल्ड", "वाइड वर्ल्ड वेब"], correctAnswer: 0, explanation: "WWW का अर्थ है वर्ल्ड वाइड वेब, जो इंटरलिंक्ड हाइपरटेक्स्ट डॉक्यूमेंट्स की प्रणाली है।" },
+    { id: 6, question: "इंटरनेट ब्राउज़ करने के लिए कौन सा सॉफ्टवेयर उपयोग किया जाता है?", options: ["माइक्रोसॉफ्ट वर्ड", "वेब ब्राउज़र", "कैलकुलेटर", "पेंट"], correctAnswer: 1, explanation: "वेब ब्राउज़र जैसे क्रोम या फायरफॉक्स वेबसाइट्स एक्सेस करने के लिए उपयोग किया जाता है।" },
+    { id: 7, question: "1 KB कितने बाइट्स के बराबर है?", options: ["1000 बाइट्स", "1024 बाइट्स", "100 बाइट्स", "512 बाइट्स"], correctAnswer: 1, explanation: "1 किलोबाइट (KB) बाइनरी कंप्यूटिंग में 1024 बाइट्स के बराबर होता है।" },
+    { id: 8, question: "कर्सर के बाईं ओर के अक्षरों को मिटाने के लिए किस कुंजी का उपयोग किया जाता है?", options: ["डिलीट", "बैकस्पेस", "एंटर", "शिफ्ट"], correctAnswer: 1, explanation: "बैकस्पेस कुंजी कर्सर के बाईं ओर के अक्षरों को मिटाती है।" },
+    { id: 9, question: "MS Excel किस प्रकार का सॉफ्टवेयर है?", options: ["वर्ड प्रोसेसर", "स्प्रेडशीट", "प्रेजेंटेशन", "डेटाबेस"], correctAnswer: 1, explanation: "MS Excel एक स्प्रेडशीट सॉफ्टवेयर है जो गणना और डेटा विश्लेषण के लिए उपयोग किया जाता है।" },
+    { id: 10, question: "कौन सा डिवाइस डेटा को स्थायी रूप से संग्रहीत करता है?", options: ["RAM", "हार्ड डिस्क", "कैश", "रजिस्टर"], correctAnswer: 1, explanation: "हार्ड डिस्क एक स्थायी स्टोरेज डिवाइस है जो पावर ऑफ होने पर भी डेटा रखता है।" }
+  ]
+};
+
+export async function generateCpctQuizQuestions(
+  pdfContent: string,
+  year: string,
+  medium: "Hindi" | "English",
+  numQuestions: number = 10,
+  previousQuestions: string[] = []
+): Promise<Question[]> {
+  let excludeSection = '';
+  if (previousQuestions.length > 0) {
+    excludeSection = `
+
+CRITICAL INSTRUCTION - QUESTION VARIETY:
+The student has already been asked ${previousQuestions.length} questions.
+You MUST generate questions on DIFFERENT topics than these previously asked questions:
+
+${previousQuestions.map((q, i) => `${i + 1}. ${q}`).join('\n')}
+
+RULES FOR NEW QUESTIONS:
+1. Each new question MUST cover a DIFFERENT concept or topic
+2. Do NOT ask about the same topics already covered above
+3. Focus on aspects NOT yet tested`;
+  }
+
+  const languageInstruction = medium === "Hindi" 
+    ? `IMPORTANT: Generate ALL content (questions, options, explanations) in HINDI (Devanagari script). The entire quiz must be in Hindi language.`
+    : `Generate all content in clear, simple English.`;
+
+  const systemPrompt = `You are an expert CPCT (Computer Proficiency Certification Test) exam content creator for Madhya Pradesh, India.
+${languageInstruction}
+
+Generate ${numQuestions} multiple-choice quiz questions for CPCT exam preparation.
+
+You MUST return a JSON object with exactly this structure:
+{
+  "questions": [
+    {
+      "question": "The full question text?",
+      "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
+      "correctAnswer": 0,
+      "explanation": "Why this answer is correct"
+    }
+  ]
+}
+
+RULES:
+- "question" must be a complete question sentence in ${medium}
+- "options" must be an array of exactly 4 answer choices in ${medium}
+- "correctAnswer" must be 0, 1, 2, or 3 (index of correct option)
+- "explanation" must explain why the answer is correct in ${medium}
+- Generate exactly ${numQuestions} questions based on CPCT syllabus concepts
+- Include questions on: Computer basics, MS Office, Internet, Operating Systems, Typing
+- Questions should be similar to actual CPCT exam pattern${excludeSection}`;
+
+  const userPrompt = `Generate ${numQuestions} CPCT exam questions in ${medium} language.
+
+ALL questions, options, and explanations MUST be in ${medium === "Hindi" ? "Hindi (Devanagari script देवनागरी)" : "English"}.
+
+Study Material from CPCT ${year}:
+${pdfContent.substring(0, 12000)}`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.7,
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error("No response from OpenAI");
+    }
+
+    const parsed = JSON.parse(content);
+    
+    let questions: any[];
+    if (Array.isArray(parsed)) {
+      questions = parsed;
+    } else if (parsed.questions && Array.isArray(parsed.questions)) {
+      questions = parsed.questions;
+    } else {
+      const arrayKey = Object.keys(parsed).find(key => Array.isArray(parsed[key]));
+      if (arrayKey) {
+        questions = parsed[arrayKey];
+      } else {
+        throw new Error("Invalid response format from OpenAI");
+      }
+    }
+    
+    if (questions.length === 0) {
+      throw new Error("No questions in OpenAI response");
+    }
+
+    const validQuestions = questions.filter((q: any) => 
+      q.question && 
+      Array.isArray(q.options) && 
+      q.options.length >= 2 &&
+      (q.correctAnswer !== undefined || q.correct_answer !== undefined || q.answer !== undefined)
+    );
+
+    if (validQuestions.length === 0) {
+      throw new Error("OpenAI response missing required question fields");
+    }
+
+    console.log(`Generated ${validQuestions.length} CPCT questions in ${medium}`);
+
+    return validQuestions.map((q: any, index: number) => ({
+      id: index + 1,
+      question: q.question,
+      options: q.options,
+      correctAnswer: q.correctAnswer ?? q.correct_answer ?? q.answer ?? 0,
+      explanation: q.explanation ?? q.reason ?? (medium === "Hindi" ? "इस विषय की समीक्षा करें।" : "Review this topic."),
+    }));
+  } catch (error) {
+    console.error("Error generating CPCT questions with OpenAI, using fallback:", error);
+    const fallback = CPCT_FALLBACK_QUESTIONS[medium] || CPCT_FALLBACK_QUESTIONS.English;
+    
+    const previousSet = new Set(previousQuestions.map(q => q.toLowerCase().trim()));
+    let availableQuestions = fallback.filter(q => 
+      !previousSet.has(q.question.toLowerCase().trim())
+    );
+    
+    if (availableQuestions.length < numQuestions) {
+      availableQuestions = fallback;
+    }
+    
+    return [...availableQuestions].sort(() => Math.random() - 0.5).slice(0, numQuestions);
+  }
+}
+
 export async function generateAnswerFeedback(
   question: string,
   selectedOption: string,

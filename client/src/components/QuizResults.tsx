@@ -23,6 +23,7 @@ interface QuizResultsProps {
   totalQuestions: number;
   onRetakeQuiz: () => void;
   onTryAnotherSubject: () => void;
+  subjectLabel?: string;
 }
 
 export default function QuizResults({ 
@@ -30,6 +31,7 @@ export default function QuizResults({
   totalQuestions, 
   onRetakeQuiz,
   onTryAnotherSubject,
+  subjectLabel = "Choose Different Subject",
 }: QuizResultsProps) {
   const percentage = Math.round((score / totalQuestions) * 100);
 
@@ -129,7 +131,7 @@ export default function QuizResults({
               data-testid="button-another-subject"
             >
               <BookMarked className="w-4 h-4 mr-2" />
-              Choose Different Subject
+              {subjectLabel}
             </Button>
           </div>
         </CardContent>

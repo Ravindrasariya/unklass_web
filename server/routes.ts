@@ -1,8 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertStudentSchema, type Question } from "@shared/schema";
-import { generateQuizQuestions, generateAnswerFeedback } from "./openai";
+import { insertStudentSchema, insertCpctStudentSchema, type Question } from "@shared/schema";
+import { generateQuizQuestions, generateAnswerFeedback, generateCpctQuizQuestions } from "./openai";
 import multer from "multer";
 
 async function parsePdf(buffer: Buffer): Promise<string> {
@@ -514,6 +514,272 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error generating CSV:", error);
       res.status(500).json({ error: "Failed to generate CSV" });
+    }
+  });
+
+  // ============================================
+  // CPCT EXAM PREP ROUTES
+  // ============================================
+
+  // CPCT Student registration
+  app.post("/api/cpct/students/register", async (req, res) => {
+    try {
+      const validatedData = insertCpctStudentSchema.parse(req.body);
+      
+      // Check if student already exists by mobile number
+      const existingStudent = await storage.getCpctStudentByMobile(validatedData.mobileNumber);
+      if (existingStudent) {
+        return res.json(existingStudent);
+      }
+      
+      const student = await storage.createCpctStudent(validatedData);
+      res.json(student);
+    } catch (error: unknown) {
+      console.error("Error registering CPCT student:", error);
+      const message = error instanceof Error ? error.message : "Failed to register student";
+      res.status(400).json({ error: message });
+    }
+  });
+
+  // CPCT Student login
+  app.post("/api/cpct/students/login", async (req, res) => {
+    try {
+      const { name, mobileNumber } = req.body;
+      
+      if (!mobileNumber) {
+        return res.status(400).json({ error: "Mobile number is required" });
+      }
+      
+      const student = await storage.getCpctStudentByMobile(mobileNumber);
+      if (!student) {
+        return res.status(404).json({ error: "Student not found. Please register first." });
+      }
+      
+      // Optionally verify name matches
+      if (name && student.name.toLowerCase() !== name.toLowerCase()) {
+        return res.status(400).json({ error: "Name does not match registered details" });
+      }
+      
+      res.json(student);
+    } catch (error) {
+      console.error("Error logging in CPCT student:", error);
+      res.status(500).json({ error: "Failed to login" });
+    }
+  });
+
+  // Get CPCT student by ID
+  app.get("/api/cpct/students/:id", async (req, res) => {
+    try {
+      const student = await storage.getCpctStudent(parseInt(req.params.id));
+      if (!student) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+      res.json(student);
+    } catch (error) {
+      console.error("Error fetching CPCT student:", error);
+      res.status(500).json({ error: "Failed to fetch student" });
+    }
+  });
+
+  // Get available CPCT years (PDFs named CPCT_Year.pdf)
+  app.get("/api/cpct/available-years", async (req, res) => {
+    try {
+      const allPdfs = await storage.getAllPdfs();
+      const cpctYears = allPdfs
+        .filter(pdf => pdf.filename.startsWith("CPCT_") && pdf.filename.endsWith(".pdf"))
+        .map(pdf => {
+          const match = pdf.filename.match(/CPCT_(\d+)\.pdf/);
+          return match ? match[1] : null;
+        })
+        .filter((year): year is string => year !== null);
+      
+      res.json({ years: cpctYears });
+    } catch (error) {
+      console.error("Error fetching available CPCT years:", error);
+      res.status(500).json({ error: "Failed to fetch available years" });
+    }
+  });
+
+  // Generate CPCT quiz questions
+  app.post("/api/cpct/quiz/generate", async (req, res) => {
+    try {
+      const { studentId, year } = req.body;
+
+      if (!studentId || !year) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      // Verify CPCT student exists
+      const student = await storage.getCpctStudent(studentId);
+      if (!student) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+
+      // Find the CPCT PDF for this year
+      const pdf = await storage.getCpctPdf(year);
+      
+      // Get previous questions to avoid duplicates
+      const previousQuestions = await storage.getCpctStudentPreviousQuestions(studentId);
+      console.log(`CPCT Student ${studentId} has ${previousQuestions.length} previous questions`);
+      
+      let questions: Question[];
+      const medium = student.medium as "Hindi" | "English";
+      
+      if (pdf) {
+        // Generate questions from PDF content in student's selected medium
+        questions = await generateCpctQuizQuestions(
+          pdf.content,
+          year,
+          medium,
+          10,
+          previousQuestions
+        );
+      } else {
+        // Generate general CPCT questions (fallback when no PDF uploaded)
+        questions = await generateCpctQuizQuestions(
+          `General CPCT exam curriculum for computer proficiency certification in Madhya Pradesh, India.`,
+          year,
+          medium,
+          10,
+          previousQuestions
+        );
+      }
+
+      // Create CPCT quiz session
+      const session = await storage.createCpctQuizSession({
+        studentId,
+        pdfId: pdf?.id || null,
+        year,
+        medium: student.medium,
+        questions,
+        totalQuestions: 10,
+      });
+
+      res.json({
+        sessionId: session.id,
+        questions,
+      });
+    } catch (error: unknown) {
+      console.error("Error generating CPCT quiz:", error);
+      const message = error instanceof Error ? error.message : "Failed to generate quiz";
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // Submit CPCT quiz results
+  app.post("/api/cpct/quiz/submit", async (req, res) => {
+    try {
+      const { sessionId, answers, score } = req.body;
+
+      if (!sessionId || answers === undefined || score === undefined) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      const session = await storage.updateCpctQuizSession(sessionId, {
+        answers,
+        score,
+        completedAt: new Date(),
+      });
+
+      if (!session) {
+        return res.status(404).json({ error: "Quiz session not found" });
+      }
+
+      res.json({
+        message: "Quiz completed",
+        score,
+        totalQuestions: session.totalQuestions,
+      });
+    } catch (error: unknown) {
+      console.error("Error submitting CPCT quiz:", error);
+      const message = error instanceof Error ? error.message : "Failed to submit quiz";
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // Get CPCT student's quiz history
+  app.get("/api/cpct/students/:studentId/quiz-history", async (req, res) => {
+    try {
+      const studentId = parseInt(req.params.studentId);
+      const sessions = await storage.getCpctStudentQuizSessions(studentId);
+      
+      res.json(sessions.map(s => ({
+        id: s.id,
+        year: s.year,
+        medium: s.medium,
+        score: s.score,
+        totalQuestions: s.totalQuestions,
+        completedAt: s.completedAt,
+      })));
+    } catch (error) {
+      console.error("Error fetching CPCT quiz history:", error);
+      res.status(500).json({ error: "Failed to fetch quiz history" });
+    }
+  });
+
+  // Get detailed CPCT quiz session for review
+  app.get("/api/cpct/quiz/:sessionId/review", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      const session = await storage.getCpctQuizSession(sessionId);
+      
+      if (!session) {
+        return res.status(404).json({ error: "Quiz session not found" });
+      }
+      
+      res.json({
+        id: session.id,
+        year: session.year,
+        medium: session.medium,
+        score: session.score,
+        totalQuestions: session.totalQuestions,
+        questions: session.questions,
+        answers: session.answers,
+        completedAt: session.completedAt,
+      });
+    } catch (error) {
+      console.error("Error fetching CPCT quiz for review:", error);
+      res.status(500).json({ error: "Failed to fetch quiz details" });
+    }
+  });
+
+  // Admin: Get all CPCT students with their progress
+  app.get("/api/admin/cpct-students", async (req, res) => {
+    try {
+      const allStudents = await storage.getAllCpctStudents();
+      
+      const studentsWithProgress = await Promise.all(
+        allStudents.map(async (student) => {
+          const sessions = await storage.getCpctStudentQuizSessions(student.id);
+          const completedSessions = sessions.filter(s => s.completedAt);
+          const totalQuizzes = completedSessions.length;
+          const totalScore = completedSessions.reduce((sum, s) => sum + (s.score || 0), 0);
+          const totalQuestions = completedSessions.reduce((sum, s) => sum + (s.totalQuestions || 10), 0);
+          const averageScore = totalQuizzes > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
+          
+          return {
+            id: student.id,
+            name: student.name,
+            medium: student.medium,
+            location: student.location,
+            mobileNumber: student.mobileNumber,
+            totalQuizzes,
+            averageScore,
+            sessions: completedSessions.map(s => ({
+              id: s.id,
+              year: s.year,
+              score: s.score,
+              totalQuestions: s.totalQuestions,
+              completedAt: s.completedAt,
+            })),
+          };
+        })
+      );
+      
+      res.json(studentsWithProgress);
+    } catch (error) {
+      console.error("Error fetching CPCT students:", error);
+      res.status(500).json({ error: "Failed to fetch students" });
     }
   });
 

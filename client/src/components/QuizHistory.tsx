@@ -7,9 +7,11 @@ import { type Question } from "./QuizQuestion";
 
 interface QuizSession {
   id: number;
-  subject: string;
-  grade: string;
-  board: string;
+  subject?: string;
+  grade?: string;
+  board?: string;
+  year?: string;
+  medium?: string;
   score: number | null;
   totalQuestions: number;
   completedAt: string | null;
@@ -23,9 +25,11 @@ interface QuizAnswer {
 
 interface QuizReview {
   id: number;
-  subject: string;
-  grade: string;
-  board: string;
+  subject?: string;
+  grade?: string;
+  board?: string;
+  year?: string;
+  medium?: string;
   score: number;
   totalQuestions: number;
   questions: Question[];
@@ -36,6 +40,7 @@ interface QuizReview {
 interface QuizHistoryProps {
   studentId: number;
   onBack: () => void;
+  isCpct?: boolean;
 }
 
 function formatChemicalFormulas(text: string): string {
@@ -47,14 +52,18 @@ function formatChemicalFormulas(text: string): string {
     .replace(/\^(\+|\-)/g, (_, sign) => sign === "+" ? "⁺" : "⁻");
 }
 
-export default function QuizHistory({ studentId, onBack }: QuizHistoryProps) {
+export default function QuizHistory({ studentId, onBack, isCpct = false }: QuizHistoryProps) {
   const [sessions, setSessions] = useState<QuizSession[]>([]);
   const [selectedSession, setSelectedSession] = useState<QuizReview | null>(null);
   const [loading, setLoading] = useState(true);
   const [reviewLoading, setReviewLoading] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/students/${studentId}/quiz-history`)
+    const endpoint = isCpct 
+      ? `/api/cpct/students/${studentId}/quiz-history`
+      : `/api/students/${studentId}/quiz-history`;
+    
+    fetch(endpoint)
       .then(res => res.json())
       .then(data => {
         setSessions(data);
@@ -64,12 +73,15 @@ export default function QuizHistory({ studentId, onBack }: QuizHistoryProps) {
         console.error("Failed to fetch quiz history:", err);
         setLoading(false);
       });
-  }, [studentId]);
+  }, [studentId, isCpct]);
 
   const handleReview = async (sessionId: number) => {
     setReviewLoading(true);
     try {
-      const res = await fetch(`/api/quiz/${sessionId}/review`);
+      const endpoint = isCpct 
+        ? `/api/cpct/quiz/${sessionId}/review`
+        : `/api/quiz/${sessionId}/review`;
+      const res = await fetch(endpoint);
       const data = await res.json();
       setSelectedSession(data);
     } catch (err) {
@@ -103,14 +115,21 @@ export default function QuizHistory({ studentId, onBack }: QuizHistoryProps) {
           <Card className="mb-6">
             <CardHeader>
               <div className="flex items-center justify-between gap-4 flex-wrap">
-                <CardTitle className="text-xl">{selectedSession.subject} - Review</CardTitle>
+                <CardTitle className="text-xl">
+                  {isCpct 
+                    ? `CPCT ${selectedSession.year} - Review`
+                    : `${selectedSession.subject} - Review`
+                  }
+                </CardTitle>
                 <Badge variant={selectedSession.score >= 7 ? "default" : "secondary"}>
                   Score: {selectedSession.score}/{selectedSession.totalQuestions}
                 </Badge>
               </div>
               <p className="text-sm text-muted-foreground">
-                {selectedSession.grade} | {selectedSession.board} | 
-                Completed: {new Date(selectedSession.completedAt).toLocaleDateString()}
+                {isCpct 
+                  ? `Medium: ${selectedSession.medium} | Completed: ${new Date(selectedSession.completedAt).toLocaleDateString()}`
+                  : `${selectedSession.grade} | ${selectedSession.board} | Completed: ${new Date(selectedSession.completedAt).toLocaleDateString()}`
+                }
               </p>
             </CardHeader>
           </Card>
@@ -206,14 +225,14 @@ export default function QuizHistory({ studentId, onBack }: QuizHistoryProps) {
           data-testid="button-back-to-subjects"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Subjects
+          {isCpct ? "Back to CPCT" : "Back to Subjects"}
         </Button>
 
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BookOpen className="w-5 h-5" />
-              Quiz History
+              {isCpct ? "CPCT Quiz History" : "Quiz History"}
             </CardTitle>
             <p className="text-sm text-muted-foreground">
               Review your past quizzes to revise questions
@@ -235,9 +254,14 @@ export default function QuizHistory({ studentId, onBack }: QuizHistoryProps) {
                     data-testid={`card-quiz-session-${session.id}`}
                   >
                     <div className="flex-1">
-                      <p className="font-medium">{session.subject}</p>
+                      <p className="font-medium">
+                        {isCpct ? `CPCT ${session.year}` : session.subject}
+                      </p>
                       <p className="text-sm text-muted-foreground">
-                        {session.grade} | {session.board}
+                        {isCpct 
+                          ? `Medium: ${session.medium}`
+                          : `${session.grade} | ${session.board}`
+                        }
                         {session.completedAt && (
                           <span> | {new Date(session.completedAt).toLocaleDateString()}</span>
                         )}
