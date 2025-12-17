@@ -57,18 +57,20 @@ export async function generateQuizQuestions(
   if (previousQuestions.length > 0) {
     excludeSection = `
 
-CRITICAL INSTRUCTION - QUESTION VARIETY:
+CRITICAL INSTRUCTION - QUESTION ROTATION:
 The student has already been asked ${previousQuestions.length} questions on this subject.
-You MUST generate questions on DIFFERENT topics/concepts than these previously asked questions:
 
+Previously asked questions:
 ${previousQuestions.map((q, i) => `${i + 1}. ${q}`).join('\n')}
 
-RULES FOR NEW QUESTIONS:
-1. Each new question MUST cover a DIFFERENT concept or topic from the study material
-2. Do NOT ask about the same formulas, definitions, or facts already covered above
-3. If most topics are covered, go DEEPER into subtopics or ask application-based questions
-4. Focus on aspects NOT yet tested: different chapters, different types of problems, different difficulty levels
-5. Only when ALL possible topics from the material are exhausted, you may revisit topics with significantly different question formats`;
+QUESTION ROTATION RULES:
+1. First priority: Generate NEW questions on topics/concepts NOT yet covered from the study material
+2. Cover ALL possible topics from the material before repeating any question
+3. If ALL topics from the material have been covered at least once, you MAY repeat questions but:
+   - Rephrase questions differently while testing the same concept
+   - Ensure equal distribution - repeat questions that have been asked fewer times first
+4. Track coverage: Aim to test every concept, formula, diagram, and fact from the material at least once before cycling back
+5. When repeating, vary the question format (numerical vs conceptual vs application-based)`;
   }
 
   const systemPrompt = `You are an expert educational content creator. Generate ${numQuestions} multiple-choice quiz questions for ${grade} grade ${board} board students in India.
@@ -241,16 +243,20 @@ export async function generateCpctQuizQuestions(
   if (previousQuestions.length > 0) {
     excludeSection = `
 
-CRITICAL INSTRUCTION - QUESTION VARIETY:
+CRITICAL INSTRUCTION - QUESTION ROTATION:
 The student has already been asked ${previousQuestions.length} questions.
-You MUST generate questions on DIFFERENT topics than these previously asked questions:
 
+Previously asked questions:
 ${previousQuestions.map((q, i) => `${i + 1}. ${q}`).join('\n')}
 
-RULES FOR NEW QUESTIONS:
-1. Each new question MUST cover a DIFFERENT concept or topic
-2. Do NOT ask about the same topics already covered above
-3. Focus on aspects NOT yet tested`;
+QUESTION ROTATION RULES:
+1. First priority: Generate NEW questions on topics/concepts NOT yet covered from the study material
+2. Cover ALL possible topics from the material before repeating any question
+3. If ALL topics from the material have been covered at least once, you MAY repeat questions but:
+   - Rephrase questions differently while testing the same concept
+   - Ensure equal distribution - repeat questions that have been asked fewer times first
+4. Track coverage: Aim to test every concept from the CPCT syllabus at least once before cycling back
+5. When repeating, vary the question format to test the same concept differently`;
   }
 
   const languageInstruction = medium === "Hindi" 

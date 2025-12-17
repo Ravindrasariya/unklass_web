@@ -56,9 +56,10 @@ Preferred communication style: Simple, everyday language.
    - Otherwise: "Keep Learning!"
 
 ### Question Rotation Rules (IMPORTANT)
-- **All questions must be covered at least once before repeating**: The system tracks all previously asked questions per student and ensures new questions are generated each time until all unique questions have been shown.
-- **Equal distribution**: Each question should come an equal number of times across all quiz attempts.
-- **Implementation**: The backend stores all previous questions in quiz_sessions and passes them to the OpenAI prompt to avoid duplicates. The AI is instructed to generate completely new questions that are different from the previous ones.
+- **All questions must be covered at least once before repeating**: The system tracks all previously asked questions per student. New questions are generated until all topics/concepts from the PDF are covered.
+- **Questions CAN repeat, but only after all topics are covered**: Once all possible topics from the study material have been tested at least once, questions may repeat with rephrased wording.
+- **Equal distribution**: Each question/topic should come an equal number of times across all quiz attempts.
+- **Implementation**: The backend stores all previous questions in quiz_sessions and passes them to the OpenAI prompt. The AI is instructed to first cover new topics, then allow repetition with varied question formats once all topics are exhausted.
 
 ### CPCT Exam Prep
 - **Separate student table**: `cpctStudents` with fields (name, medium, location, mobileNumber)
