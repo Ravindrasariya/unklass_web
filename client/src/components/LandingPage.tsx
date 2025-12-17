@@ -50,7 +50,7 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick }: LandingPa
           <div className="flex flex-col items-start">
             <img 
               src={logoImage} 
-              alt="Unklass" 
+              alt="UNKLASS" 
               className="h-12 md:h-14"
               data-testid="img-logo-header"
             />
@@ -214,7 +214,7 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick }: LandingPa
             <div className="flex flex-col items-center md:items-start">
               <img 
                 src={logoImage} 
-                alt="Unklass" 
+                alt="UNKLASS" 
                 className="h-10 invert"
                 data-testid="img-logo-footer"
               />

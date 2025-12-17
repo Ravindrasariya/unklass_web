@@ -42,7 +42,7 @@ export default function ContactPage() {
             <Link href="/">
               <img 
                 src={logoImage} 
-                alt="Unklass" 
+                alt="UNKLASS" 
                 className="h-12 md:h-14 cursor-pointer"
                 data-testid="img-logo-header"
               />
@@ -194,7 +194,7 @@ export default function ContactPage() {
           <div className="max-w-4xl mx-auto px-4 text-center">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Partner With Us</h2>
             <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
-              Are you a school, learning center, or community organization? Partner with UnKlass to bring quality education to your students.
+              Are you a school, learning center, or community organization? Partner with UNKLASS to bring quality education to your students.
             </p>
             <Link href="/about">
               <Button variant="outline" className="border-sky-500 text-sky-600 hover:bg-sky-50" data-testid="button-learn-more">
@@ -211,7 +211,7 @@ export default function ContactPage() {
             <div className="flex flex-col items-center md:items-start">
               <img 
                 src={logoImage} 
-                alt="Unklass" 
+                alt="UNKLASS" 
                 className="h-10 invert"
                 data-testid="img-logo-footer"
               />

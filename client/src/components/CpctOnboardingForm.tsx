@@ -70,7 +70,7 @@ export default function CpctOnboardingForm({ onSubmit, onLogin, onBack }: CpctOn
             <div className="flex flex-col items-center gap-1 mb-2">
               <img 
                 src={logoImage} 
-                alt="Unklass" 
+                alt="UNKLASS" 
                 className="h-10 dark:invert" 
                 data-testid="img-cpct-logo"
               />
@@ -180,7 +180,7 @@ export default function CpctOnboardingForm({ onSubmit, onLogin, onBack }: CpctOn
           <div className="flex flex-col items-center gap-1 mb-2">
             <img 
               src={logoImage} 
-              alt="Unklass" 
+              alt="UNKLASS" 
               className="h-10 dark:invert" 
               data-testid="img-cpct-logo"
             />

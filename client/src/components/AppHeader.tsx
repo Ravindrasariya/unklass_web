@@ -23,7 +23,7 @@ export default function AppHeader({
         >
           <img 
             src={logoImage} 
-            alt="Unklass" 
+            alt="UNKLASS" 
             className="h-8 dark:invert" 
             data-testid="img-logo"
           />

@@ -71,7 +71,7 @@ export default function StudentOnboardingForm({ onSubmit, onLogin }: StudentOnbo
             <div className="flex flex-col items-center gap-1 mb-2">
               <img 
                 src={logoImage} 
-                alt="Unklass" 
+                alt="UNKLASS" 
                 className="h-10 dark:invert" 
                 data-testid="img-logo"
               />
@@ -172,7 +172,7 @@ export default function StudentOnboardingForm({ onSubmit, onLogin }: StudentOnbo
           <div className="flex flex-col items-center gap-1 mb-2">
             <img 
               src={logoImage} 
-              alt="Unklass" 
+              alt="UNKLASS" 
               className="h-10 dark:invert" 
               data-testid="img-logo"
             />

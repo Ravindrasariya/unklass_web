@@ -13,7 +13,7 @@ export default function AboutPage() {
             <Link href="/">
               <img 
                 src={logoImage} 
-                alt="Unklass" 
+                alt="UNKLASS" 
                 className="h-12 md:h-14 cursor-pointer"
                 data-testid="img-logo-header"
               />
@@ -56,10 +56,10 @@ export default function AboutPage() {
           <div className="max-w-4xl mx-auto px-4">
             <div className="prose prose-lg max-w-none">
               <p className="text-gray-700 text-lg leading-relaxed mb-6">
-                UnKlass is an education initiative focused on bringing quality, structured, and affordable learning to students in rural and semi-urban India. We believe that a child's learning outcomes should not be determined by their geography.
+                UNKLASS is an education initiative focused on bringing quality, structured, and affordable learning to students in rural and semi-urban India. We believe that a child's learning outcomes should not be determined by their geography.
               </p>
               <p className="text-gray-700 text-lg leading-relaxed">
-                Across rural India, millions of students face a common challenge—lack of subject-expert teachers, limited academic support, and minimal exposure to competitive exam preparation. UnKlass was created to solve this problem using technology, strong academic design, and local learning infrastructure.
+                Across rural India, millions of students face a common challenge—lack of subject-expert teachers, limited academic support, and minimal exposure to competitive exam preparation. UNKLASS was created to solve this problem using technology, strong academic design, and local learning infrastructure.
               </p>
             </div>
           </div>
@@ -71,7 +71,7 @@ export default function AboutPage() {
               What We Do
             </h2>
             <p className="text-gray-700 text-lg mb-8 text-center">
-              UnKlass partners with schools, communities, and learning centers to deliver:
+              UNKLASS partners with schools, communities, and learning centers to deliver:
             </p>
             
             <div className="grid md:grid-cols-2 gap-6">
@@ -197,7 +197,7 @@ export default function AboutPage() {
         <section className="py-12 bg-sky-500 text-white">
           <div className="max-w-4xl mx-auto px-4 text-center">
             <h2 className="text-2xl font-bold mb-4">Ready to Start Learning?</h2>
-            <p className="mb-6 text-white/90">Join thousands of students already learning with UnKlass</p>
+            <p className="mb-6 text-white/90">Join thousands of students already learning with UNKLASS</p>
             <Link href="/">
               <Button className="bg-white text-sky-600 hover:bg-gray-100" data-testid="button-start-learning">
                 Start Learning Now
@@ -213,7 +213,7 @@ export default function AboutPage() {
             <div className="flex flex-col items-center md:items-start">
               <img 
                 src={logoImage} 
-                alt="Unklass" 
+                alt="UNKLASS" 
                 className="h-10 invert"
                 data-testid="img-logo-footer"
               />
