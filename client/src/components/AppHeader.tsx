@@ -6,15 +6,21 @@ interface AppHeaderProps {
   showProgress?: boolean;
   currentQuestion?: number;
   totalQuestions?: number;
+  onLogoClick?: () => void;
 }
 
 export default function AppHeader({ 
   studentName,
+  onLogoClick,
 }: AppHeaderProps) {
   return (
     <header className="sticky top-0 z-50 bg-background border-b">
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
+        <div 
+          className="flex items-center gap-2 cursor-pointer" 
+          onClick={onLogoClick}
+          data-testid="header-logo-link"
+        >
           <img 
             src={logoImage} 
             alt="Unklass" 

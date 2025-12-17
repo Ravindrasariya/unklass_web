@@ -4,6 +4,7 @@ import { queryClient, apiRequest } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import LandingPage from "@/components/LandingPage";
 import StudentOnboardingForm, { type StudentData } from "@/components/StudentOnboardingForm";
 import QuizQuestion, { type Question } from "@/components/QuizQuestion";
 import QuizResults from "@/components/QuizResults";
@@ -18,7 +19,7 @@ import { Loader2 } from "lucide-react";
 import logoIcon from "@assets/Unklass_-_1_1765392666171.png";
 import { useToast } from "@/hooks/use-toast";
 
-type AppState = "onboarding" | "ready" | "loading" | "quiz" | "results" | "history";
+type AppState = "landing" | "onboarding" | "ready" | "loading" | "quiz" | "results" | "history";
 
 interface QuizAnswer {
   questionId: number;
@@ -47,7 +48,7 @@ const SUBJECTS = [
 ] as const;
 
 function App() {
-  const [appState, setAppState] = useState<AppState>("onboarding");
+  const [appState, setAppState] = useState<AppState>("landing");
   const [studentData, setStudentData] = useState<RegisteredStudent | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<string>("");
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -225,8 +226,15 @@ function App() {
           <Route path="/admin" component={AdminPage} />
           <Route path="/">
             <div className="min-h-screen bg-background">
-              {appState !== "onboarding" && (
-                <AppHeader studentName={studentData?.name} />
+              {appState !== "onboarding" && appState !== "landing" && (
+                <AppHeader studentName={studentData?.name} onLogoClick={() => setAppState("landing")} />
+              )}
+
+              {appState === "landing" && (
+                <LandingPage 
+                  onBoardExamClick={() => setAppState("onboarding")}
+                  onCPCTClick={() => {}}
+                />
               )}
 
               {appState === "onboarding" && (
