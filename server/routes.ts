@@ -136,15 +136,18 @@ export async function registerRoutes(
       }
 
       const filename = req.file.originalname;
-      // Parse filename: {grade}_{board}_{subject}.pdf
-      const match = filename.match(/^(.+)_(.+)_(.+)\.pdf$/i);
-      if (!match) {
+      
+      // Check for CPCT format: CPCT_Year.pdf (e.g., CPCT_2024.pdf)
+      const cpctMatch = filename.match(/^CPCT_(\d{4})\.pdf$/i);
+      
+      // Check for Board Exam format: {grade}_{board}_{subject}.pdf
+      const boardMatch = filename.match(/^(.+)_(.+)_(.+)\.pdf$/i);
+      
+      if (!cpctMatch && !boardMatch) {
         return res.status(400).json({ 
-          error: "Invalid filename format. Expected: {grade}_{board}_{subject}.pdf (e.g., 10th_MP_Mathematics.pdf)" 
+          error: "Invalid filename format. Expected: grade_board_subject.pdf (Board Exam) or CPCT_Year.pdf (CPCT)" 
         });
       }
-
-      const [, grade, board, subject] = match;
 
       // Check if PDF already exists
       const existingPdf = await storage.getPdfByFilename(filename);
@@ -159,13 +162,30 @@ export async function registerRoutes(
         return res.status(400).json({ error: "PDF appears to be empty or contains too little text" });
       }
 
-      const pdf = await storage.createPdf({
-        filename,
-        grade,
-        board: board.toUpperCase(),
-        subject,
-        content,
-      });
+      let pdfData: { filename: string; grade: string; board: string; subject: string; content: string };
+      
+      if (cpctMatch) {
+        // CPCT format - use special values
+        pdfData = {
+          filename,
+          grade: "CPCT",
+          board: "CPCT",
+          subject: `CPCT ${cpctMatch[1]}`,
+          content,
+        };
+      } else {
+        // Board Exam format
+        const [, grade, board, subject] = boardMatch!;
+        pdfData = {
+          filename,
+          grade,
+          board: board.toUpperCase(),
+          subject,
+          content,
+        };
+      }
+
+      const pdf = await storage.createPdf(pdfData);
 
       res.json({ 
         message: "PDF uploaded successfully",

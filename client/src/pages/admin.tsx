@@ -232,12 +232,19 @@ export default function AdminPage() {
   };
 
   const validateFilename = (filename: string): { isValid: boolean; error?: string } => {
-    const match = filename.match(/^(.+)_(.+)_(.+)\.pdf$/i);
-    if (!match) {
-      return { isValid: false, error: "Format must be: grade_board_subject.pdf" };
+    // Check for CPCT format: CPCT_Year.pdf (e.g., CPCT_2024.pdf)
+    const cpctMatch = filename.match(/^CPCT_(\d{4})\.pdf$/i);
+    if (cpctMatch) {
+      return { isValid: true };
     }
     
-    const [, grade, board, subject] = match;
+    // Check for Board Exam format: grade_board_subject.pdf
+    const boardMatch = filename.match(/^(.+)_(.+)_(.+)\.pdf$/i);
+    if (!boardMatch) {
+      return { isValid: false, error: "Format must be: grade_board_subject.pdf (Board Exam) or CPCT_Year.pdf (CPCT)" };
+    }
+    
+    const [, grade, board, subject] = boardMatch;
     
     if (!VALID_GRADES.includes(grade)) {
       return { isValid: false, error: `Invalid grade "${grade}". Use: ${VALID_GRADES.join(", ")}` };
@@ -330,9 +337,11 @@ export default function AdminPage() {
               Upload PDF
             </CardTitle>
             <CardDescription>
-              Upload PDF files with the naming format: <code className="bg-muted px-1 py-0.5 rounded text-sm">grade_board_subject.pdf</code>
+              Upload PDF files with one of these naming formats:
               <br />
-              Examples: <code className="bg-muted px-1 py-0.5 rounded text-sm">10th_MP_Mathematics.pdf</code>, <code className="bg-muted px-1 py-0.5 rounded text-sm">12th_CBSE_Physics.pdf</code>
+              <strong>Board Exam:</strong> <code className="bg-muted px-1 py-0.5 rounded text-sm">grade_board_subject.pdf</code> (e.g., <code className="bg-muted px-1 py-0.5 rounded text-sm">10th_MP_Science.pdf</code>)
+              <br />
+              <strong>CPCT:</strong> <code className="bg-muted px-1 py-0.5 rounded text-sm">CPCT_Year.pdf</code> (e.g., <code className="bg-muted px-1 py-0.5 rounded text-sm">CPCT_2024.pdf</code>)
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
