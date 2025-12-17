@@ -7,7 +7,9 @@ import multer from "multer";
 
 async function parsePdf(buffer: Buffer): Promise<string> {
   // Use dynamic import to handle both ESM and bundled CJS environments
-  const pdfParseModule = await import("pdf-parse");
+  // pdf-parse has a bug where it tries to load a test file on import
+  // We work around this by importing the internal module directly
+  const pdfParseModule = await import("pdf-parse/lib/pdf-parse.js");
   const pdfParse = pdfParseModule.default ?? pdfParseModule;
   const data = await pdfParse(buffer);
   return data.text;
