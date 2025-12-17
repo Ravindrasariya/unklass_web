@@ -51,10 +51,10 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick }: LandingPa
             <img 
               src={logoImage} 
               alt="UNKLASS" 
-              className="h-10 sm:h-12 md:h-14 w-auto object-contain"
+              className="h-8 sm:h-10 md:h-12 w-auto object-contain"
               data-testid="img-logo-header"
             />
-            <span className="text-[10px] sm:text-xs md:text-sm text-gray-600 tracking-tight mt-1 pl-1">Learning Beyond Classroom</span>
+            <span className="text-[9px] sm:text-[10px] md:text-xs text-gray-600 tracking-tight mt-1 pl-1">Learning Beyond Classroom</span>
           </div>
           <nav className="flex items-center gap-1 sm:gap-2 md:gap-4 flex-shrink-0">
             <Link href="/">
@@ -64,12 +64,12 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick }: LandingPa
             </Link>
             <Link href="/about">
               <Button variant="ghost" size="sm" className="text-gray-700 font-medium text-xs sm:text-sm px-2 sm:px-3" data-testid="nav-about">
-                About
+                About Us
               </Button>
             </Link>
             <Link href="/contact">
               <Button variant="ghost" size="sm" className="text-gray-700 font-medium text-xs sm:text-sm px-2 sm:px-3" data-testid="nav-contact">
-                Contact
+                Contact Us
               </Button>
             </Link>
           </nav>
