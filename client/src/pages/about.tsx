@@ -194,6 +194,22 @@ export default function AboutPage() {
           </div>
         </section>
 
+        <section className="py-12 md:py-16 bg-gray-50">
+          <div className="max-w-4xl mx-auto px-4">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-8 text-center">
+              Our Roots & Belief
+            </h2>
+            <div className="prose prose-lg max-w-none text-center">
+              <p className="text-gray-700 text-lg leading-relaxed mb-6">
+                UNKLASS is built by a team that comes from rural backgrounds and understands the challenges at the grassroots level. This lived experience shapes our solutions, ensuring they are practical, inclusive, and grounded in reality.
+              </p>
+              <p className="text-gray-700 text-lg leading-relaxed font-medium">
+                We don't just use technology for teaching—we use it to level the playing field.
+              </p>
+            </div>
+          </div>
+        </section>
+
         <section className="py-12 bg-sky-500 text-white">
           <div className="max-w-4xl mx-auto px-4 text-center">
             <h2 className="text-2xl font-bold mb-4">Ready to Start Learning?</h2>
