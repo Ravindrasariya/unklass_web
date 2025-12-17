@@ -278,9 +278,15 @@ export default function AboutPage() {
             </nav>
           </div>
           
-          <div className="border-t border-gray-800 mt-6 pt-6 text-center">
-            <p className="text-gray-500 text-sm">
-              Empowering students across India with quality education
+          <div className="border-t border-gray-800 mt-6 pt-6 text-center space-y-2">
+            <p className="text-gray-400 text-sm font-medium">
+              Vegaklass Learning Private Limited
+            </p>
+            <p className="text-gray-500 text-xs max-w-md mx-auto">
+              Unit 101, Oxford Towers, 139, HAL Old Airport Rd, Kodihalli, Bengaluru, Karnataka 560008
+            </p>
+            <p className="text-gray-500 text-xs">
+              © 2025 Vegaklass Learning Private Limited. All rights reserved.
             </p>
           </div>
         </div>
