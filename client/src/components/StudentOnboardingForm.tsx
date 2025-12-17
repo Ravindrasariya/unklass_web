@@ -19,6 +19,7 @@ const studentSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   grade: z.string().min(1, "Please select your grade"),
   board: z.string().min(1, "Please select your board"),
+  medium: z.string().min(1, "Please select your medium"),
   location: z.string().min(2, "Location must be at least 2 characters"),
   mobile: z.string().regex(/^[0-9]{10}$/, "Please enter a valid 10-digit mobile number"),
 });
@@ -49,6 +50,7 @@ export default function StudentOnboardingForm({ onSubmit, onLogin }: StudentOnbo
       name: "",
       grade: "",
       board: "",
+      medium: "",
       location: "",
       mobile: "",
     },
@@ -243,6 +245,28 @@ export default function StudentOnboardingForm({ onSubmit, onLogin }: StudentOnbo
                       <SelectContent>
                         <SelectItem value="MP">MP Board</SelectItem>
                         <SelectItem value="CBSE">CBSE</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="medium"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Medium</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-medium">
+                          <SelectValue placeholder="Select your medium" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Hindi">Hindi</SelectItem>
+                        <SelectItem value="English">English</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

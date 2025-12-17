@@ -9,6 +9,7 @@ export const students = pgTable("students", {
   name: text("name").notNull(),
   grade: varchar("grade", { length: 10 }).notNull(), // 8th, 10th, 12th
   board: varchar("board", { length: 10 }).notNull(), // MP, CBSE
+  medium: varchar("medium", { length: 10 }).notNull().default("English"), // Hindi, English
   location: text("location").notNull(),
   mobileNumber: varchar("mobile_number", { length: 15 }).notNull(),
 });

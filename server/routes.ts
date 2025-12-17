@@ -273,7 +273,7 @@ export async function registerRoutes(
   // Generate quiz questions
   app.post("/api/quiz/generate", async (req, res) => {
     try {
-      const { studentId, grade, board, subject } = req.body;
+      const { studentId, grade, board, subject, medium } = req.body;
 
       if (!studentId || !grade || !board || !subject) {
         return res.status(400).json({ error: "Missing required fields" });
@@ -285,12 +285,15 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Student not found" });
       }
 
+      // Use student's medium preference or default to English
+      const studentMedium = medium || student.medium || "English";
+
       // Find the PDF for this grade/board/subject
       const pdf = await storage.getPdfByGradeBoardSubject(grade, board.toUpperCase(), subject);
       
       // Get previous questions to avoid duplicates
       const previousQuestions = await storage.getStudentPreviousQuestions(studentId, subject);
-      console.log(`Student ${studentId} has ${previousQuestions.length} previous questions for ${subject}`);
+      console.log(`Student ${studentId} has ${previousQuestions.length} previous questions for ${subject} in ${studentMedium} medium`);
       
       let questions: Question[];
       
@@ -302,7 +305,8 @@ export async function registerRoutes(
           grade,
           board,
           10,
-          previousQuestions
+          previousQuestions,
+          studentMedium
         );
       } else {
         // Generate general questions for the subject (fallback when no PDF uploaded)
@@ -312,7 +316,8 @@ export async function registerRoutes(
           grade,
           board,
           10,
-          previousQuestions
+          previousQuestions,
+          studentMedium
         );
       }
 

@@ -51,7 +51,8 @@ export async function generateQuizQuestions(
   grade: string,
   board: string,
   numQuestions: number = 10,
-  previousQuestions: string[] = []
+  previousQuestions: string[] = [],
+  medium: string = "English"
 ): Promise<Question[]> {
   let excludeSection = '';
   if (previousQuestions.length > 0) {
@@ -73,7 +74,13 @@ QUESTION ROTATION RULES:
 5. When repeating, vary the question format (numerical vs conceptual vs application-based)`;
   }
 
+  const languageInstruction = medium === "Hindi" 
+    ? `IMPORTANT LANGUAGE INSTRUCTION: Generate ALL content in Hindi (Devanagari script). The questions, all 4 options, and explanations MUST be written in Hindi. Use proper Hindi language and Devanagari script throughout.`
+    : `Generate all content in English.`;
+
   const systemPrompt = `You are an expert educational content creator. Generate ${numQuestions} multiple-choice quiz questions for ${grade} grade ${board} board students in India.
+
+${languageInstruction}
 
 You MUST return a JSON object with exactly this structure:
 {

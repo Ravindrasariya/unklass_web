@@ -36,6 +36,7 @@ interface RegisteredStudent {
   name: string;
   grade: string;
   board: string;
+  medium: string;
   location: string;
   mobileNumber: string;
 }
@@ -137,6 +138,7 @@ function App() {
         name: data.name,
         grade: data.grade,
         board: data.board,
+        medium: data.medium,
         location: data.location,
         mobileNumber: data.mobile,
       });
@@ -183,6 +185,7 @@ function App() {
         grade: studentData.grade,
         board: studentData.board,
         subject: selectedSubject,
+        medium: studentData.medium,
       });
       
       const data = await response.json();
@@ -509,7 +512,7 @@ function App() {
                       <Loader2 className="w-12 h-12 mx-auto text-primary animate-spin mb-4" />
                       <h2 className="text-xl font-medium mb-2">Preparing Your Quiz</h2>
                       <p className="text-muted-foreground">
-                        UNKLASS provides carefully selected important questions based on exam trends
+                        Generating questions in {studentData?.medium || "English"} medium...
                       </p>
                     </CardContent>
                   </Card>
