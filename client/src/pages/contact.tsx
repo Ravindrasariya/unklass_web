@@ -2,17 +2,16 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Link } from "wouter";
-import { Mail, Phone, MapPin, Send } from "lucide-react";
+import { Mail, Phone, Send } from "lucide-react";
+import { SiWhatsapp } from "react-icons/si";
 import { useToast } from "@/hooks/use-toast";
 import logoImage from "@assets/Screenshot_2025-12-11_at_12.16.26_AM_1765392397522.png";
 
 export default function ContactPage() {
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [message, setMessage] = useState("");
+  const [contactNumber, setContactNumber] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -24,13 +23,12 @@ export default function ContactPage() {
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     toast({
-      title: "Message Sent",
-      description: "Thank you for contacting us. We'll get back to you soon!",
+      title: "Request Submitted",
+      description: "Thank you! We'll contact you soon to schedule your free trial.",
     });
     
     setName("");
-    setEmail("");
-    setMessage("");
+    setContactNumber("");
     setIsSubmitting(false);
   };
 
@@ -73,10 +71,10 @@ export default function ContactPage() {
         <section className="bg-gradient-to-br from-sky-400 via-sky-500 to-sky-600 text-white py-16 md:py-20">
           <div className="max-w-4xl mx-auto px-4 text-center">
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
-              Contact Us
+              Have Questions or Feedback? Let's Talk!
             </h1>
             <p className="text-lg md:text-xl text-white/90 max-w-2xl mx-auto">
-              Have questions or want to partner with us? We'd love to hear from you.
+              We are here to help! Fill out the form to book your free trial or ask a question.
             </p>
           </div>
         </section>
@@ -84,50 +82,9 @@ export default function ContactPage() {
         <section className="py-12 md:py-16">
           <div className="max-w-5xl mx-auto px-4">
             <div className="grid md:grid-cols-2 gap-8 md:gap-12">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Get in Touch</h2>
-                <p className="text-gray-600 mb-8">
-                  Whether you're a school looking to partner, a student seeking information, or just curious about our work, we're here to help.
-                </p>
-
-                <div className="space-y-6">
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 bg-sky-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Mail className="w-5 h-5 text-sky-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 mb-1">Email</h3>
-                      <p className="text-gray-600">contact@unklass.com</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 bg-sky-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Phone className="w-5 h-5 text-sky-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 mb-1">Phone</h3>
-                      <p className="text-gray-600">+91 98765 43210</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 bg-sky-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <MapPin className="w-5 h-5 text-sky-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 mb-1">Address</h3>
-                      <p className="text-gray-600">
-                        Madhya Pradesh, India
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               <Card className="border-gray-200">
                 <CardContent className="p-6">
-                  <h2 className="text-xl font-bold text-gray-900 mb-6">Send us a Message</h2>
+                  <h2 className="text-xl font-bold text-gray-900 mb-6">Book Your Free Trial</h2>
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="name">Name</Label>
@@ -142,29 +99,16 @@ export default function ContactPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
+                      <Label htmlFor="contact">Contact Number</Label>
                       <Input
-                        id="email"
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="your.email@example.com"
+                        id="contact"
+                        type="tel"
+                        value={contactNumber}
+                        onChange={(e) => setContactNumber(e.target.value)}
+                        placeholder="Enter your 10-digit mobile number"
+                        maxLength={10}
                         required
-                        data-testid="input-email"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="message">Message</Label>
-                      <Textarea
-                        id="message"
-                        value={message}
-                        onChange={(e) => setMessage(e.target.value)}
-                        placeholder="How can we help you?"
-                        rows={4}
-                        required
-                        className="resize-none"
-                        data-testid="input-message"
+                        data-testid="input-contact"
                       />
                     </div>
 
@@ -175,32 +119,47 @@ export default function ContactPage() {
                       data-testid="button-send"
                     >
                       {isSubmitting ? (
-                        "Sending..."
+                        "Submitting..."
                       ) : (
                         <>
                           <Send className="w-4 h-4 mr-2" />
-                          Send Message
+                          Submit
                         </>
                       )}
                     </Button>
                   </form>
                 </CardContent>
               </Card>
-            </div>
-          </div>
-        </section>
 
-        <section className="py-12 bg-gray-50">
-          <div className="max-w-4xl mx-auto px-4 text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Partner With Us</h2>
-            <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
-              Are you a school, learning center, or community organization? Partner with UNKLASS to bring quality education to your students.
-            </p>
-            <Link href="/about">
-              <Button variant="outline" className="border-sky-500 text-sky-600 hover:bg-sky-50" data-testid="button-learn-more">
-                Learn More About Us
-              </Button>
-            </Link>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Talk to Us</h2>
+                <p className="text-gray-600 mb-8">
+                  Have a specific query? You can also reach out to us via these channels
+                </p>
+
+                <div className="space-y-6">
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 bg-sky-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Mail className="w-5 h-5 text-sky-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-1">Email</h3>
+                      <p className="text-gray-600">support@unklass.com</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <SiWhatsapp className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-1">WhatsApp</h3>
+                      <p className="text-gray-600">8904061785, 9981489815</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
       </main>
