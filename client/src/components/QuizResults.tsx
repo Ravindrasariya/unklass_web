@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Trophy, Award, BookOpen, RefreshCw, BookMarked, Quote } from "lucide-react";
@@ -9,13 +9,27 @@ const MOTIVATIONAL_QUOTES = [
   { text: "Education is the most powerful weapon which you can use to change the world.", language: "English" },
   { text: "Every expert was once a beginner.", language: "English" },
   { text: "The future belongs to those who believe in the beauty of their dreams.", language: "English" },
+  { text: "Believe you can and you're halfway there.", language: "English" },
+  { text: "The secret of getting ahead is getting started.", language: "English" },
+  { text: "It does not matter how slowly you go as long as you do not stop.", language: "English" },
+  { text: "The expert in anything was once a beginner.", language: "English" },
+  { text: "Your limitation - it's only your imagination.", language: "English" },
+  { text: "Push yourself, because no one else is going to do it for you.", language: "English" },
+  { text: "Great things never come from comfort zones.", language: "English" },
+  { text: "Dream it. Wish it. Do it.", language: "English" },
+  { text: "Success doesn't just find you. You have to go out and get it.", language: "English" },
   { text: "कोशिश करने वालों की कभी हार नहीं होती।", language: "Hindi" },
   { text: "मेहनत इतनी खामोशी से करो कि सफलता शोर मचा दे।", language: "Hindi" },
   { text: "शिक्षा सबसे शक्तिशाली हथियार है जिससे आप दुनिया बदल सकते हैं।", language: "Hindi" },
   { text: "हर विशेषज्ञ कभी एक शुरुआती था।", language: "Hindi" },
   { text: "सपने वो नहीं जो सोते हुए आएं, सपने वो हैं जो सोने न दें।", language: "Hindi" },
   { text: "गिरकर सीखना, संभलकर चलना, यही है जीवन का सार।", language: "Hindi" },
-  { text: "Believe you can and you're halfway there.", language: "English" },
+  { text: "जो अपने कदमों की काबिलियत पर विश्वास रखते हैं, वो ही मंजिल पाते हैं।", language: "Hindi" },
+  { text: "असफलता एक चुनौती है, इसे स्वीकार करो।", language: "Hindi" },
+  { text: "खुद को इतना काबिल बनाओ कि किस्मत भी तुम्हें ढूंढने आए।", language: "Hindi" },
+  { text: "परिश्रम ही सफलता की कुंजी है।", language: "Hindi" },
+  { text: "जहाँ चाह, वहाँ राह।", language: "Hindi" },
+  { text: "विश्वास वो शक्ति है जिससे उजड़ी हुई दुनिया में भी उजाला किया जा सकता है।", language: "Hindi" },
 ];
 
 interface QuizResultsProps {
@@ -35,10 +49,10 @@ export default function QuizResults({
 }: QuizResultsProps) {
   const percentage = Math.round((score / totalQuestions) * 100);
 
-  const [randomQuote] = useState(() => {
+  const randomQuote = useMemo(() => {
     const randomIndex = Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length);
     return MOTIVATIONAL_QUOTES[randomIndex];
-  });
+  }, [score]);
 
   const getPerformanceData = () => {
     if (score > 8) {
