@@ -61,71 +61,69 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick }: LandingPa
       <main className="flex-1 flex flex-col">
         <section className="relative bg-gradient-to-br from-sky-400 via-sky-500 to-sky-600 text-white overflow-hidden">
           <div className="absolute inset-0 bg-black/10"></div>
-          <div className="max-w-6xl mx-auto px-4 py-12 md:py-16 relative z-10">
-            <div className="flex flex-col md:flex-row items-center gap-8">
-              <div className="flex-1 text-center md:text-left">
-                <div className="relative min-h-[120px] flex items-center justify-center md:justify-start">
-                  <div className="relative w-full">
-                    {sliderContent.map((slide, index) => (
-                      <p
-                        key={index}
-                        className={`text-xl md:text-2xl lg:text-3xl font-medium leading-relaxed transition-all duration-500 ${
-                          currentSlide === index 
-                            ? "opacity-100 translate-x-0" 
-                            : "opacity-0 absolute top-0 left-0 right-0 translate-x-4"
-                        }`}
-                        data-testid={`slider-text-${index}`}
-                      >
-                        {slide.text}
-                      </p>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-center md:justify-start gap-4 mt-6">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={prevSlide}
-                    className="bg-white/20 text-white border-0"
-                    data-testid="button-prev-slide"
-                  >
-                    <ChevronLeft className="h-5 w-5" />
-                  </Button>
-                  <div className="flex gap-2">
-                    {sliderContent.map((_, index) => (
-                      <button
-                        key={index}
-                        onClick={() => goToSlide(index)}
-                        className={`w-2.5 h-2.5 rounded-full transition-all ${
-                          currentSlide === index ? "bg-white" : "bg-white/40"
-                        }`}
-                        data-testid={`slider-dot-${index}`}
-                      />
-                    ))}
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={nextSlide}
-                    className="bg-white/20 text-white border-0"
-                    data-testid="button-next-slide"
-                  >
-                    <ChevronRight className="h-5 w-5" />
-                  </Button>
+          <div className="max-w-4xl mx-auto px-4 py-6 md:py-8 relative z-10">
+            <div className="text-center">
+              <div className="relative min-h-[60px] md:min-h-[70px] flex items-center justify-center">
+                <div className="relative w-full">
+                  {sliderContent.map((slide, index) => (
+                    <p
+                      key={index}
+                      className={`text-base md:text-lg lg:text-xl font-medium leading-relaxed transition-all duration-500 ${
+                        currentSlide === index 
+                          ? "opacity-100 translate-x-0" 
+                          : "opacity-0 absolute top-0 left-0 right-0 translate-x-4"
+                      }`}
+                      data-testid={`slider-text-${index}`}
+                    >
+                      {slide.text}
+                    </p>
+                  ))}
                 </div>
               </div>
 
-              <div className="flex-shrink-0">
-                <img 
-                  src={studentImage} 
-                  alt="Student learning" 
-                  className="w-64 h-64 md:w-80 md:h-80 object-contain"
-                  data-testid="img-student"
-                />
+              <div className="flex items-center justify-center gap-3 mt-4">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={prevSlide}
+                  className="bg-white/20 text-white border-0 h-8 w-8"
+                  data-testid="button-prev-slide"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="flex gap-2">
+                  {sliderContent.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => goToSlide(index)}
+                      className={`w-2 h-2 rounded-full transition-all ${
+                        currentSlide === index ? "bg-white" : "bg-white/40"
+                      }`}
+                      data-testid={`slider-dot-${index}`}
+                    />
+                  ))}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={nextSlide}
+                  className="bg-white/20 text-white border-0 h-8 w-8"
+                  data-testid="button-next-slide"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           </div>
+        </section>
+
+        <section className="bg-white py-6 flex justify-center">
+          <img 
+            src={studentImage} 
+            alt="Student learning" 
+            className="w-48 h-48 md:w-56 md:h-56 object-contain"
+            data-testid="img-student"
+          />
         </section>
 
         <section className="flex-1 bg-white py-12 md:py-16">
