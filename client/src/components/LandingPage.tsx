@@ -152,7 +152,7 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick }: LandingPa
                   UNKLASS Board Exam Prep
                 </h3>
                 <p className="text-gray-600 text-sm mb-4">
-                  Prepare for 8th, 10th, and 12th board exams with AI-powered quizzes
+                  Prepare for 8th, 10th, and 12th board exams with Exam Important Quizzes
                 </p>
                 <Button 
                   className="w-full bg-sky-500 hover:bg-sky-600 text-white"
@@ -173,7 +173,7 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick }: LandingPa
                   </svg>
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">
-                  MP CPCT
+                  UNKLASS MP CPCT Exam Prep
                 </h3>
                 <p className="text-gray-600 text-sm mb-4">
                   Prepare for Madhya Pradesh Computer Proficiency Certification Test
@@ -183,7 +183,7 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick }: LandingPa
                   className="w-full border-sky-500 text-sky-600 hover:bg-sky-50"
                   data-testid="button-cpct"
                 >
-                  Coming Soon
+                  Start Preparation
                 </Button>
               </div>
             </div>
