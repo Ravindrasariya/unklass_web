@@ -47,7 +47,7 @@ export default function ContactPage() {
                 data-testid="img-logo-header"
               />
             </Link>
-            <span className="text-xs md:text-sm text-gray-600 tracking-tight mt-1">Learning Beyond Classroom</span>
+            <span className="text-xs md:text-sm text-gray-600 tracking-tight mt-1 pl-0.5">Learning Beyond Classroom</span>
           </div>
           <nav className="flex items-center gap-2 md:gap-4">
             <Link href="/">
