@@ -6,8 +6,12 @@ import logoImage from "@assets/Screenshot_2025-12-11_at_12.16.26_AM_176539239752
 import studentImage from "@assets/Screenshot_2025-12-17_at_6.41.41_AM_1765934337756.png";
 import classroom1 from "@assets/Screenshot_2025-12-17_at_2.54.23_PM_1765963603824.png";
 import classroom2 from "@assets/Screenshot_2025-12-17_at_2.55.03_PM_1765963603824.png";
+import testimonial1 from "@assets/Screenshot_2025-12-17_at_3.03.57_PM_1765964212063.png";
+import testimonial2 from "@assets/Screenshot_2025-12-17_at_3.05.27_PM_1765964212063.png";
+import testimonial3 from "@assets/Screenshot_2025-12-17_at_3.05.43_PM_1765964212063.png";
 
 const classroomImages = [classroom1, classroom2];
+const testimonialImages = [testimonial1, testimonial2, testimonial3];
 
 interface LandingPageProps {
   onBoardExamClick: () => void;
@@ -51,12 +55,29 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick }: LandingPa
     return () => clearInterval(timer);
   }, []);
 
+  const [currentTestimonial, setCurrentTestimonial] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTestimonial((prev) => (prev + 1) % testimonialImages.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
+
   const nextClassroom = () => {
     setCurrentClassroom((prev) => (prev + 1) % classroomImages.length);
   };
 
   const prevClassroom = () => {
     setCurrentClassroom((prev) => (prev - 1 + classroomImages.length) % classroomImages.length);
+  };
+
+  const nextTestimonial = () => {
+    setCurrentTestimonial((prev) => (prev + 1) % testimonialImages.length);
+  };
+
+  const prevTestimonial = () => {
+    setCurrentTestimonial((prev) => (prev - 1 + testimonialImages.length) % testimonialImages.length);
   };
 
   const goToSlide = (index: number) => {
@@ -295,6 +316,61 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick }: LandingPa
                 >
                   Start Preparation
                 </Button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-sky-50 py-10 md:py-14">
+          <div className="max-w-3xl mx-auto px-4">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900 text-center mb-6">
+              UNKLASS is liked by its current students
+            </h2>
+            <div className="relative">
+              <div className="overflow-hidden rounded-lg">
+                <div className="relative aspect-[16/9]">
+                  {testimonialImages.map((img, index) => (
+                    <img
+                      key={index}
+                      src={img}
+                      alt={`Student testimonial ${index + 1}`}
+                      className={`absolute inset-0 w-full h-full object-contain bg-sky-500 transition-opacity duration-500 ${
+                        currentTestimonial === index ? "opacity-100" : "opacity-0"
+                      }`}
+                      data-testid={`img-testimonial-${index}`}
+                    />
+                  ))}
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={prevTestimonial}
+                className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 text-gray-800 h-10 w-10 rounded-full shadow-md"
+                data-testid="button-prev-testimonial"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={nextTestimonial}
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 text-gray-800 h-10 w-10 rounded-full shadow-md"
+                data-testid="button-next-testimonial"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </Button>
+              <div className="flex justify-center gap-2 mt-4">
+                {testimonialImages.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentTestimonial(index)}
+                    className={`w-2.5 h-2.5 rounded-full transition-all ${
+                      currentTestimonial === index ? "bg-sky-500" : "bg-gray-300"
+                    }`}
+                    data-testid={`testimonial-dot-${index}`}
+                  />
+                ))}
               </div>
             </div>
           </div>
