@@ -11,11 +11,11 @@ interface LandingPageProps {
 
 const sliderContent = [
   {
-    text: "Enabling quality education with the help of technology in remotest part of the India",
+    text: "Empowering the remotest parts of India with quality education through technology",
     lang: "en",
   },
   {
-    text: "भारत के सुदूर क्षेत्रों में प्रौद्योगिकी की मदद से गुणवत्तापूर्ण शिक्षा को सक्षम बनाना",
+    text: "प्रौद्योगिकी के माध्यम से भारत के सबसे दूरदराज़ क्षेत्रों को गुणवत्तापूर्ण शिक्षा से सशक्त बनाना।",
     lang: "hi",
   },
 ];
