@@ -179,8 +179,7 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick }: LandingPa
                   Prepare for Madhya Pradesh Computer Proficiency Certification Test
                 </p>
                 <Button 
-                  variant="outline"
-                  className="w-full border-sky-500 text-sky-600 hover:bg-sky-50"
+                  className="w-full bg-sky-500 hover:bg-sky-600 text-white"
                   data-testid="button-cpct"
                 >
                   Start Preparation
