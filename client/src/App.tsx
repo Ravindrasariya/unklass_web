@@ -252,56 +252,13 @@ function App() {
     setAppState("ready");
   }, []);
 
-  // CPCT Handlers
-  const handleCpctOnboardingSubmit = useCallback(async (data: CpctStudentData) => {
-    try {
-      const response = await apiRequest("POST", "/api/cpct/students/register", {
-        name: data.name,
-        medium: data.medium,
-        location: data.location,
-        mobileNumber: data.mobile,
-      });
-      const student = await response.json();
-      setCpctStudentData(student);
-      setAppState("cpct-ready");
-    } catch (error) {
-      console.error("CPCT Registration error:", error);
-      toast({
-        title: "Registration failed",
-        description: "Please try again.",
-        variant: "destructive",
-      });
-    }
-  }, [toast]);
-
-  const handleCpctLogin = useCallback(async (data: { name: string; mobile: string }): Promise<boolean> => {
-    try {
-      const response = await apiRequest("POST", "/api/cpct/students/login", {
-        name: data.name,
-        mobileNumber: data.mobile,
-      });
-      const student = await response.json();
-      if (student && student.id) {
-        setCpctStudentData(student);
-        setAppState("cpct-ready");
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error("CPCT Login error:", error);
-      return false;
-    }
-  }, []);
-
-  const handleCpctStartQuiz = useCallback(async () => {
-    if (!selectedYear || !cpctStudentData) return;
-    
+  // Function to start CPCT quiz directly
+  const startCpctQuizForStudent = useCallback(async (student: RegisteredCpctStudent) => {
     setAppState("cpct-loading");
     
     try {
       const response = await apiRequest("POST", "/api/cpct/quiz/generate", {
-        studentId: cpctStudentData.id,
-        year: selectedYear,
+        studentId: student.id,
       });
       
       const data = await response.json();
@@ -317,9 +274,57 @@ function App() {
         description: "Please try again later.",
         variant: "destructive",
       });
-      setAppState("cpct-ready");
+      setAppState("cpct-onboarding");
     }
-  }, [selectedYear, cpctStudentData, toast]);
+  }, [toast]);
+
+  // CPCT Handlers
+  const handleCpctOnboardingSubmit = useCallback(async (data: CpctStudentData) => {
+    try {
+      const response = await apiRequest("POST", "/api/cpct/students/register", {
+        name: data.name,
+        medium: data.medium,
+        location: data.location,
+        mobileNumber: data.mobile,
+      });
+      const student = await response.json();
+      setCpctStudentData(student);
+      // Directly start quiz after registration
+      startCpctQuizForStudent(student);
+    } catch (error) {
+      console.error("CPCT Registration error:", error);
+      toast({
+        title: "Registration failed",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [toast, startCpctQuizForStudent]);
+
+  const handleCpctLogin = useCallback(async (data: { name: string; mobile: string }): Promise<boolean> => {
+    try {
+      const response = await apiRequest("POST", "/api/cpct/students/login", {
+        name: data.name,
+        mobileNumber: data.mobile,
+      });
+      const student = await response.json();
+      if (student && student.id) {
+        setCpctStudentData(student);
+        // Directly start quiz after login
+        startCpctQuizForStudent(student);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("CPCT Login error:", error);
+      return false;
+    }
+  }, [startCpctQuizForStudent]);
+
+  const handleCpctStartQuiz = useCallback(async () => {
+    if (!cpctStudentData) return;
+    startCpctQuizForStudent(cpctStudentData);
+  }, [cpctStudentData, startCpctQuizForStudent]);
 
   const handleCpctAnswer = useCallback((selectedOption: number, isCorrect: boolean) => {
     const currentQuestion = cpctQuestions[cpctCurrentQuestionIndex];
@@ -353,40 +358,12 @@ function App() {
   }, [cpctCurrentQuestionIndex, cpctQuestions.length, cpctAnswers, cpctSessionId]);
 
   const handleCpctRetakeQuiz = useCallback(async () => {
-    if (!selectedYear || !cpctStudentData) return;
-    
-    setAppState("cpct-loading");
-    
-    try {
-      const response = await apiRequest("POST", "/api/cpct/quiz/generate", {
-        studentId: cpctStudentData.id,
-        year: selectedYear,
-      });
-      
-      const data = await response.json();
-      setCpctSessionId(data.sessionId);
-      setCpctQuestions(data.questions);
-      setCpctCurrentQuestionIndex(0);
-      setCpctAnswers([]);
-      setAppState("cpct-quiz");
-    } catch (error) {
-      console.error("CPCT Quiz generation error:", error);
-      toast({
-        title: "Failed to generate quiz",
-        description: "Please try again later.",
-        variant: "destructive",
-      });
-      setAppState("cpct-results");
-    }
-  }, [selectedYear, cpctStudentData, toast]);
+    if (!cpctStudentData) return;
+    startCpctQuizForStudent(cpctStudentData);
+  }, [cpctStudentData, startCpctQuizForStudent]);
 
-  const handleCpctTryAnotherYear = useCallback(() => {
-    setSelectedYear("");
-    setCpctQuestions([]);
-    setCpctCurrentQuestionIndex(0);
-    setCpctAnswers([]);
-    setCpctSessionId(null);
-    setAppState("cpct-ready");
+  const handleCpctViewHistory = useCallback(() => {
+    setAppState("cpct-history");
   }, []);
 
   const score = answers.filter(a => a.isCorrect).length;
@@ -549,83 +526,6 @@ function App() {
                 />
               )}
 
-              {appState === "cpct-ready" && (
-                <div className="min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center p-4">
-                  <Card className="w-full max-w-md">
-                    <CardContent className="p-8">
-                      <div className="text-center mb-6">
-                        <div className="w-16 h-16 mx-auto rounded-lg overflow-hidden mb-4">
-                          <img 
-                            src={logoIcon} 
-                            alt="Unklass" 
-                            className="w-full h-full object-cover"
-                            data-testid="img-cpct-logo-icon"
-                          />
-                        </div>
-                        <h1 className="text-2xl font-semibold mb-2">MP CPCT Preparation</h1>
-                        <p className="text-muted-foreground text-sm">
-                          Select a year to start your CPCT practice quiz. Questions will be in {cpctStudentData?.medium || "your selected"} medium.
-                        </p>
-                      </div>
-
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="year">CPCT Year</Label>
-                          {availableYears.length === 0 ? (
-                            <div className="p-4 text-center text-muted-foreground border rounded-md bg-muted/30">
-                              <p className="text-sm">No CPCT study materials available yet.</p>
-                              <p className="text-xs mt-1">Please check back later or contact your administrator.</p>
-                            </div>
-                          ) : (
-                            <Select 
-                              value={selectedYear} 
-                              onValueChange={setSelectedYear}
-                            >
-                              <SelectTrigger id="year" data-testid="select-cpct-year">
-                                <SelectValue placeholder="Select a year" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {availableYears.map((year) => (
-                                  <SelectItem key={year} value={year}>
-                                    CPCT {year}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          )}
-                        </div>
-
-                        {cpctStudentData && (
-                          <div className="p-3 bg-muted/50 rounded-lg text-sm">
-                            <p className="text-muted-foreground">
-                              <span className="font-medium text-foreground">Medium:</span> {cpctStudentData.medium}
-                            </p>
-                          </div>
-                        )}
-
-                        <Button 
-                          className="w-full" 
-                          onClick={handleCpctStartQuiz}
-                          disabled={!selectedYear && availableYears.length > 0}
-                          data-testid="button-cpct-start-quiz"
-                        >
-                          {availableYears.length === 0 ? "Start Practice Quiz" : "Start Quiz"}
-                        </Button>
-
-                        <Button 
-                          variant="outline"
-                          className="w-full" 
-                          onClick={() => setAppState("cpct-history")}
-                          data-testid="button-cpct-view-history"
-                        >
-                          View Quiz History
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
-
               {appState === "cpct-loading" && (
                 <div className="min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center p-4">
                   <Card className="w-full max-w-md text-center">
@@ -655,15 +555,15 @@ function App() {
                   score={cpctScore}
                   totalQuestions={cpctQuestions.length}
                   onRetakeQuiz={handleCpctRetakeQuiz}
-                  onTryAnotherSubject={handleCpctTryAnotherYear}
-                  subjectLabel="Try Another Year"
+                  onTryAnotherSubject={handleCpctViewHistory}
+                  subjectLabel="View Quiz History"
                 />
               )}
 
               {appState === "cpct-history" && cpctStudentData && (
                 <QuizHistory
                   studentId={cpctStudentData.id}
-                  onBack={() => setAppState("cpct-ready")}
+                  onBack={handleCpctRetakeQuiz}
                   isCpct={true}
                 />
               )}

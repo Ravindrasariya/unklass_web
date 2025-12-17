@@ -603,9 +603,9 @@ export async function registerRoutes(
   // Generate CPCT quiz questions
   app.post("/api/cpct/quiz/generate", async (req, res) => {
     try {
-      const { studentId, year } = req.body;
+      const { studentId } = req.body;
 
-      if (!studentId || !year) {
+      if (!studentId) {
         return res.status(400).json({ error: "Missing required fields" });
       }
 
@@ -615,8 +615,33 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Student not found" });
       }
 
-      // Find the CPCT PDF for this year
-      const pdf = await storage.getCpctPdf(year);
+      // Get all available CPCT PDFs and combine content
+      const allPdfs = await storage.getAllPdfs();
+      const cpctPdfs = allPdfs.filter(pdf => 
+        pdf.filename.startsWith("CPCT_") && pdf.filename.endsWith(".pdf")
+      );
+      
+      // Combine content from all CPCT PDFs or use fallback
+      let combinedContent = "";
+      let usedYear = "2024"; // Default year for reference
+      let usedPdfId: number | null = null;
+      
+      if (cpctPdfs.length > 0) {
+        // Sort by year descending to prioritize latest content
+        cpctPdfs.sort((a, b) => {
+          const yearA = a.filename.match(/CPCT_(\d+)\.pdf/)?.[1] || "0";
+          const yearB = b.filename.match(/CPCT_(\d+)\.pdf/)?.[1] || "0";
+          return yearB.localeCompare(yearA);
+        });
+        
+        // Use the latest PDF's year
+        const latestMatch = cpctPdfs[0].filename.match(/CPCT_(\d+)\.pdf/);
+        usedYear = latestMatch ? latestMatch[1] : "2024";
+        usedPdfId = cpctPdfs[0].id;
+        
+        // Combine content from all PDFs
+        combinedContent = cpctPdfs.map(pdf => pdf.content).join("\n\n");
+      }
       
       // Get previous questions to avoid duplicates
       const previousQuestions = await storage.getCpctStudentPreviousQuestions(studentId);
@@ -625,11 +650,11 @@ export async function registerRoutes(
       let questions: Question[];
       const medium = student.medium as "Hindi" | "English";
       
-      if (pdf) {
-        // Generate questions from PDF content in student's selected medium
+      if (combinedContent) {
+        // Generate questions from combined PDF content in student's selected medium
         questions = await generateCpctQuizQuestions(
-          pdf.content,
-          year,
+          combinedContent,
+          usedYear,
           medium,
           10,
           previousQuestions
@@ -637,8 +662,8 @@ export async function registerRoutes(
       } else {
         // Generate general CPCT questions (fallback when no PDF uploaded)
         questions = await generateCpctQuizQuestions(
-          `General CPCT exam curriculum for computer proficiency certification in Madhya Pradesh, India.`,
-          year,
+          `General CPCT exam curriculum for computer proficiency certification in Madhya Pradesh, India. Topics include: Computer Fundamentals, Operating Systems (Windows), MS Office (Word, Excel, PowerPoint), Internet and Email, Basic Networking, Computer Security, Hindi Typing, English Typing.`,
+          usedYear,
           medium,
           10,
           previousQuestions
@@ -648,8 +673,8 @@ export async function registerRoutes(
       // Create CPCT quiz session
       const session = await storage.createCpctQuizSession({
         studentId,
-        pdfId: pdf?.id || null,
-        year,
+        pdfId: usedPdfId,
+        year: usedYear,
         medium: student.medium,
         questions,
         totalQuestions: 10,
