@@ -67,6 +67,29 @@ export default function AboutPage() {
 
         <section className="py-12 md:py-16 bg-gray-50">
           <div className="max-w-4xl mx-auto px-4">
+            <div className="grid md:grid-cols-2 gap-8">
+              <div className="text-center md:text-left">
+                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
+                  Our Mission
+                </h2>
+                <p className="text-gray-700 text-lg leading-relaxed">
+                  To empower students in rural India with access to quality education, expert teaching, and structured academic support—so they can compete on equal footing, anywhere in the country.
+                </p>
+              </div>
+              <div className="text-center md:text-left">
+                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
+                  Our Vision
+                </h2>
+                <p className="text-gray-700 text-lg leading-relaxed">
+                  A future where every student, regardless of location, has access to high-quality education and the opportunity to achieve their full potential.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="py-12 md:py-16 bg-white">
+          <div className="max-w-4xl mx-auto px-4">
             <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-8 text-center">
               What We Do
             </h2>
