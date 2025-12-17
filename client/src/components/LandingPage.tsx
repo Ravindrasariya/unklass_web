@@ -173,13 +173,13 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick }: LandingPa
           </div>
         </section>
 
-        <section className="bg-gray-50 py-8 md:py-12">
-          <div className="max-w-4xl mx-auto px-4">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 text-center mb-6">
+        <section className="bg-gray-50 py-8 md:py-10">
+          <div className="max-w-2xl mx-auto px-4">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900 text-center mb-5">
               Our Classrooms
             </h2>
             <div className="relative">
-              <div className="overflow-hidden rounded-xl">
+              <div className="overflow-hidden rounded-lg">
                 <div className="relative aspect-video">
                   {classroomImages.map((img, index) => (
                     <img
