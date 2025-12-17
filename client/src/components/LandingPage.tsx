@@ -54,7 +54,7 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick }: LandingPa
               className="h-12 md:h-14"
               data-testid="img-logo-header"
             />
-            <span className="text-xs md:text-sm text-gray-600 tracking-tight mt-1 pl-0.5">Learning Beyond Classroom</span>
+            <span className="text-xs md:text-sm text-gray-600 tracking-tight mt-1 pl-1">Learning Beyond Classroom</span>
           </div>
           <nav className="flex items-center gap-2 md:gap-4">
             <Link href="/">
