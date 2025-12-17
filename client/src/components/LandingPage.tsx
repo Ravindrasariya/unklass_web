@@ -45,31 +45,31 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick }: LandingPa
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      <header className="bg-white border-b border-gray-100 py-4 px-4 sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex flex-col items-start">
+      <header className="bg-white border-b border-gray-100 py-3 md:py-4 px-3 md:px-4 sticky top-0 z-50">
+        <div className="max-w-6xl mx-auto flex items-center justify-between gap-2 md:gap-4">
+          <div className="flex flex-col items-start flex-shrink-0">
             <img 
               src={logoImage} 
               alt="UNKLASS" 
-              className="h-12 md:h-14"
+              className="h-10 sm:h-12 md:h-14 w-auto object-contain"
               data-testid="img-logo-header"
             />
-            <span className="text-xs md:text-sm text-gray-600 tracking-tight mt-1 pl-1">Learning Beyond Classroom</span>
+            <span className="text-[10px] sm:text-xs md:text-sm text-gray-600 tracking-tight mt-1 pl-1">Learning Beyond Classroom</span>
           </div>
-          <nav className="flex items-center gap-2 md:gap-4">
+          <nav className="flex items-center gap-1 sm:gap-2 md:gap-4 flex-shrink-0">
             <Link href="/">
-              <Button variant="ghost" className="text-gray-700 font-medium" data-testid="nav-home">
+              <Button variant="ghost" size="sm" className="text-gray-700 font-medium text-xs sm:text-sm px-2 sm:px-3" data-testid="nav-home">
                 Home
               </Button>
             </Link>
             <Link href="/about">
-              <Button variant="ghost" className="text-gray-700 font-medium" data-testid="nav-about">
-                About Us
+              <Button variant="ghost" size="sm" className="text-gray-700 font-medium text-xs sm:text-sm px-2 sm:px-3" data-testid="nav-about">
+                About
               </Button>
             </Link>
             <Link href="/contact">
-              <Button variant="ghost" className="text-gray-700 font-medium" data-testid="nav-contact">
-                Contact Us
+              <Button variant="ghost" size="sm" className="text-gray-700 font-medium text-xs sm:text-sm px-2 sm:px-3" data-testid="nav-contact">
+                Contact
               </Button>
             </Link>
           </nav>
