@@ -111,6 +111,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deletePdf(id: number): Promise<boolean> {
+    // First delete related quiz sessions that reference this PDF
+    await db.delete(quizSessions).where(eq(quizSessions.pdfId, id));
+    // Then delete the PDF
     const result = await db.delete(pdfs).where(eq(pdfs.id, id)).returning();
     return result.length > 0;
   }
