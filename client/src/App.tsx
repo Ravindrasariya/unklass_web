@@ -416,7 +416,11 @@ function App() {
               )}
 
               {appState === "onboarding" && (
-                <StudentOnboardingForm onSubmit={handleOnboardingSubmit} onLogin={handleLogin} />
+                <StudentOnboardingForm 
+                  onSubmit={handleOnboardingSubmit} 
+                  onLogin={handleLogin}
+                  onBack={() => setAppState("landing")}
+                />
               )}
 
               {appState === "ready" && (
@@ -498,6 +502,18 @@ function App() {
                           data-testid="button-view-history"
                         >
                           View Quiz History
+                        </Button>
+
+                        <Button 
+                          variant="ghost"
+                          className="w-full" 
+                          onClick={() => {
+                            setStudentData(null);
+                            setAppState("landing");
+                          }}
+                          data-testid="button-back-landing"
+                        >
+                          Back to Home
                         </Button>
                       </div>
                     </CardContent>

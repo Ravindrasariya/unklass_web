@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowRight, UserPlus } from "lucide-react";
+import { ArrowRight, UserPlus, ArrowLeft } from "lucide-react";
 import logoImage from "@assets/Screenshot_2025-12-11_at_12.16.26_AM_1765392397522.png";
 
 const loginSchema = z.object({
@@ -30,9 +30,10 @@ type LoginData = z.infer<typeof loginSchema>;
 interface StudentOnboardingFormProps {
   onSubmit: (data: StudentData) => void;
   onLogin: (data: LoginData) => Promise<boolean>;
+  onBack: () => void;
 }
 
-export default function StudentOnboardingForm({ onSubmit, onLogin }: StudentOnboardingFormProps) {
+export default function StudentOnboardingForm({ onSubmit, onLogin, onBack }: StudentOnboardingFormProps) {
   const [isNewStudent, setIsNewStudent] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
 
@@ -158,6 +159,17 @@ export default function StudentOnboardingForm({ onSubmit, onLogin }: StudentOnbo
                     Register as New Student
                   </Button>
                 </div>
+
+                <Button 
+                  type="button"
+                  variant="ghost"
+                  className="w-full"
+                  onClick={onBack}
+                  data-testid="button-back-home"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back to Home
+                </Button>
               </form>
             </Form>
           </CardContent>
@@ -333,6 +345,17 @@ export default function StudentOnboardingForm({ onSubmit, onLogin }: StudentOnbo
                   Login with Mobile Number
                 </Button>
               </div>
+
+              <Button 
+                type="button"
+                variant="ghost"
+                className="w-full"
+                onClick={onBack}
+                data-testid="button-back-home-reg"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Home
+              </Button>
             </form>
           </Form>
         </CardContent>
