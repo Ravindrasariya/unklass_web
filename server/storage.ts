@@ -1,13 +1,13 @@
 import { 
   students, pdfs, quizSessions, cpctStudents, cpctQuizSessions,
-  contactSubmissions, visitorStats,
+  contactSubmissions, visitorStats, uniqueVisitors,
   type Student, type InsertStudent,
   type Pdf, type InsertPdf,
   type QuizSession, type InsertQuizSession,
   type CpctStudent, type InsertCpctStudent,
   type CpctQuizSession, type InsertCpctQuizSession,
   type ContactSubmission, type InsertContactSubmission,
-  type VisitorStats, type InsertVisitorStats
+  type VisitorStats
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, like, sql, desc } from "drizzle-orm";
@@ -53,9 +53,10 @@ export interface IStorage {
   getAllContactSubmissions(): Promise<ContactSubmission[]>;
 
   // Visitor Stats
-  incrementVisitorCount(date: string): Promise<VisitorStats>;
+  incrementVisitorCount(date: string, ipAddress?: string): Promise<VisitorStats>;
   getVisitorStats(): Promise<VisitorStats[]>;
   getTotalVisitors(): Promise<number>;
+  getTotalUniqueVisitors(): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -241,19 +242,41 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Visitor Stats
-  async incrementVisitorCount(date: string): Promise<VisitorStats> {
+  async incrementVisitorCount(date: string, ipAddress?: string): Promise<VisitorStats> {
+    let isUniqueVisit = false;
+    
+    // Check if this IP has visited today (if IP provided)
+    if (ipAddress) {
+      const existingVisit = await db.select().from(uniqueVisitors)
+        .where(and(eq(uniqueVisitors.ipAddress, ipAddress), eq(uniqueVisitors.date, date)));
+      
+      if (existingVisit.length === 0) {
+        // New unique visitor for today
+        await db.insert(uniqueVisitors).values({ ipAddress, date });
+        isUniqueVisit = true;
+      }
+    }
+    
     // Try to update existing record first
     const existing = await db.select().from(visitorStats).where(eq(visitorStats.date, date));
     
     if (existing.length > 0) {
+      const updateData: any = { totalVisitors: sql`${visitorStats.totalVisitors} + 1` };
+      if (isUniqueVisit) {
+        updateData.uniqueVisitors = sql`${visitorStats.uniqueVisitors} + 1`;
+      }
       const [updated] = await db
         .update(visitorStats)
-        .set({ totalVisitors: sql`${visitorStats.totalVisitors} + 1` })
+        .set(updateData)
         .where(eq(visitorStats.date, date))
         .returning();
       return updated;
     } else {
-      const [created] = await db.insert(visitorStats).values({ date, totalVisitors: 1 }).returning();
+      const [created] = await db.insert(visitorStats).values({ 
+        date, 
+        totalVisitors: 1,
+        uniqueVisitors: isUniqueVisit ? 1 : 0
+      }).returning();
       return created;
     }
   }
@@ -264,6 +287,11 @@ export class DatabaseStorage implements IStorage {
 
   async getTotalVisitors(): Promise<number> {
     const result = await db.select({ total: sql<number>`COALESCE(SUM(${visitorStats.totalVisitors}), 0)` }).from(visitorStats);
+    return result[0]?.total || 0;
+  }
+
+  async getTotalUniqueVisitors(): Promise<number> {
+    const result = await db.select({ total: sql<number>`COALESCE(SUM(${visitorStats.uniqueVisitors}), 0)` }).from(visitorStats);
     return result[0]?.total || 0;
   }
 }

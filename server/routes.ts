@@ -863,7 +863,11 @@ export async function registerRoutes(
   app.post("/api/analytics/visit", async (req, res) => {
     try {
       const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-      const stats = await storage.incrementVisitorCount(today);
+      // Get IP address from request headers or connection
+      const ipAddress = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() 
+        || req.socket?.remoteAddress 
+        || 'unknown';
+      const stats = await storage.incrementVisitorCount(today, ipAddress);
       res.json({ success: true, date: today, count: stats.totalVisitors });
     } catch (error) {
       console.error("Error tracking visit:", error);
@@ -876,15 +880,19 @@ export async function registerRoutes(
     try {
       const stats = await storage.getVisitorStats();
       const totalVisitors = await storage.getTotalVisitors();
+      const totalUniqueVisitors = await storage.getTotalUniqueVisitors();
       
       // Get today's visitors
       const today = new Date().toISOString().split('T')[0];
       const todayStats = stats.find(s => s.date === today);
       const todayVisitors = todayStats?.totalVisitors || 0;
+      const todayUniqueVisitors = todayStats?.uniqueVisitors || 0;
       
       res.json({
         totalVisitors,
+        totalUniqueVisitors,
         todayVisitors,
+        todayUniqueVisitors,
         dailyStats: stats.slice(0, 30), // Last 30 days
       });
     } catch (error) {

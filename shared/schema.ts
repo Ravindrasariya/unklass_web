@@ -154,6 +154,15 @@ export const visitorStats = pgTable("visitor_stats", {
   id: serial("id").primaryKey(),
   date: varchar("date", { length: 10 }).notNull().unique(), // YYYY-MM-DD format
   totalVisitors: integer("total_visitors").default(0),
+  uniqueVisitors: integer("unique_visitors").default(0),
+});
+
+// Unique visitors table - tracks individual visitors by IP
+export const uniqueVisitors = pgTable("unique_visitors", {
+  id: serial("id").primaryKey(),
+  ipAddress: varchar("ip_address", { length: 45 }).notNull(),
+  date: varchar("date", { length: 10 }).notNull(), // YYYY-MM-DD format
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Insert schemas for new tables

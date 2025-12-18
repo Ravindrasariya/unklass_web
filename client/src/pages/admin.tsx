@@ -65,8 +65,10 @@ interface ContactSubmission {
 
 interface VisitorStats {
   totalVisitors: number;
+  totalUniqueVisitors: number;
   todayVisitors: number;
-  dailyStats: Array<{ date: string; totalVisitors: number }>;
+  todayUniqueVisitors: number;
+  dailyStats: Array<{ date: string; totalVisitors: number; uniqueVisitors: number }>;
 }
 
 export default function AdminPage() {
@@ -677,11 +679,19 @@ export default function AdminPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="p-4 bg-muted rounded-lg text-center">
                       <p className="text-3xl font-bold">{visitorStats.totalVisitors}</p>
-                      <p className="text-sm text-muted-foreground">Total Visitors</p>
+                      <p className="text-sm text-muted-foreground">Total Page Views</p>
+                    </div>
+                    <div className="p-4 bg-muted rounded-lg text-center">
+                      <p className="text-3xl font-bold">{visitorStats.totalUniqueVisitors}</p>
+                      <p className="text-sm text-muted-foreground">Unique Visitors</p>
                     </div>
                     <div className="p-4 bg-muted rounded-lg text-center">
                       <p className="text-3xl font-bold">{visitorStats.todayVisitors}</p>
-                      <p className="text-sm text-muted-foreground">Today</p>
+                      <p className="text-sm text-muted-foreground">Today Views</p>
+                    </div>
+                    <div className="p-4 bg-muted rounded-lg text-center">
+                      <p className="text-3xl font-bold">{visitorStats.todayUniqueVisitors}</p>
+                      <p className="text-sm text-muted-foreground">Today Unique</p>
                     </div>
                   </div>
                   {visitorStats.dailyStats.length > 0 && (
@@ -691,7 +701,7 @@ export default function AdminPage() {
                         {visitorStats.dailyStats.slice(0, 7).map((stat) => (
                           <div key={stat.date} className="flex justify-between text-sm p-2 bg-muted/50 rounded">
                             <span>{new Date(stat.date).toLocaleDateString("en-IN", { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-                            <span className="font-medium">{stat.totalVisitors} visitors</span>
+                            <span className="font-medium">{stat.totalVisitors} views / {stat.uniqueVisitors || 0} unique</span>
                           </div>
                         ))}
                       </div>
