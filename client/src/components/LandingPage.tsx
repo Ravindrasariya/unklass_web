@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, BookOpen, Monitor, GraduationCap } from "lucide-react";
+import { ChevronLeft, ChevronRight, BookOpen, Monitor, GraduationCap, Shield, School } from "lucide-react";
 import { Link } from "wouter";
 import logoImage from "@assets/Screenshot_2025-12-11_at_12.16.26_AM_1765392397522.png";
 import studentImage from "@assets/Screenshot_2025-12-17_at_6.41.41_AM_1765934337756.png";
@@ -292,25 +292,25 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick }: LandingPa
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-8 items-stretch">
+            <div className="grid md:grid-cols-2 gap-6 items-stretch">
               <div 
-                className="bg-white border border-sky-100 rounded-2xl p-8 text-center transition-all duration-300 hover:shadow-2xl hover:shadow-sky-100 hover:-translate-y-1 cursor-pointer group relative overflow-hidden flex flex-col"
+                className="bg-white border border-sky-100 rounded-2xl p-6 text-center transition-all duration-300 hover:shadow-2xl hover:shadow-sky-100 hover:-translate-y-1 cursor-pointer group relative overflow-hidden flex flex-col"
                 onClick={onBoardExamClick}
                 data-testid="card-board-exam"
               >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-sky-100 to-transparent rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-500"></div>
                 <div className="relative z-10 flex flex-col flex-1">
-                  <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-sky-100 to-sky-50 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-sm">
-                    <BookOpen className="w-10 h-10 text-sky-600" />
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-sky-100 to-sky-50 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-sm">
+                    <BookOpen className="w-8 h-8 text-sky-600" />
                   </div>
-                  <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-3 whitespace-nowrap">
+                  <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-2">
                     UNKLASS Board Exam Prep
                   </h3>
-                  <p className="text-gray-600 mb-6 flex-1">
+                  <p className="text-gray-600 text-sm mb-4 flex-1">
                     Prepare for 8th, 10th, and 12th board exams with Exam Important Quizzes
                   </p>
                   <Button 
-                    className="w-full bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 text-white font-medium py-6 rounded-xl shadow-lg shadow-sky-200 transition-all group-hover:shadow-xl mt-auto"
+                    className="w-full bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 text-white font-medium py-5 rounded-xl shadow-lg shadow-sky-200 transition-all group-hover:shadow-xl mt-auto"
                     data-testid="button-board-exam"
                   >
                     Start Preparation
@@ -319,26 +319,82 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick }: LandingPa
               </div>
 
               <div 
-                className="bg-white border border-gray-100 rounded-2xl p-8 text-center transition-all duration-300 hover:shadow-2xl hover:shadow-gray-100 hover:-translate-y-1 cursor-pointer group relative overflow-hidden flex flex-col"
+                className="bg-white border border-gray-100 rounded-2xl p-6 text-center transition-all duration-300 hover:shadow-2xl hover:shadow-gray-100 hover:-translate-y-1 cursor-pointer group relative overflow-hidden flex flex-col"
                 onClick={onCPCTClick}
                 data-testid="card-cpct"
               >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-gray-100 to-transparent rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-500"></div>
                 <div className="relative z-10 flex flex-col flex-1">
-                  <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-gray-100 to-gray-50 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:bg-gradient-to-br group-hover:from-sky-100 group-hover:to-sky-50 transition-all duration-300 shadow-sm">
-                    <Monitor className="w-10 h-10 text-gray-600 group-hover:text-sky-600 transition-colors duration-300" />
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-gray-100 to-gray-50 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:bg-gradient-to-br group-hover:from-sky-100 group-hover:to-sky-50 transition-all duration-300 shadow-sm">
+                    <Monitor className="w-8 h-8 text-gray-600 group-hover:text-sky-600 transition-colors duration-300" />
                   </div>
-                  <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-3 whitespace-nowrap">
+                  <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-2">
                     UNKLASS MP CPCT Exam Prep
                   </h3>
-                  <p className="text-gray-600 mb-6 flex-1">
+                  <p className="text-gray-600 text-sm mb-4 flex-1">
                     Prepare for Madhya Pradesh Computer Proficiency Certification Test
                   </p>
                   <Button 
-                    className="w-full bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 text-white font-medium py-6 rounded-xl shadow-lg shadow-sky-200 transition-all group-hover:shadow-xl mt-auto"
+                    className="w-full bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 text-white font-medium py-5 rounded-xl shadow-lg shadow-sky-200 transition-all group-hover:shadow-xl mt-auto"
                     data-testid="button-cpct"
                   >
                     Start Preparation
+                  </Button>
+                </div>
+              </div>
+
+              <div 
+                className="bg-white border border-gray-200 rounded-2xl p-6 text-center relative overflow-hidden flex flex-col opacity-75"
+                data-testid="card-police"
+              >
+                <div className="absolute top-3 right-3 bg-amber-100 text-amber-700 text-xs font-semibold px-3 py-1 rounded-full z-20">
+                  Coming Soon
+                </div>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-gray-100 to-transparent rounded-full -translate-y-1/2 translate-x-1/2"></div>
+                <div className="relative z-10 flex flex-col flex-1">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-gray-100 to-gray-50 rounded-2xl flex items-center justify-center shadow-sm">
+                    <Shield className="w-8 h-8 text-gray-500" />
+                  </div>
+                  <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-2">
+                    UNKLASS MP Police Exam Prep
+                  </h3>
+                  <p className="text-gray-600 text-sm mb-4 flex-1">
+                    Prepare for Madhya Pradesh Police recruitment examinations
+                  </p>
+                  <Button 
+                    className="w-full bg-gray-300 text-gray-500 font-medium py-5 rounded-xl cursor-not-allowed mt-auto"
+                    disabled
+                    data-testid="button-police"
+                  >
+                    Coming Soon
+                  </Button>
+                </div>
+              </div>
+
+              <div 
+                className="bg-white border border-gray-200 rounded-2xl p-6 text-center relative overflow-hidden flex flex-col opacity-75"
+                data-testid="card-navodaya"
+              >
+                <div className="absolute top-3 right-3 bg-amber-100 text-amber-700 text-xs font-semibold px-3 py-1 rounded-full z-20">
+                  Coming Soon
+                </div>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-gray-100 to-transparent rounded-full -translate-y-1/2 translate-x-1/2"></div>
+                <div className="relative z-10 flex flex-col flex-1">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-gray-100 to-gray-50 rounded-2xl flex items-center justify-center shadow-sm">
+                    <School className="w-8 h-8 text-gray-500" />
+                  </div>
+                  <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-2">
+                    UNKLASS Navodaya Exam Prep
+                  </h3>
+                  <p className="text-gray-600 text-sm mb-4 flex-1">
+                    Prepare for Jawahar Navodaya Vidyalaya entrance examinations
+                  </p>
+                  <Button 
+                    className="w-full bg-gray-300 text-gray-500 font-medium py-5 rounded-xl cursor-not-allowed mt-auto"
+                    disabled
+                    data-testid="button-navodaya"
+                  >
+                    Coming Soon
                   </Button>
                 </div>
               </div>
