@@ -97,8 +97,16 @@ You MUST return a JSON object with exactly this structure:
 RULES:
 - "question" must be a complete question sentence
 - "options" must be an array of exactly 4 answer choices
-- "correctAnswer" must be 0, 1, 2, or 3 (index of correct option)
-- "explanation" must explain why the answer is correct
+- "correctAnswer" must be 0, 1, 2, or 3 (the ZERO-BASED index of the correct option in the options array)
+  - If correct answer is the FIRST option (index 0), set correctAnswer: 0
+  - If correct answer is the SECOND option (index 1), set correctAnswer: 1
+  - If correct answer is the THIRD option (index 2), set correctAnswer: 2
+  - If correct answer is the FOURTH option (index 3), set correctAnswer: 3
+- "explanation" must explain why the answer is correct AND the explanation MUST match the correctAnswer index
+- CRITICAL VALIDATION: Before outputting each question, VERIFY that:
+  1. The answer in the explanation matches options[correctAnswer]
+  2. For numerical questions, solve the problem and ensure the calculated answer equals options[correctAnswer]
+  3. Double-check: if explanation says "answer is 8" and "8" is at options[0], then correctAnswer MUST be 0
 - Generate exactly ${numQuestions} questions based on the CONCEPTS covered in the study material
 - Questions should TEST UNDERSTANDING of concepts, not just repeat exact text from the material
 - Create application-based, analytical, and conceptual questions that assess deep understanding
@@ -290,8 +298,16 @@ You MUST return a JSON object with exactly this structure:
 RULES:
 - "question" must be a complete question sentence in ${medium}
 - "options" must be an array of exactly 4 answer choices in ${medium}
-- "correctAnswer" must be 0, 1, 2, or 3 (index of correct option)
-- "explanation" must explain why the answer is correct in ${medium}
+- "correctAnswer" must be 0, 1, 2, or 3 (the ZERO-BASED index of the correct option in the options array)
+  - If correct answer is the FIRST option (index 0), set correctAnswer: 0
+  - If correct answer is the SECOND option (index 1), set correctAnswer: 1
+  - If correct answer is the THIRD option (index 2), set correctAnswer: 2
+  - If correct answer is the FOURTH option (index 3), set correctAnswer: 3
+- "explanation" must explain why the answer is correct in ${medium} AND MUST match the correctAnswer index
+- CRITICAL VALIDATION: Before outputting each question, VERIFY that:
+  1. The answer in the explanation matches options[correctAnswer]
+  2. For numerical questions, solve the problem and ensure the calculated answer equals options[correctAnswer]
+  3. Double-check: if explanation says "answer is X" and "X" is at options[0], then correctAnswer MUST be 0
 - Generate exactly ${numQuestions} questions based on CPCT syllabus concepts
 - Include questions on: Computer basics, MS Office, Internet, Operating Systems, Typing
 - Questions should be similar to actual CPCT exam pattern${excludeSection}`;
