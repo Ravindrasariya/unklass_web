@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, BookOpen, Monitor, GraduationCap, Shield, School } from "lucide-react";
 import { Link } from "wouter";
+import WeeklyLeaderboard from "./WeeklyLeaderboard";
 import logoImage from "@assets/Screenshot_2025-12-11_at_12.16.26_AM_1765392397522.png";
 import studentImage from "@assets/Screenshot_2025-12-17_at_6.41.41_AM_1765934337756.png";
 import classroom1 from "@assets/Screenshot_2025-12-17_at_2.54.23_PM_1765963603824.png";
@@ -401,6 +402,8 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick }: LandingPa
             </div>
           </div>
         </section>
+
+        <WeeklyLeaderboard />
 
         <section className="bg-gradient-to-b from-sky-50 to-sky-100/50 py-14 md:py-18 relative overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_70%,rgba(14,165,233,0.1)_0%,transparent_50%)]"></div>

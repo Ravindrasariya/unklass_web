@@ -901,5 +901,59 @@ export async function registerRoutes(
     }
   });
 
+  // Weekly Leaderboard - IST timezone (Monday to Sunday)
+  app.get("/api/leaderboard/weekly", async (req, res) => {
+    try {
+      // IST is UTC+5:30
+      const IST_OFFSET_HOURS = 5;
+      const IST_OFFSET_MINUTES = 30;
+      
+      // Get current time in UTC
+      const nowUtc = new Date();
+      
+      // Calculate IST day, hours, minutes from UTC
+      const istTotalMinutes = nowUtc.getUTCHours() * 60 + nowUtc.getUTCMinutes() + IST_OFFSET_HOURS * 60 + IST_OFFSET_MINUTES;
+      const istDayOffset = istTotalMinutes >= 24 * 60 ? 1 : istTotalMinutes < 0 ? -1 : 0;
+      
+      // Get day of week in IST (0 = Sunday, 1 = Monday, ...)
+      const utcDay = nowUtc.getUTCDay();
+      const istDay = (utcDay + istDayOffset + 7) % 7;
+      
+      // Days since Monday in IST
+      const daysFromMonday = istDay === 0 ? 6 : istDay - 1;
+      
+      // Monday 00:00:00 IST = Monday 18:30:00 UTC (previous day)
+      // So Monday IST midnight = subtract 5:30 from midnight = previous day 18:30 UTC
+      const mondayUtc = new Date(nowUtc);
+      mondayUtc.setUTCDate(nowUtc.getUTCDate() - daysFromMonday - istDayOffset);
+      mondayUtc.setUTCHours(0 - IST_OFFSET_HOURS, 0 - IST_OFFSET_MINUTES, 0, 0);
+      
+      // Sunday 23:59:59.999 IST = Sunday 18:29:59.999 UTC
+      const sundayUtc = new Date(mondayUtc);
+      sundayUtc.setUTCDate(mondayUtc.getUTCDate() + 7);
+      sundayUtc.setUTCMilliseconds(sundayUtc.getUTCMilliseconds() - 1);
+      
+      const leaderboard = await storage.getWeeklyLeaderboard(mondayUtc, sundayUtc);
+      
+      // Format week range for display in IST
+      const formatDateIST = (utcDate: Date) => {
+        const istDate = new Date(utcDate.getTime() + (IST_OFFSET_HOURS * 60 + IST_OFFSET_MINUTES) * 60 * 1000);
+        const day = istDate.getUTCDate();
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return `${day} ${months[istDate.getUTCMonth()]}`;
+      };
+      
+      res.json({
+        weekStart: formatDateIST(mondayUtc),
+        weekEnd: formatDateIST(new Date(sundayUtc.getTime() - 1)),
+        boardExam: leaderboard.boardExam,
+        cpct: leaderboard.cpct,
+      });
+    } catch (error) {
+      console.error("Error fetching weekly leaderboard:", error);
+      res.status(500).json({ error: "Failed to fetch leaderboard" });
+    }
+  });
+
   return httpServer;
 }

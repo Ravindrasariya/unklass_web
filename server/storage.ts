@@ -10,7 +10,7 @@ import {
   type VisitorStats
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, like, sql, desc } from "drizzle-orm";
+import { eq, and, like, sql, desc, gte, lte, isNotNull } from "drizzle-orm";
 
 export interface IStorage {
   // Students
@@ -57,6 +57,22 @@ export interface IStorage {
   getVisitorStats(): Promise<VisitorStats[]>;
   getTotalVisitors(): Promise<number>;
   getTotalUniqueVisitors(): Promise<number>;
+
+  // Leaderboard
+  getWeeklyLeaderboard(weekStartUtc: Date, weekEndUtc: Date): Promise<{
+    boardExam: LeaderboardEntry[];
+    cpct: LeaderboardEntry[];
+  }>;
+}
+
+export interface LeaderboardEntry {
+  rank: number;
+  studentId: number;
+  studentName: string;
+  accuracy: number;
+  totalScore: number;
+  totalQuestions: number;
+  testsCompleted: number;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -293,6 +309,82 @@ export class DatabaseStorage implements IStorage {
   async getTotalUniqueVisitors(): Promise<number> {
     const result = await db.select({ total: sql<number>`COALESCE(SUM(${visitorStats.uniqueVisitors}), 0)` }).from(visitorStats);
     return result[0]?.total || 0;
+  }
+
+  // Leaderboard
+  async getWeeklyLeaderboard(weekStartUtc: Date, weekEndUtc: Date): Promise<{
+    boardExam: LeaderboardEntry[];
+    cpct: LeaderboardEntry[];
+  }> {
+    // Board Exam Leaderboard
+    const boardExamResults = await db
+      .select({
+        studentId: quizSessions.studentId,
+        studentName: students.name,
+        totalScore: sql<number>`COALESCE(SUM(${quizSessions.score}), 0)`,
+        totalQuestions: sql<number>`COALESCE(SUM(${quizSessions.totalQuestions}), 0)`,
+        testsCompleted: sql<number>`COUNT(*)`,
+      })
+      .from(quizSessions)
+      .innerJoin(students, eq(quizSessions.studentId, students.id))
+      .where(
+        and(
+          isNotNull(quizSessions.score),
+          isNotNull(quizSessions.completedAt),
+          sql`${quizSessions.totalQuestions} > 0`,
+          gte(quizSessions.completedAt, weekStartUtc),
+          lte(quizSessions.completedAt, weekEndUtc)
+        )
+      )
+      .groupBy(quizSessions.studentId, students.name)
+      .orderBy(sql`(COALESCE(SUM(${quizSessions.score}), 0)::float / NULLIF(SUM(${quizSessions.totalQuestions}), 0)) DESC NULLS LAST`)
+      .limit(5);
+
+    const boardExam: LeaderboardEntry[] = boardExamResults.map((row, index) => ({
+      rank: index + 1,
+      studentId: row.studentId,
+      studentName: row.studentName,
+      totalScore: Number(row.totalScore),
+      totalQuestions: Number(row.totalQuestions),
+      accuracy: row.totalQuestions > 0 ? Math.round((Number(row.totalScore) / Number(row.totalQuestions)) * 100) : 0,
+      testsCompleted: Number(row.testsCompleted),
+    }));
+
+    // CPCT Leaderboard
+    const cpctResults = await db
+      .select({
+        studentId: cpctQuizSessions.studentId,
+        studentName: cpctStudents.name,
+        totalScore: sql<number>`COALESCE(SUM(${cpctQuizSessions.score}), 0)`,
+        totalQuestions: sql<number>`COALESCE(SUM(${cpctQuizSessions.totalQuestions}), 0)`,
+        testsCompleted: sql<number>`COUNT(*)`,
+      })
+      .from(cpctQuizSessions)
+      .innerJoin(cpctStudents, eq(cpctQuizSessions.studentId, cpctStudents.id))
+      .where(
+        and(
+          isNotNull(cpctQuizSessions.score),
+          isNotNull(cpctQuizSessions.completedAt),
+          sql`${cpctQuizSessions.totalQuestions} > 0`,
+          gte(cpctQuizSessions.completedAt, weekStartUtc),
+          lte(cpctQuizSessions.completedAt, weekEndUtc)
+        )
+      )
+      .groupBy(cpctQuizSessions.studentId, cpctStudents.name)
+      .orderBy(sql`(COALESCE(SUM(${cpctQuizSessions.score}), 0)::float / NULLIF(SUM(${cpctQuizSessions.totalQuestions}), 0)) DESC NULLS LAST`)
+      .limit(5);
+
+    const cpct: LeaderboardEntry[] = cpctResults.map((row, index) => ({
+      rank: index + 1,
+      studentId: row.studentId,
+      studentName: row.studentName,
+      totalScore: Number(row.totalScore),
+      totalQuestions: Number(row.totalQuestions),
+      accuracy: row.totalQuestions > 0 ? Math.round((Number(row.totalScore) / Number(row.totalQuestions)) * 100) : 0,
+      testsCompleted: Number(row.testsCompleted),
+    }));
+
+    return { boardExam, cpct };
   }
 }
 
