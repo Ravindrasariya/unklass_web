@@ -303,7 +303,7 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick }: LandingPa
                   <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-sky-100 to-sky-50 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-sm">
                     <BookOpen className="w-10 h-10 text-sky-600" />
                   </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                  <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-3 whitespace-nowrap">
                     UNKLASS Board Exam Prep
                   </h3>
                   <p className="text-gray-600 mb-6 flex-1">
@@ -328,7 +328,7 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick }: LandingPa
                   <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-gray-100 to-gray-50 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:bg-gradient-to-br group-hover:from-sky-100 group-hover:to-sky-50 transition-all duration-300 shadow-sm">
                     <Monitor className="w-10 h-10 text-gray-600 group-hover:text-sky-600 transition-colors duration-300" />
                   </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                  <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-3 whitespace-nowrap">
                     UNKLASS MP CPCT Exam Prep
                   </h3>
                   <p className="text-gray-600 mb-6 flex-1">
