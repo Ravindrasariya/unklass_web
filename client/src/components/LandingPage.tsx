@@ -292,25 +292,25 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick }: LandingPa
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-8">
+            <div className="grid md:grid-cols-2 gap-8 items-stretch">
               <div 
-                className="bg-white border border-sky-100 rounded-2xl p-8 text-center transition-all duration-300 hover:shadow-2xl hover:shadow-sky-100 hover:-translate-y-1 cursor-pointer group relative overflow-hidden"
+                className="bg-white border border-sky-100 rounded-2xl p-8 text-center transition-all duration-300 hover:shadow-2xl hover:shadow-sky-100 hover:-translate-y-1 cursor-pointer group relative overflow-hidden flex flex-col"
                 onClick={onBoardExamClick}
                 data-testid="card-board-exam"
               >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-sky-100 to-transparent rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-500"></div>
-                <div className="relative z-10">
+                <div className="relative z-10 flex flex-col flex-1">
                   <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-sky-100 to-sky-50 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-sm">
                     <BookOpen className="w-10 h-10 text-sky-600" />
                   </div>
                   <h3 className="text-2xl font-bold text-gray-900 mb-3">
                     UNKLASS Board Exam Prep
                   </h3>
-                  <p className="text-gray-600 mb-6">
+                  <p className="text-gray-600 mb-6 flex-1">
                     Prepare for 8th, 10th, and 12th board exams with Exam Important Quizzes
                   </p>
                   <Button 
-                    className="w-full bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 text-white font-medium py-6 rounded-xl shadow-lg shadow-sky-200 transition-all group-hover:shadow-xl"
+                    className="w-full bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 text-white font-medium py-6 rounded-xl shadow-lg shadow-sky-200 transition-all group-hover:shadow-xl mt-auto"
                     data-testid="button-board-exam"
                   >
                     Start Preparation
@@ -319,23 +319,23 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick }: LandingPa
               </div>
 
               <div 
-                className="bg-white border border-gray-100 rounded-2xl p-8 text-center transition-all duration-300 hover:shadow-2xl hover:shadow-gray-100 hover:-translate-y-1 cursor-pointer group relative overflow-hidden"
+                className="bg-white border border-gray-100 rounded-2xl p-8 text-center transition-all duration-300 hover:shadow-2xl hover:shadow-gray-100 hover:-translate-y-1 cursor-pointer group relative overflow-hidden flex flex-col"
                 onClick={onCPCTClick}
                 data-testid="card-cpct"
               >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-gray-100 to-transparent rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-500"></div>
-                <div className="relative z-10">
+                <div className="relative z-10 flex flex-col flex-1">
                   <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-gray-100 to-gray-50 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:bg-gradient-to-br group-hover:from-sky-100 group-hover:to-sky-50 transition-all duration-300 shadow-sm">
                     <Monitor className="w-10 h-10 text-gray-600 group-hover:text-sky-600 transition-colors duration-300" />
                   </div>
                   <h3 className="text-2xl font-bold text-gray-900 mb-3">
                     UNKLASS MP CPCT Exam Prep
                   </h3>
-                  <p className="text-gray-600 mb-6">
+                  <p className="text-gray-600 mb-6 flex-1">
                     Prepare for Madhya Pradesh Computer Proficiency Certification Test
                   </p>
                   <Button 
-                    className="w-full bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 text-white font-medium py-6 rounded-xl shadow-lg shadow-sky-200 transition-all group-hover:shadow-xl"
+                    className="w-full bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 text-white font-medium py-6 rounded-xl shadow-lg shadow-sky-200 transition-all group-hover:shadow-xl mt-auto"
                     data-testid="button-cpct"
                   >
                     Start Preparation
