@@ -310,8 +310,37 @@ export async function registerRoutes(
         );
       } else {
         // Generate general questions for the subject (fallback when no PDF uploaded)
+        // Provide grade-specific curriculum topics to ensure appropriate difficulty
+        const gradeTopics: Record<string, Record<string, string>> = {
+          "8th": {
+            Mathematics: "Linear equations, quadrilaterals, data handling, squares and square roots, cubes and cube roots, comparing quantities, algebraic expressions, mensuration, exponents and powers, direct and inverse proportions.",
+            Science: "Crop production, microorganisms, synthetic fibres, metals and non-metals, coal and petroleum, combustion and flame, cell structure, reproduction in animals, force and pressure, friction, sound, chemical effects of electric current, light, stars and solar system, pollution."
+          },
+          "10th": {
+            Mathematics: "Real numbers, polynomials, pair of linear equations, quadratic equations, arithmetic progressions, triangles, coordinate geometry, trigonometry, circles, areas related to circles, surface areas and volumes, statistics, probability.",
+            Science: "Chemical reactions, acids bases and salts, metals and non-metals, carbon compounds, periodic classification, life processes, control and coordination, reproduction, heredity and evolution, light reflection refraction, human eye, electricity, magnetic effects, sources of energy, environment, natural resources."
+          },
+          "12th": {
+            Mathematics: "Relations and functions, inverse trigonometric functions, matrices, determinants, continuity and differentiability, applications of derivatives, integrals, applications of integrals, differential equations, vectors, three-dimensional geometry, linear programming, probability.",
+            Science: "Solid state, solutions, electrochemistry, chemical kinetics, surface chemistry, p-block elements, d and f block elements, coordination compounds, haloalkanes, alcohols phenols ethers, aldehydes ketones, amines, biomolecules, polymers, chemistry in everyday life.",
+            Physics: "Electric charges and fields, electrostatic potential, current electricity, moving charges and magnetism, magnetism and matter, electromagnetic induction, alternating current, electromagnetic waves, ray optics, wave optics, dual nature of radiation, atoms, nuclei, semiconductor electronics."
+          }
+        };
+        
+        // Extract base grade number
+        const baseGrade = grade.replace(/(st|nd|rd|th)$/i, '').trim() + "th";
+        const topicsForGrade = gradeTopics[baseGrade] || {};
+        const subjectTopics = topicsForGrade[subject] || `Advanced ${subject} topics appropriate for ${grade} grade level in Indian education system.`;
+        
+        const fallbackContent = `${subject} curriculum for ${grade} grade students in ${board} board, India.
+
+GRADE-SPECIFIC TOPICS (${grade} grade level ONLY - do NOT include topics from lower grades):
+${subjectTopics}
+
+IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT use concepts from lower grades like 8th or 10th for 12th grade questions.`;
+        
         questions = await generateQuizQuestions(
-          `General ${subject} curriculum for ${grade} grade students in ${board} board, India.`,
+          fallbackContent,
           subject,
           grade,
           board,

@@ -10,7 +10,15 @@ import {
   type VisitorStats
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, like, sql, desc, gte, lte, isNotNull } from "drizzle-orm";
+import { eq, and, like, sql, desc, gte, lte, isNotNull, or } from "drizzle-orm";
+
+// Normalize grade to handle "8th" vs "8", "10th" vs "10", etc.
+function normalizeGrade(grade: string): string[] {
+  // Remove ordinal suffixes and get base number
+  const base = grade.replace(/(st|nd|rd|th)$/i, '').trim();
+  // Return both formats for matching
+  return [base, `${base}th`];
+}
 
 export interface IStorage {
   // Students
@@ -108,9 +116,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPdfByGradeBoardSubject(grade: string, board: string, subject: string): Promise<Pdf | undefined> {
+    // Get normalized grade variants (e.g., "12th" -> ["12", "12th"])
+    const gradeVariants = normalizeGrade(grade);
+    
     const [pdf] = await db.select().from(pdfs).where(
       and(
-        eq(pdfs.grade, grade),
+        or(
+          eq(pdfs.grade, gradeVariants[0]),
+          eq(pdfs.grade, gradeVariants[1])
+        ),
         eq(pdfs.board, board),
         eq(pdfs.subject, subject)
       )
