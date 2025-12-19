@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, BookOpen, Monitor, Sparkles, GraduationCap } from "lucide-react";
+import { ChevronLeft, ChevronRight, BookOpen, Monitor, GraduationCap } from "lucide-react";
 import { Link } from "wouter";
 import logoImage from "@assets/Screenshot_2025-12-11_at_12.16.26_AM_1765392397522.png";
 import studentImage from "@assets/Screenshot_2025-12-17_at_6.41.41_AM_1765934337756.png";
@@ -135,10 +135,6 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick }: LandingPa
           </div>
           <div className="max-w-4xl mx-auto px-4 py-10 md:py-14 relative z-10">
             <div className="text-center">
-              <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm px-4 py-1.5 rounded-full text-sm mb-6 border border-white/20">
-                <Sparkles className="w-4 h-4" />
-                <span>AI-Powered Learning Platform</span>
-              </div>
               <div className="relative min-h-[100px] md:min-h-[120px] flex items-center justify-center">
                 <div className="relative w-full">
                   {sliderContent.map((slide, index) => (
