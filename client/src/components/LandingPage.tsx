@@ -406,6 +406,27 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick }: LandingPa
             </div>
           </div>
         </section>
+
+        <section className="bg-gradient-to-r from-sky-500 via-sky-600 to-blue-600 py-14 md:py-16 relative overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,rgba(255,255,255,0.1)_0%,transparent_50%)]"></div>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_50%,rgba(0,0,0,0.1)_0%,transparent_50%)]"></div>
+          <div className="max-w-3xl mx-auto px-4 text-center relative z-10">
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
+              Interested in Learning More?
+            </h2>
+            <p className="text-white/90 text-lg mb-8 max-w-xl mx-auto">
+              Book a free demo class and experience our teaching methodology firsthand
+            </p>
+            <Link href="/contact">
+              <Button 
+                className="bg-white text-sky-600 hover:bg-gray-100 font-semibold px-8 py-6 rounded-xl shadow-lg transition-all hover:shadow-xl hover:scale-105"
+                data-testid="button-book-demo"
+              >
+                Contact Us to Book a Demo
+              </Button>
+            </Link>
+          </div>
+        </section>
       </main>
 
       <footer className="bg-gradient-to-b from-gray-900 to-gray-950 text-white py-10">
