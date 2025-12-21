@@ -17,6 +17,7 @@ const testimonialImages = [testimonial1, testimonial2, testimonial3];
 interface LandingPageProps {
   onBoardExamClick: () => void;
   onCPCTClick: () => void;
+  onNavodayaClick: () => void;
 }
 
 const sliderContent = [
@@ -38,7 +39,7 @@ const sliderContent = [
   },
 ];
 
-export default function LandingPage({ onBoardExamClick, onCPCTClick }: LandingPageProps) {
+export default function LandingPage({ onBoardExamClick, onCPCTClick, onNavodayaClick }: LandingPageProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [currentClassroom, setCurrentClassroom] = useState(0);
 
@@ -373,16 +374,14 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick }: LandingPa
               </div>
 
               <div 
-                className="bg-white border border-gray-200 rounded-2xl p-6 text-center relative overflow-hidden flex flex-col opacity-75"
+                className="bg-white border border-green-100 rounded-2xl p-6 text-center transition-all duration-300 hover:shadow-2xl hover:shadow-green-100 hover:-translate-y-1 cursor-pointer group relative overflow-hidden flex flex-col"
+                onClick={onNavodayaClick}
                 data-testid="card-navodaya"
               >
-                <div className="absolute top-3 right-3 bg-amber-100 text-amber-700 text-xs font-semibold px-3 py-1 rounded-full z-20">
-                  Coming Soon
-                </div>
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-gray-100 to-transparent rounded-full -translate-y-1/2 translate-x-1/2"></div>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-green-100 to-transparent rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-500"></div>
                 <div className="relative z-10 flex flex-col flex-1">
-                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-gray-100 to-gray-50 rounded-2xl flex items-center justify-center shadow-sm">
-                    <School className="w-8 h-8 text-gray-500" />
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-green-100 to-green-50 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-sm">
+                    <School className="w-8 h-8 text-green-600" />
                   </div>
                   <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-2">
                     UNKLASS Navodaya Exam Prep
@@ -391,11 +390,10 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick }: LandingPa
                     Prepare for Jawahar Navodaya Vidyalaya entrance examinations
                   </p>
                   <Button 
-                    className="w-full bg-gray-300 text-gray-500 font-medium py-5 rounded-xl cursor-not-allowed mt-auto"
-                    disabled
+                    className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium py-5 rounded-xl shadow-lg shadow-green-200 transition-all group-hover:shadow-xl mt-auto"
                     data-testid="button-navodaya"
                   >
-                    Coming Soon
+                    Start Preparation
                   </Button>
                 </div>
               </div>

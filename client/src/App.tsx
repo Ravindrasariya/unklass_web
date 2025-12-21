@@ -412,6 +412,7 @@ function App() {
                 <LandingPage 
                   onBoardExamClick={() => setAppState("onboarding")}
                   onCPCTClick={() => setAppState("cpct-onboarding")}
+                  onNavodayaClick={() => setAppState("onboarding")}
                 />
               )}
 
@@ -551,6 +552,7 @@ function App() {
                   totalQuestions={questions.length}
                   onRetakeQuiz={handleRetakeQuiz}
                   onTryAnotherSubject={handleTryAnotherSubject}
+                  onBackToHome={() => setAppState("landing")}
                 />
               )}
 
@@ -600,6 +602,7 @@ function App() {
                   totalQuestions={cpctQuestions.length}
                   onRetakeQuiz={handleCpctRetakeQuiz}
                   onTryAnotherSubject={handleCpctViewHistory}
+                  onBackToHome={() => setAppState("landing")}
                   subjectLabel="View Quiz History"
                 />
               )}

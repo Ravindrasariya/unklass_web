@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trophy, Award, BookOpen, RefreshCw, BookMarked, Quote } from "lucide-react";
+import { Trophy, Award, BookOpen, RefreshCw, BookMarked, Quote, Home } from "lucide-react";
 
 const MOTIVATIONAL_QUOTES = [
   { text: "Success is not final, failure is not fatal: it is the courage to continue that counts.", language: "English" },
@@ -37,6 +37,7 @@ interface QuizResultsProps {
   totalQuestions: number;
   onRetakeQuiz: () => void;
   onTryAnotherSubject: () => void;
+  onBackToHome?: () => void;
   subjectLabel?: string;
 }
 
@@ -45,6 +46,7 @@ export default function QuizResults({
   totalQuestions, 
   onRetakeQuiz,
   onTryAnotherSubject,
+  onBackToHome,
   subjectLabel = "Choose Different Subject",
 }: QuizResultsProps) {
   const percentage = Math.round((score / totalQuestions) * 100);
@@ -147,6 +149,17 @@ export default function QuizResults({
               <BookMarked className="w-4 h-4 mr-2" />
               {subjectLabel}
             </Button>
+            {onBackToHome && (
+              <Button 
+                variant="ghost"
+                className="w-full" 
+                onClick={onBackToHome}
+                data-testid="button-back-to-home"
+              >
+                <Home className="w-4 h-4 mr-2" />
+                Back to Home
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
