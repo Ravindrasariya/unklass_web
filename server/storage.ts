@@ -1,11 +1,14 @@
 import { 
   students, pdfs, quizSessions, cpctStudents, cpctQuizSessions,
+  navodayaStudents, navodayaQuizSessions,
   contactSubmissions, visitorStats, uniqueVisitors,
   type Student, type InsertStudent,
   type Pdf, type InsertPdf,
   type QuizSession, type InsertQuizSession,
   type CpctStudent, type InsertCpctStudent,
   type CpctQuizSession, type InsertCpctQuizSession,
+  type NavodayaStudent, type InsertNavodayaStudent,
+  type NavodayaQuizSession, type InsertNavodayaQuizSession,
   type ContactSubmission, type InsertContactSubmission,
   type VisitorStats
 } from "@shared/schema";
@@ -55,6 +58,20 @@ export interface IStorage {
   getCpctStudentQuizSessions(studentId: number): Promise<CpctQuizSession[]>;
   getCpctStudentPreviousQuestions(studentId: number): Promise<string[]>;
   getCpctPdf(year: string): Promise<Pdf | undefined>;
+
+  // Navodaya Students
+  getNavodayaStudent(id: number): Promise<NavodayaStudent | undefined>;
+  getNavodayaStudentByMobile(mobileNumber: string): Promise<NavodayaStudent | undefined>;
+  createNavodayaStudent(student: InsertNavodayaStudent): Promise<NavodayaStudent>;
+  getAllNavodayaStudents(): Promise<NavodayaStudent[]>;
+
+  // Navodaya Quiz Sessions
+  createNavodayaQuizSession(session: InsertNavodayaQuizSession): Promise<NavodayaQuizSession>;
+  updateNavodayaQuizSession(id: number, updates: Partial<NavodayaQuizSession>): Promise<NavodayaQuizSession | undefined>;
+  getNavodayaQuizSession(id: number): Promise<NavodayaQuizSession | undefined>;
+  getNavodayaStudentQuizSessions(studentId: number): Promise<NavodayaQuizSession[]>;
+  getNavodayaStudentPreviousQuestions(studentId: number): Promise<string[]>;
+  getNavodayaPdf(examGrade: string): Promise<Pdf | undefined>;
 
   // Contact Submissions
   createContactSubmission(submission: InsertContactSubmission): Promise<ContactSubmission>;
@@ -257,6 +274,73 @@ export class DatabaseStorage implements IStorage {
   async getCpctPdf(year: string): Promise<Pdf | undefined> {
     // Look for CPCT_Year.pdf format
     const filename = `CPCT_${year}.pdf`;
+    const [pdf] = await db.select().from(pdfs).where(eq(pdfs.filename, filename));
+    return pdf || undefined;
+  }
+
+  // Navodaya Students
+  async getNavodayaStudent(id: number): Promise<NavodayaStudent | undefined> {
+    const [student] = await db.select().from(navodayaStudents).where(eq(navodayaStudents.id, id));
+    return student || undefined;
+  }
+
+  async getNavodayaStudentByMobile(mobileNumber: string): Promise<NavodayaStudent | undefined> {
+    const [student] = await db.select().from(navodayaStudents).where(eq(navodayaStudents.mobileNumber, mobileNumber));
+    return student || undefined;
+  }
+
+  async createNavodayaStudent(insertStudent: InsertNavodayaStudent): Promise<NavodayaStudent> {
+    const [student] = await db.insert(navodayaStudents).values(insertStudent).returning();
+    return student;
+  }
+
+  async getAllNavodayaStudents(): Promise<NavodayaStudent[]> {
+    return await db.select().from(navodayaStudents);
+  }
+
+  // Navodaya Quiz Sessions
+  async createNavodayaQuizSession(insertSession: InsertNavodayaQuizSession): Promise<NavodayaQuizSession> {
+    const [session] = await db.insert(navodayaQuizSessions).values(insertSession).returning();
+    return session;
+  }
+
+  async updateNavodayaQuizSession(id: number, updates: Partial<NavodayaQuizSession>): Promise<NavodayaQuizSession | undefined> {
+    const [session] = await db
+      .update(navodayaQuizSessions)
+      .set(updates)
+      .where(eq(navodayaQuizSessions.id, id))
+      .returning();
+    return session || undefined;
+  }
+
+  async getNavodayaQuizSession(id: number): Promise<NavodayaQuizSession | undefined> {
+    const [session] = await db.select().from(navodayaQuizSessions).where(eq(navodayaQuizSessions.id, id));
+    return session || undefined;
+  }
+
+  async getNavodayaStudentQuizSessions(studentId: number): Promise<NavodayaQuizSession[]> {
+    return await db.select().from(navodayaQuizSessions).where(eq(navodayaQuizSessions.studentId, studentId));
+  }
+
+  async getNavodayaStudentPreviousQuestions(studentId: number): Promise<string[]> {
+    const sessions = await db.select().from(navodayaQuizSessions).where(eq(navodayaQuizSessions.studentId, studentId));
+    
+    const previousQuestions: string[] = [];
+    for (const session of sessions) {
+      if (session.questions && Array.isArray(session.questions)) {
+        for (const q of session.questions as any[]) {
+          if (q.question) {
+            previousQuestions.push(q.question);
+          }
+        }
+      }
+    }
+    return previousQuestions;
+  }
+
+  async getNavodayaPdf(examGrade: string): Promise<Pdf | undefined> {
+    // Look for {grade}_navodaya.pdf format (e.g., 6th_navodaya.pdf, 9th_navodaya.pdf)
+    const filename = `${examGrade}_navodaya.pdf`;
     const [pdf] = await db.select().from(pdfs).where(eq(pdfs.filename, filename));
     return pdf || undefined;
   }

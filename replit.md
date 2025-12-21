@@ -32,9 +32,13 @@ Preferred communication style: Simple, everyday language.
 - **Schema Location**: `shared/schema.ts` (shared between frontend/backend)
 - **Migrations**: Drizzle Kit with `migrations/` output directory
 - **Tables**:
-  - `students`: User registration data (name, grade, board, location, mobile_number)
+  - `students`: Board exam student registration (name, grade, board, location, mobile_number)
   - `pdfs`: Uploaded PDF metadata and extracted content (admin functionality)
-  - `quiz_sessions`: Quiz attempts, generated questions, answers, and scores
+  - `quiz_sessions`: Board exam quiz attempts, generated questions, answers, and scores
+  - `cpct_students`: CPCT student registration (name, medium, location, mobile_number)
+  - `cpct_quiz_sessions`: CPCT quiz attempts
+  - `navodaya_students`: Navodaya student registration (name, exam_grade, medium, location, mobile_number)
+  - `navodaya_quiz_sessions`: Navodaya quiz attempts
 
 ### API Endpoints
 - `POST /api/students/register` - Register new student
@@ -67,6 +71,15 @@ Preferred communication style: Simple, everyday language.
 - **PDF format**: CPCT_Year.pdf (e.g., CPCT_2024.pdf)
 - **Direct quiz start**: After login/registration, quiz starts immediately without year selection
 - **Quiz history**: Students can view their CPCT quiz history and review past questions
+
+### Navodaya Exam Prep (JNV Entrance)
+- **Separate student table**: `navodayaStudents` with fields (name, examGrade, medium, location, mobileNumber)
+- **Exam grade selection**: 6th or 9th - determines which grade-level questions are generated
+- **Medium selection**: Hindi or English - questions, answers, and explanations are rendered in the selected medium
+- **PDF format**: {grade}_navodaya.pdf (e.g., 6th_navodaya.pdf, 9th_navodaya.pdf)
+- **Direct quiz start**: After login/registration, quiz starts immediately
+- **Quiz history**: Students can view their Navodaya quiz history and review past questions
+- **Fallback questions**: Grade-specific fallback questions for Mental Ability, Arithmetic, Language, and GK
 
 ### Design System
 - **Typography**: Inter (primary), Poppins (headings) via Google Fonts

@@ -1,8 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertStudentSchema, insertCpctStudentSchema, insertContactSubmissionSchema, type Question } from "@shared/schema";
-import { generateQuizQuestions, generateAnswerFeedback, generateCpctQuizQuestions } from "./openai";
+import { insertStudentSchema, insertCpctStudentSchema, insertNavodayaStudentSchema, insertContactSubmissionSchema, type Question } from "@shared/schema";
+import { generateQuizQuestions, generateAnswerFeedback, generateCpctQuizQuestions, generateNavodayaQuizQuestions } from "./openai";
 import multer from "multer";
 
 async function parsePdf(buffer: Buffer): Promise<string> {
@@ -142,12 +142,15 @@ export async function registerRoutes(
       // Check for CPCT format: CPCT_Year.pdf (e.g., CPCT_2024.pdf)
       const cpctMatch = filename.match(/^CPCT_(\d{4})\.pdf$/i);
       
+      // Check for Navodaya format: {grade}_navodaya.pdf (e.g., 6th_navodaya.pdf, 9th_navodaya.pdf)
+      const navodayaMatch = filename.match(/^(\d+(?:st|nd|rd|th)?)_navodaya\.pdf$/i);
+      
       // Check for Board Exam format: {grade}_{board}_{subject}.pdf
       const boardMatch = filename.match(/^(.+)_(.+)_(.+)\.pdf$/i);
       
-      if (!cpctMatch && !boardMatch) {
+      if (!cpctMatch && !navodayaMatch && !boardMatch) {
         return res.status(400).json({ 
-          error: "Invalid filename format. Expected: grade_board_subject.pdf (Board Exam) or CPCT_Year.pdf (CPCT)" 
+          error: "Invalid filename format. Expected: grade_board_subject.pdf (Board Exam), CPCT_Year.pdf (CPCT), or grade_navodaya.pdf (Navodaya)" 
         });
       }
 
@@ -173,6 +176,15 @@ export async function registerRoutes(
           grade: "CPCT",
           board: "CPCT",
           subject: `CPCT ${cpctMatch[1]}`,
+          content,
+        };
+      } else if (navodayaMatch) {
+        // Navodaya format - use special values
+        pdfData = {
+          filename,
+          grade: navodayaMatch[1],
+          board: "Navodaya",
+          subject: "Navodaya Entrance",
           content,
         };
       } else {
@@ -927,6 +939,245 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     } catch (error) {
       console.error("Error fetching visitor stats:", error);
       res.status(500).json({ error: "Failed to fetch visitor stats" });
+    }
+  });
+
+  // ============================================
+  // NAVODAYA EXAM PREP ROUTES
+  // ============================================
+
+  // Navodaya Student registration
+  app.post("/api/navodaya/students/register", async (req, res) => {
+    try {
+      const validatedData = insertNavodayaStudentSchema.parse(req.body);
+      
+      // Check if student already exists by mobile number
+      const existingStudent = await storage.getNavodayaStudentByMobile(validatedData.mobileNumber);
+      if (existingStudent) {
+        return res.json(existingStudent);
+      }
+      
+      const student = await storage.createNavodayaStudent(validatedData);
+      res.json(student);
+    } catch (error: unknown) {
+      console.error("Error registering Navodaya student:", error);
+      const message = error instanceof Error ? error.message : "Failed to register student";
+      res.status(400).json({ error: message });
+    }
+  });
+
+  // Navodaya Student login
+  app.post("/api/navodaya/students/login", async (req, res) => {
+    try {
+      const { name, mobileNumber } = req.body;
+      
+      if (!mobileNumber) {
+        return res.status(400).json({ error: "Mobile number is required" });
+      }
+      
+      const student = await storage.getNavodayaStudentByMobile(mobileNumber);
+      if (!student) {
+        return res.status(404).json({ error: "Student not found. Please register first." });
+      }
+      
+      // Optionally verify name matches
+      if (name && student.name.toLowerCase() !== name.toLowerCase()) {
+        return res.status(404).json({ error: "Student not found. Please check your name and mobile number." });
+      }
+      
+      res.json(student);
+    } catch (error) {
+      console.error("Error logging in Navodaya student:", error);
+      res.status(500).json({ error: "Failed to login" });
+    }
+  });
+
+  // Generate Navodaya quiz questions
+  app.post("/api/navodaya/quiz/generate", async (req, res) => {
+    try {
+      const { studentId } = req.body;
+
+      if (!studentId) {
+        return res.status(400).json({ error: "Student ID is required" });
+      }
+
+      // Verify student exists
+      const student = await storage.getNavodayaStudent(studentId);
+      if (!student) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+
+      // Get PDF content for the student's exam grade
+      const pdf = await storage.getNavodayaPdf(student.examGrade);
+      
+      // Get previous questions to avoid duplicates
+      const previousQuestions = await storage.getNavodayaStudentPreviousQuestions(studentId);
+      console.log(`Navodaya Student ${studentId} has ${previousQuestions.length} previous questions`);
+      
+      let questions: Question[];
+      const medium = student.medium as "Hindi" | "English";
+      const examGrade = student.examGrade as "6th" | "9th";
+      
+      if (pdf) {
+        // Generate questions from PDF content in student's selected medium
+        questions = await generateNavodayaQuizQuestions(
+          pdf.content,
+          examGrade,
+          medium,
+          10,
+          previousQuestions
+        );
+      } else {
+        // Generate general Navodaya questions (fallback when no PDF uploaded)
+        const fallbackContent = examGrade === "6th"
+          ? `Navodaya Class 6 entrance exam curriculum. Topics: Mental Ability (patterns, sequences, coding-decoding, analogies, mirror images, classifications), Arithmetic (basic operations, fractions, decimals, percentages, time and distance, profit and loss), Language comprehension (reading passages, grammar basics, vocabulary), General Knowledge (current affairs, science facts, geography basics, Indian history).`
+          : `Navodaya Class 9 entrance exam curriculum. Topics: Mental Ability (advanced patterns, series completion, coding-decoding, blood relations, direction sense, ranking tests), Mathematics (algebra basics, geometry, mensuration, statistics, number system), Science (physics fundamentals, chemistry basics, biology concepts), Social Studies (history, geography, civics), Language (English and Hindi comprehension, grammar).`;
+        
+        questions = await generateNavodayaQuizQuestions(
+          fallbackContent,
+          examGrade,
+          medium,
+          10,
+          previousQuestions
+        );
+      }
+
+      // Create Navodaya quiz session
+      const session = await storage.createNavodayaQuizSession({
+        studentId,
+        pdfId: pdf?.id || null,
+        examGrade: student.examGrade,
+        medium: student.medium,
+        questions,
+        totalQuestions: 10,
+      });
+
+      res.json({
+        sessionId: session.id,
+        questions,
+      });
+    } catch (error: unknown) {
+      console.error("Error generating Navodaya quiz:", error);
+      const message = error instanceof Error ? error.message : "Failed to generate quiz";
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // Submit Navodaya quiz results
+  app.post("/api/navodaya/quiz/submit", async (req, res) => {
+    try {
+      const { sessionId, answers, score } = req.body;
+
+      if (!sessionId || answers === undefined || score === undefined) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      const session = await storage.updateNavodayaQuizSession(sessionId, {
+        answers,
+        score,
+        completedAt: new Date(),
+      });
+
+      if (!session) {
+        return res.status(404).json({ error: "Quiz session not found" });
+      }
+
+      res.json({
+        message: "Quiz completed",
+        score,
+        totalQuestions: session.totalQuestions,
+      });
+    } catch (error: unknown) {
+      console.error("Error submitting Navodaya quiz:", error);
+      const message = error instanceof Error ? error.message : "Failed to submit quiz";
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // Get Navodaya student's quiz history
+  app.get("/api/navodaya/students/:studentId/quiz-history", async (req, res) => {
+    try {
+      const studentId = parseInt(req.params.studentId);
+      const sessions = await storage.getNavodayaStudentQuizSessions(studentId);
+      
+      res.json(sessions.map(s => ({
+        id: s.id,
+        examGrade: s.examGrade,
+        medium: s.medium,
+        score: s.score,
+        totalQuestions: s.totalQuestions,
+        completedAt: s.completedAt,
+      })));
+    } catch (error) {
+      console.error("Error fetching Navodaya quiz history:", error);
+      res.status(500).json({ error: "Failed to fetch quiz history" });
+    }
+  });
+
+  // Get detailed Navodaya quiz session for review
+  app.get("/api/navodaya/quiz/:sessionId/review", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      const session = await storage.getNavodayaQuizSession(sessionId);
+      
+      if (!session) {
+        return res.status(404).json({ error: "Quiz session not found" });
+      }
+      
+      res.json({
+        id: session.id,
+        examGrade: session.examGrade,
+        medium: session.medium,
+        score: session.score,
+        totalQuestions: session.totalQuestions,
+        questions: session.questions,
+        answers: session.answers,
+        completedAt: session.completedAt,
+      });
+    } catch (error) {
+      console.error("Error fetching Navodaya quiz for review:", error);
+      res.status(500).json({ error: "Failed to fetch quiz details" });
+    }
+  });
+
+  // Admin: Get all Navodaya students with their progress
+  app.get("/api/admin/navodaya-students", async (req, res) => {
+    try {
+      const allStudents = await storage.getAllNavodayaStudents();
+      
+      const studentsWithProgress = await Promise.all(
+        allStudents.map(async (student) => {
+          const sessions = await storage.getNavodayaStudentQuizSessions(student.id);
+          const completedSessions = sessions.filter(s => s.completedAt);
+          const totalQuizzes = completedSessions.length;
+          const totalScore = completedSessions.reduce((sum, s) => sum + (s.score || 0), 0);
+          const totalQuestions = completedSessions.reduce((sum, s) => sum + (s.totalQuestions || 10), 0);
+          const averageScore = totalQuizzes > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
+          
+          return {
+            id: student.id,
+            name: student.name,
+            examGrade: student.examGrade,
+            medium: student.medium,
+            location: student.location,
+            mobileNumber: student.mobileNumber,
+            totalQuizzes,
+            averageScore,
+            sessions: completedSessions.map(s => ({
+              id: s.id,
+              examGrade: s.examGrade,
+              score: s.score,
+              totalQuestions: s.totalQuestions,
+              completedAt: s.completedAt,
+            })),
+          };
+        })
+      );
+      
+      res.json(studentsWithProgress);
+    } catch (error) {
+      console.error("Error fetching Navodaya students:", error);
+      res.status(500).json({ error: "Failed to fetch students" });
     }
   });
 

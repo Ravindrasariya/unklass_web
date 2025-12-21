@@ -12,6 +12,7 @@ interface QuizSession {
   board?: string;
   year?: string;
   medium?: string;
+  examGrade?: string;
   score: number | null;
   totalQuestions: number;
   completedAt: string | null;
@@ -30,6 +31,7 @@ interface QuizReview {
   board?: string;
   year?: string;
   medium?: string;
+  examGrade?: string;
   score: number;
   totalQuestions: number;
   questions: Question[];
@@ -41,6 +43,7 @@ interface QuizHistoryProps {
   studentId: number;
   onBack: () => void;
   isCpct?: boolean;
+  isNavodaya?: boolean;
 }
 
 function formatChemicalFormulas(text: string): string {
@@ -52,16 +55,21 @@ function formatChemicalFormulas(text: string): string {
     .replace(/\^(\+|\-)/g, (_, sign) => sign === "+" ? "⁺" : "⁻");
 }
 
-export default function QuizHistory({ studentId, onBack, isCpct = false }: QuizHistoryProps) {
+export default function QuizHistory({ studentId, onBack, isCpct = false, isNavodaya = false }: QuizHistoryProps) {
   const [sessions, setSessions] = useState<QuizSession[]>([]);
   const [selectedSession, setSelectedSession] = useState<QuizReview | null>(null);
   const [loading, setLoading] = useState(true);
   const [reviewLoading, setReviewLoading] = useState(false);
 
   useEffect(() => {
-    const endpoint = isCpct 
-      ? `/api/cpct/students/${studentId}/quiz-history`
-      : `/api/students/${studentId}/quiz-history`;
+    let endpoint: string;
+    if (isNavodaya) {
+      endpoint = `/api/navodaya/students/${studentId}/quiz-history`;
+    } else if (isCpct) {
+      endpoint = `/api/cpct/students/${studentId}/quiz-history`;
+    } else {
+      endpoint = `/api/students/${studentId}/quiz-history`;
+    }
     
     fetch(endpoint)
       .then(res => res.json())
@@ -73,14 +81,19 @@ export default function QuizHistory({ studentId, onBack, isCpct = false }: QuizH
         console.error("Failed to fetch quiz history:", err);
         setLoading(false);
       });
-  }, [studentId, isCpct]);
+  }, [studentId, isCpct, isNavodaya]);
 
   const handleReview = async (sessionId: number) => {
     setReviewLoading(true);
     try {
-      const endpoint = isCpct 
-        ? `/api/cpct/quiz/${sessionId}/review`
-        : `/api/quiz/${sessionId}/review`;
+      let endpoint: string;
+      if (isNavodaya) {
+        endpoint = `/api/navodaya/quiz/${sessionId}/review`;
+      } else if (isCpct) {
+        endpoint = `/api/cpct/quiz/${sessionId}/review`;
+      } else {
+        endpoint = `/api/quiz/${sessionId}/review`;
+      }
       const res = await fetch(endpoint);
       const data = await res.json();
       setSelectedSession(data);
@@ -116,9 +129,11 @@ export default function QuizHistory({ studentId, onBack, isCpct = false }: QuizH
             <CardHeader>
               <div className="flex items-center justify-between gap-4 flex-wrap">
                 <CardTitle className="text-xl">
-                  {isCpct 
-                    ? `CPCT ${selectedSession.year} - Review`
-                    : `${selectedSession.subject} - Review`
+                  {isNavodaya 
+                    ? `Navodaya ${selectedSession.examGrade} - Review`
+                    : isCpct 
+                      ? `CPCT ${selectedSession.year} - Review`
+                      : `${selectedSession.subject} - Review`
                   }
                 </CardTitle>
                 <Badge variant={selectedSession.score >= 7 ? "default" : "secondary"}>
@@ -126,9 +141,11 @@ export default function QuizHistory({ studentId, onBack, isCpct = false }: QuizH
                 </Badge>
               </div>
               <p className="text-sm text-muted-foreground">
-                {isCpct 
-                  ? `Medium: ${selectedSession.medium} | Completed: ${new Date(selectedSession.completedAt).toLocaleDateString()}`
-                  : `${selectedSession.grade} | ${selectedSession.board} | Completed: ${new Date(selectedSession.completedAt).toLocaleDateString()}`
+                {isNavodaya
+                  ? `Grade: ${selectedSession.examGrade} | Medium: ${selectedSession.medium} | Completed: ${new Date(selectedSession.completedAt).toLocaleDateString()}`
+                  : isCpct 
+                    ? `Medium: ${selectedSession.medium} | Completed: ${new Date(selectedSession.completedAt).toLocaleDateString()}`
+                    : `${selectedSession.grade} | ${selectedSession.board} | Completed: ${new Date(selectedSession.completedAt).toLocaleDateString()}`
                 }
               </p>
             </CardHeader>
@@ -225,14 +242,14 @@ export default function QuizHistory({ studentId, onBack, isCpct = false }: QuizH
           data-testid="button-back-to-subjects"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          {isCpct ? "Back to CPCT" : "Back to Subjects"}
+          {isNavodaya ? "Back to Navodaya" : isCpct ? "Back to CPCT" : "Back to Subjects"}
         </Button>
 
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BookOpen className="w-5 h-5" />
-              {isCpct ? "CPCT Quiz History" : "Quiz History"}
+              {isNavodaya ? "Navodaya Quiz History" : isCpct ? "CPCT Quiz History" : "Quiz History"}
             </CardTitle>
             <p className="text-sm text-muted-foreground">
               Review your past quizzes to revise questions
@@ -255,12 +272,18 @@ export default function QuizHistory({ studentId, onBack, isCpct = false }: QuizH
                   >
                     <div className="flex-1">
                       <p className="font-medium">
-                        {isCpct ? `CPCT ${session.year}` : session.subject}
+                        {isNavodaya 
+                          ? `Navodaya ${session.examGrade}` 
+                          : isCpct 
+                            ? `CPCT ${session.year}` 
+                            : session.subject}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {isCpct 
+                        {isNavodaya
                           ? `Medium: ${session.medium}`
-                          : `${session.grade} | ${session.board}`
+                          : isCpct 
+                            ? `Medium: ${session.medium}`
+                            : `${session.grade} | ${session.board}`
                         }
                         {session.completedAt && (
                           <span> | {new Date(session.completedAt).toLocaleDateString()}</span>

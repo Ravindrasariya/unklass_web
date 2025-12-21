@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import LandingPage from "@/components/LandingPage";
 import StudentOnboardingForm, { type StudentData } from "@/components/StudentOnboardingForm";
 import CpctOnboardingForm, { type CpctStudentData } from "@/components/CpctOnboardingForm";
+import NavodayaOnboardingForm, { type NavodayaStudentData } from "@/components/NavodayaOnboardingForm";
 import QuizQuestion, { type Question } from "@/components/QuizQuestion";
 import QuizResults from "@/components/QuizResults";
 import QuizHistory from "@/components/QuizHistory";
@@ -23,7 +24,8 @@ import logoIcon from "@assets/Unklass_-_1_1765392666171.png";
 import { useToast } from "@/hooks/use-toast";
 
 type AppState = "landing" | "onboarding" | "ready" | "loading" | "quiz" | "results" | "history" 
-  | "cpct-onboarding" | "cpct-ready" | "cpct-loading" | "cpct-quiz" | "cpct-results" | "cpct-history";
+  | "cpct-onboarding" | "cpct-ready" | "cpct-loading" | "cpct-quiz" | "cpct-results" | "cpct-history"
+  | "navodaya-onboarding" | "navodaya-loading" | "navodaya-quiz" | "navodaya-results" | "navodaya-history";
 
 interface QuizAnswer {
   questionId: number;
@@ -44,6 +46,15 @@ interface RegisteredStudent {
 interface RegisteredCpctStudent {
   id: number;
   name: string;
+  medium: string;
+  location: string;
+  mobileNumber: string;
+}
+
+interface RegisteredNavodayaStudent {
+  id: number;
+  name: string;
+  examGrade: string;
   medium: string;
   location: string;
   mobileNumber: string;
@@ -99,6 +110,13 @@ function App() {
   const [cpctAnswers, setCpctAnswers] = useState<QuizAnswer[]>([]);
   const [cpctSessionId, setCpctSessionId] = useState<number | null>(null);
   const [availableYears, setAvailableYears] = useState<string[]>([]);
+  
+  // Navodaya state
+  const [navodayaStudentData, setNavodayaStudentData] = useState<RegisteredNavodayaStudent | null>(null);
+  const [navodayaQuestions, setNavodayaQuestions] = useState<Question[]>([]);
+  const [navodayaCurrentQuestionIndex, setNavodayaCurrentQuestionIndex] = useState(0);
+  const [navodayaAnswers, setNavodayaAnswers] = useState<QuizAnswer[]>([]);
+  const [navodayaSessionId, setNavodayaSessionId] = useState<number | null>(null);
   
   const { toast } = useToast();
 
@@ -392,8 +410,119 @@ function App() {
     setAppState("cpct-history");
   }, []);
 
+  // Function to start Navodaya quiz directly
+  const startNavodayaQuizForStudent = useCallback(async (student: RegisteredNavodayaStudent) => {
+    setAppState("navodaya-loading");
+    
+    try {
+      const response = await apiRequest("POST", "/api/navodaya/quiz/generate", {
+        studentId: student.id,
+      });
+      
+      const data = await response.json();
+      setNavodayaSessionId(data.sessionId);
+      setNavodayaQuestions(data.questions);
+      setNavodayaCurrentQuestionIndex(0);
+      setNavodayaAnswers([]);
+      setAppState("navodaya-quiz");
+    } catch (error) {
+      console.error("Navodaya Quiz generation error:", error);
+      toast({
+        title: "Failed to generate quiz",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+      setAppState("navodaya-onboarding");
+    }
+  }, [toast]);
+
+  // Navodaya Handlers
+  const handleNavodayaOnboardingSubmit = useCallback(async (data: NavodayaStudentData) => {
+    try {
+      const response = await apiRequest("POST", "/api/navodaya/students/register", {
+        name: data.name,
+        examGrade: data.examGrade,
+        medium: data.medium,
+        location: data.location,
+        mobileNumber: data.mobile,
+      });
+      const student = await response.json();
+      setNavodayaStudentData(student);
+      // Directly start quiz after registration
+      startNavodayaQuizForStudent(student);
+    } catch (error) {
+      console.error("Navodaya Registration error:", error);
+      toast({
+        title: "Registration failed",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [toast, startNavodayaQuizForStudent]);
+
+  const handleNavodayaLogin = useCallback(async (data: { name: string; mobile: string }): Promise<boolean> => {
+    try {
+      const response = await apiRequest("POST", "/api/navodaya/students/login", {
+        name: data.name,
+        mobileNumber: data.mobile,
+      });
+      const student = await response.json();
+      if (student && student.id) {
+        setNavodayaStudentData(student);
+        // Directly start quiz after login
+        startNavodayaQuizForStudent(student);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Navodaya Login error:", error);
+      return false;
+    }
+  }, [startNavodayaQuizForStudent]);
+
+  const handleNavodayaAnswer = useCallback((selectedOption: number, isCorrect: boolean) => {
+    const currentQuestion = navodayaQuestions[navodayaCurrentQuestionIndex];
+    setNavodayaAnswers(prev => [...prev, {
+      questionId: currentQuestion.id,
+      selectedOption,
+      isCorrect,
+    }]);
+  }, [navodayaQuestions, navodayaCurrentQuestionIndex]);
+
+  const handleNavodayaNextQuestion = useCallback(async () => {
+    if (navodayaCurrentQuestionIndex < navodayaQuestions.length - 1) {
+      setNavodayaCurrentQuestionIndex(prev => prev + 1);
+    } else {
+      const actualScore = [...navodayaAnswers].filter(a => a.isCorrect).length;
+      
+      if (navodayaSessionId) {
+        try {
+          await apiRequest("POST", "/api/navodaya/quiz/submit", {
+            sessionId: navodayaSessionId,
+            answers: navodayaAnswers,
+            score: actualScore,
+          });
+        } catch (error) {
+          console.error("Failed to submit Navodaya quiz results:", error);
+        }
+      }
+      
+      setAppState("navodaya-results");
+    }
+  }, [navodayaCurrentQuestionIndex, navodayaQuestions.length, navodayaAnswers, navodayaSessionId]);
+
+  const handleNavodayaRetakeQuiz = useCallback(async () => {
+    if (!navodayaStudentData) return;
+    startNavodayaQuizForStudent(navodayaStudentData);
+  }, [navodayaStudentData, startNavodayaQuizForStudent]);
+
+  const handleNavodayaViewHistory = useCallback(() => {
+    setAppState("navodaya-history");
+  }, []);
+
   const score = answers.filter(a => a.isCorrect).length;
   const cpctScore = cpctAnswers.filter(a => a.isCorrect).length;
+  const navodayaScore = navodayaAnswers.filter(a => a.isCorrect).length;
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -404,15 +533,15 @@ function App() {
           <Route path="/contact" component={ContactPage} />
           <Route path="/">
             <div className="min-h-screen bg-background">
-              {appState !== "onboarding" && appState !== "landing" && appState !== "cpct-onboarding" && (
-                <AppHeader studentName={studentData?.name || cpctStudentData?.name} onLogoClick={() => setAppState("landing")} />
+              {appState !== "onboarding" && appState !== "landing" && appState !== "cpct-onboarding" && appState !== "navodaya-onboarding" && (
+                <AppHeader studentName={studentData?.name || cpctStudentData?.name || navodayaStudentData?.name} onLogoClick={() => setAppState("landing")} />
               )}
 
               {appState === "landing" && (
                 <LandingPage 
                   onBoardExamClick={() => setAppState("onboarding")}
                   onCPCTClick={() => setAppState("cpct-onboarding")}
-                  onNavodayaClick={() => setAppState("onboarding")}
+                  onNavodayaClick={() => setAppState("navodaya-onboarding")}
                 />
               )}
 
@@ -612,6 +741,58 @@ function App() {
                   studentId={cpctStudentData.id}
                   onBack={handleCpctRetakeQuiz}
                   isCpct={true}
+                />
+              )}
+
+              {/* Navodaya Exam Prep Sections */}
+              {appState === "navodaya-onboarding" && (
+                <NavodayaOnboardingForm 
+                  onSubmit={handleNavodayaOnboardingSubmit} 
+                  onLogin={handleNavodayaLogin}
+                  onBack={() => setAppState("landing")}
+                />
+              )}
+
+              {appState === "navodaya-loading" && (
+                <div className="min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center p-4">
+                  <Card className="w-full max-w-md text-center">
+                    <CardContent className="p-8">
+                      <Loader2 className="w-12 h-12 mx-auto text-green-500 animate-spin mb-4" />
+                      <h2 className="text-xl font-medium mb-2">Preparing Your Navodaya Quiz</h2>
+                      <p className="text-muted-foreground">
+                        UNKLASS provides carefully selected important questions for JNV entrance exam
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {appState === "navodaya-quiz" && navodayaQuestions.length > 0 && (
+                <QuizQuestion
+                  question={navodayaQuestions[navodayaCurrentQuestionIndex]}
+                  currentQuestion={navodayaCurrentQuestionIndex + 1}
+                  totalQuestions={navodayaQuestions.length}
+                  onAnswer={handleNavodayaAnswer}
+                  onNext={handleNavodayaNextQuestion}
+                />
+              )}
+
+              {appState === "navodaya-results" && (
+                <QuizResults
+                  score={navodayaScore}
+                  totalQuestions={navodayaQuestions.length}
+                  onRetakeQuiz={handleNavodayaRetakeQuiz}
+                  onTryAnotherSubject={handleNavodayaViewHistory}
+                  onBackToHome={() => setAppState("landing")}
+                  subjectLabel="View Quiz History"
+                />
+              )}
+
+              {appState === "navodaya-history" && navodayaStudentData && (
+                <QuizHistory
+                  studentId={navodayaStudentData.id}
+                  onBack={() => startNavodayaQuizForStudent(navodayaStudentData)}
+                  isNavodaya={true}
                 />
               )}
             </div>

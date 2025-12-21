@@ -392,6 +392,204 @@ ${pdfContent.substring(0, 12000)}`;
   }
 }
 
+// Navodaya Fallback questions (JNV entrance exam)
+const NAVODAYA_FALLBACK_QUESTIONS: { "6th": { Hindi: Question[]; English: Question[] }; "9th": { Hindi: Question[]; English: Question[] } } = {
+  "6th": {
+    English: [
+      { id: 1, question: "If 3 + 4 = 7, what is 7 + 8?", options: ["13", "14", "15", "16"], correctAnswer: 2, explanation: "7 + 8 = 15" },
+      { id: 2, question: "Which shape has 4 equal sides?", options: ["Rectangle", "Square", "Triangle", "Circle"], correctAnswer: 1, explanation: "A square has 4 equal sides." },
+      { id: 3, question: "What comes next: 2, 4, 6, 8, ?", options: ["9", "10", "11", "12"], correctAnswer: 1, explanation: "The pattern adds 2 each time, so next is 10." },
+      { id: 4, question: "Which animal gives us milk?", options: ["Dog", "Cat", "Cow", "Lion"], correctAnswer: 2, explanation: "Cow gives us milk." },
+      { id: 5, question: "How many days are in a week?", options: ["5", "6", "7", "8"], correctAnswer: 2, explanation: "There are 7 days in a week." },
+      { id: 6, question: "Which is the largest planet in our solar system?", options: ["Earth", "Mars", "Jupiter", "Saturn"], correctAnswer: 2, explanation: "Jupiter is the largest planet in our solar system." },
+      { id: 7, question: "What is 15 - 7?", options: ["6", "7", "8", "9"], correctAnswer: 2, explanation: "15 - 7 = 8" },
+      { id: 8, question: "Which direction does the sun rise from?", options: ["North", "South", "East", "West"], correctAnswer: 2, explanation: "The sun rises from the East." },
+      { id: 9, question: "How many legs does a spider have?", options: ["4", "6", "8", "10"], correctAnswer: 2, explanation: "A spider has 8 legs." },
+      { id: 10, question: "What is the capital of India?", options: ["Mumbai", "New Delhi", "Kolkata", "Chennai"], correctAnswer: 1, explanation: "New Delhi is the capital of India." }
+    ],
+    Hindi: [
+      { id: 1, question: "यदि 3 + 4 = 7 है, तो 7 + 8 क्या होगा?", options: ["13", "14", "15", "16"], correctAnswer: 2, explanation: "7 + 8 = 15" },
+      { id: 2, question: "किस आकृति की चारों भुजाएं बराबर होती हैं?", options: ["आयत", "वर्ग", "त्रिभुज", "वृत्त"], correctAnswer: 1, explanation: "वर्ग की चारों भुजाएं बराबर होती हैं।" },
+      { id: 3, question: "अगला क्या आएगा: 2, 4, 6, 8, ?", options: ["9", "10", "11", "12"], correctAnswer: 1, explanation: "यह क्रम हर बार 2 जोड़ता है, इसलिए अगला 10 है।" },
+      { id: 4, question: "कौन सा जानवर हमें दूध देता है?", options: ["कुत्ता", "बिल्ली", "गाय", "शेर"], correctAnswer: 2, explanation: "गाय हमें दूध देती है।" },
+      { id: 5, question: "एक सप्ताह में कितने दिन होते हैं?", options: ["5", "6", "7", "8"], correctAnswer: 2, explanation: "एक सप्ताह में 7 दिन होते हैं।" },
+      { id: 6, question: "हमारे सौरमंडल का सबसे बड़ा ग्रह कौन सा है?", options: ["पृथ्वी", "मंगल", "बृहस्पति", "शनि"], correctAnswer: 2, explanation: "बृहस्पति हमारे सौरमंडल का सबसे बड़ा ग्रह है।" },
+      { id: 7, question: "15 - 7 का मान क्या है?", options: ["6", "7", "8", "9"], correctAnswer: 2, explanation: "15 - 7 = 8" },
+      { id: 8, question: "सूर्य किस दिशा से उगता है?", options: ["उत्तर", "दक्षिण", "पूर्व", "पश्चिम"], correctAnswer: 2, explanation: "सूर्य पूर्व दिशा से उगता है।" },
+      { id: 9, question: "मकड़ी के कितने पैर होते हैं?", options: ["4", "6", "8", "10"], correctAnswer: 2, explanation: "मकड़ी के 8 पैर होते हैं।" },
+      { id: 10, question: "भारत की राजधानी क्या है?", options: ["मुंबई", "नई दिल्ली", "कोलकाता", "चेन्नई"], correctAnswer: 1, explanation: "नई दिल्ली भारत की राजधानी है।" }
+    ]
+  },
+  "9th": {
+    English: [
+      { id: 1, question: "What is the LCM of 12 and 18?", options: ["24", "36", "48", "72"], correctAnswer: 1, explanation: "LCM of 12 and 18 is 36." },
+      { id: 2, question: "Which gas is most abundant in Earth's atmosphere?", options: ["Oxygen", "Carbon dioxide", "Nitrogen", "Hydrogen"], correctAnswer: 2, explanation: "Nitrogen makes up about 78% of Earth's atmosphere." },
+      { id: 3, question: "What is the formula for area of a circle?", options: ["2πr", "πr²", "πd", "2πr²"], correctAnswer: 1, explanation: "Area of a circle is πr² where r is the radius." },
+      { id: 4, question: "Who wrote 'Discovery of India'?", options: ["Mahatma Gandhi", "Jawaharlal Nehru", "Sardar Patel", "Dr. Ambedkar"], correctAnswer: 1, explanation: "Discovery of India was written by Jawaharlal Nehru." },
+      { id: 5, question: "What is the SI unit of electric current?", options: ["Volt", "Watt", "Ampere", "Ohm"], correctAnswer: 2, explanation: "Ampere (A) is the SI unit of electric current." },
+      { id: 6, question: "If x + 5 = 12, what is x?", options: ["5", "6", "7", "8"], correctAnswer: 2, explanation: "x = 12 - 5 = 7" },
+      { id: 7, question: "Which vitamin is produced by sunlight?", options: ["Vitamin A", "Vitamin B", "Vitamin C", "Vitamin D"], correctAnswer: 3, explanation: "Vitamin D is produced when skin is exposed to sunlight." },
+      { id: 8, question: "What is the atomic number of Carbon?", options: ["4", "5", "6", "7"], correctAnswer: 2, explanation: "Carbon has atomic number 6." },
+      { id: 9, question: "Which river is known as 'Sorrow of Bengal'?", options: ["Ganga", "Brahmaputra", "Damodar", "Hooghly"], correctAnswer: 2, explanation: "Damodar river is known as 'Sorrow of Bengal' due to floods." },
+      { id: 10, question: "What is 25% of 200?", options: ["25", "40", "50", "75"], correctAnswer: 2, explanation: "25% of 200 = (25/100) × 200 = 50" }
+    ],
+    Hindi: [
+      { id: 1, question: "12 और 18 का LCM क्या है?", options: ["24", "36", "48", "72"], correctAnswer: 1, explanation: "12 और 18 का LCM 36 है।" },
+      { id: 2, question: "पृथ्वी के वायुमंडल में सबसे अधिक कौन सी गैस है?", options: ["ऑक्सीजन", "कार्बन डाइऑक्साइड", "नाइट्रोजन", "हाइड्रोजन"], correctAnswer: 2, explanation: "नाइट्रोजन पृथ्वी के वायुमंडल का लगभग 78% है।" },
+      { id: 3, question: "वृत्त के क्षेत्रफल का सूत्र क्या है?", options: ["2πr", "πr²", "πd", "2πr²"], correctAnswer: 1, explanation: "वृत्त का क्षेत्रफल πr² है जहां r त्रिज्या है।" },
+      { id: 4, question: "'डिस्कवरी ऑफ इंडिया' किसने लिखी?", options: ["महात्मा गांधी", "जवाहरलाल नेहरू", "सरदार पटेल", "डॉ. अंबेडकर"], correctAnswer: 1, explanation: "डिस्कवरी ऑफ इंडिया जवाहरलाल नेहरू ने लिखी थी।" },
+      { id: 5, question: "विद्युत धारा की SI इकाई क्या है?", options: ["वोल्ट", "वाट", "एम्पियर", "ओम"], correctAnswer: 2, explanation: "एम्पियर (A) विद्युत धारा की SI इकाई है।" },
+      { id: 6, question: "यदि x + 5 = 12 है, तो x क्या है?", options: ["5", "6", "7", "8"], correctAnswer: 2, explanation: "x = 12 - 5 = 7" },
+      { id: 7, question: "सूर्य के प्रकाश से कौन सा विटामिन बनता है?", options: ["विटामिन A", "विटामिन B", "विटामिन C", "विटामिन D"], correctAnswer: 3, explanation: "विटामिन D त्वचा पर सूर्य के प्रकाश पड़ने से बनता है।" },
+      { id: 8, question: "कार्बन का परमाणु क्रमांक क्या है?", options: ["4", "5", "6", "7"], correctAnswer: 2, explanation: "कार्बन का परमाणु क्रमांक 6 है।" },
+      { id: 9, question: "किस नदी को 'बंगाल का शोक' कहा जाता है?", options: ["गंगा", "ब्रह्मपुत्र", "दामोदर", "हुगली"], correctAnswer: 2, explanation: "दामोदर नदी को बाढ़ के कारण 'बंगाल का शोक' कहा जाता है।" },
+      { id: 10, question: "200 का 25% क्या है?", options: ["25", "40", "50", "75"], correctAnswer: 2, explanation: "200 का 25% = (25/100) × 200 = 50" }
+    ]
+  }
+};
+
+export async function generateNavodayaQuizQuestions(
+  pdfContent: string,
+  examGrade: "6th" | "9th",
+  medium: "Hindi" | "English",
+  numQuestions: number = 10,
+  previousQuestions: string[] = []
+): Promise<Question[]> {
+  let excludeSection = '';
+  if (previousQuestions.length > 0) {
+    excludeSection = `
+
+CRITICAL INSTRUCTION - QUESTION ROTATION:
+The student has already been asked ${previousQuestions.length} questions.
+
+Previously asked questions:
+${previousQuestions.map((q, i) => `${i + 1}. ${q}`).join('\n')}
+
+QUESTION ROTATION RULES:
+1. First priority: Generate NEW questions on topics/concepts NOT yet covered from the study material
+2. Cover ALL possible topics from the material before repeating any question
+3. If ALL topics from the material have been covered at least once, you MAY repeat questions but:
+   - Rephrase questions differently while testing the same concept
+   - Ensure equal distribution - repeat questions that have been asked fewer times first
+4. Track coverage: Aim to test every concept from the Navodaya syllabus at least once before cycling back
+5. When repeating, vary the question format to test the same concept differently`;
+  }
+
+  const gradeInfo = examGrade === "6th" 
+    ? "Class 6 entry level (students appearing from Class 5)" 
+    : "Class 9 entry level (students appearing from Class 8)";
+
+  const languageInstruction = medium === "Hindi" 
+    ? `IMPORTANT: Generate ALL content (questions, options, explanations) in HINDI (Devanagari script). The entire quiz must be in Hindi language.`
+    : `Generate all content in clear, simple English.`;
+
+  const systemPrompt = `You are an expert Jawahar Navodaya Vidyalaya (JNV) entrance exam content creator for India.
+${languageInstruction}
+
+Generate ${numQuestions} multiple-choice quiz questions for Navodaya entrance exam preparation - ${gradeInfo}.
+
+You MUST return a JSON object with exactly this structure:
+{
+  "questions": [
+    {
+      "question": "The full question text?",
+      "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
+      "correctAnswer": 0,
+      "explanation": "Why this answer is correct"
+    }
+  ]
+}
+
+RULES:
+- "question" must be a complete question sentence in ${medium}
+- "options" must be an array of exactly 4 answer choices in ${medium}
+- "correctAnswer" must be 0, 1, 2, or 3 (the ZERO-BASED index of the correct option)
+- "explanation" must explain why the answer is correct in ${medium} AND MUST match the correctAnswer index
+- Generate exactly ${numQuestions} questions appropriate for ${gradeInfo}
+- Include questions on: Mental Ability, Arithmetic, Language (${medium}), General Knowledge
+- Questions should be similar to actual JNVST (Jawahar Navodaya Vidyalaya Selection Test) pattern${excludeSection}`;
+
+  const userPrompt = `Generate ${numQuestions} Navodaya entrance exam questions in ${medium} language for ${gradeInfo}.
+
+ALL questions, options, and explanations MUST be in ${medium === "Hindi" ? "Hindi (Devanagari script देवनागरी)" : "English"}.
+
+Study Material for ${examGrade} Navodaya exam:
+${pdfContent.substring(0, 12000)}`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.7,
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error("No response from OpenAI");
+    }
+
+    const parsed = JSON.parse(content);
+    
+    let questions: any[];
+    if (Array.isArray(parsed)) {
+      questions = parsed;
+    } else if (parsed.questions && Array.isArray(parsed.questions)) {
+      questions = parsed.questions;
+    } else {
+      const arrayKey = Object.keys(parsed).find(key => Array.isArray(parsed[key]));
+      if (arrayKey) {
+        questions = parsed[arrayKey];
+      } else {
+        throw new Error("Invalid response format from OpenAI");
+      }
+    }
+    
+    if (questions.length === 0) {
+      throw new Error("No questions in OpenAI response");
+    }
+
+    const validQuestions = questions.filter((q: any) => 
+      q.question && 
+      Array.isArray(q.options) && 
+      q.options.length >= 2 &&
+      (q.correctAnswer !== undefined || q.correct_answer !== undefined || q.answer !== undefined)
+    );
+
+    if (validQuestions.length === 0) {
+      throw new Error("OpenAI response missing required question fields");
+    }
+
+    console.log(`Generated ${validQuestions.length} Navodaya questions for ${examGrade} in ${medium}`);
+
+    return validQuestions.map((q: any, index: number) => ({
+      id: index + 1,
+      question: q.question,
+      options: q.options,
+      correctAnswer: q.correctAnswer ?? q.correct_answer ?? q.answer ?? 0,
+      explanation: q.explanation ?? q.reason ?? (medium === "Hindi" ? "इस विषय की समीक्षा करें।" : "Review this topic."),
+    }));
+  } catch (error) {
+    console.error("Error generating Navodaya questions with OpenAI, using fallback:", error);
+    const gradeKey = examGrade === "6th" ? "6th" : "9th";
+    const fallback = NAVODAYA_FALLBACK_QUESTIONS[gradeKey][medium] || NAVODAYA_FALLBACK_QUESTIONS[gradeKey].English;
+    
+    const previousSet = new Set(previousQuestions.map(q => q.toLowerCase().trim()));
+    let availableQuestions = fallback.filter(q => 
+      !previousSet.has(q.question.toLowerCase().trim())
+    );
+    
+    if (availableQuestions.length < numQuestions) {
+      availableQuestions = fallback;
+    }
+    
+    return [...availableQuestions].sort(() => Math.random() - 0.5).slice(0, numQuestions);
+  }
+}
+
 export async function generateAnswerFeedback(
   question: string,
   selectedOption: string,
