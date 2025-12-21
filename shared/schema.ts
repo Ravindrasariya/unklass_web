@@ -23,6 +23,16 @@ export const cpctStudents = pgTable("cpct_students", {
   mobileNumber: varchar("mobile_number", { length: 15 }).notNull(),
 });
 
+// Navodaya Students table - stores JNV entrance exam candidates
+export const navodayaStudents = pgTable("navodaya_students", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  examGrade: varchar("exam_grade", { length: 10 }).notNull(), // 6th, 9th
+  medium: varchar("medium", { length: 10 }).notNull(), // Hindi, English
+  location: text("location").notNull(),
+  mobileNumber: varchar("mobile_number", { length: 15 }).notNull(),
+});
+
 // PDFs table - stores uploaded PDF metadata (admin functionality)
 export const pdfs = pgTable("pdfs", {
   id: serial("id").primaryKey(),
@@ -65,6 +75,21 @@ export const cpctQuizSessions = pgTable("cpct_quiz_sessions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Navodaya Quiz sessions table - stores JNV quiz attempts and results
+export const navodayaQuizSessions = pgTable("navodaya_quiz_sessions", {
+  id: serial("id").primaryKey(),
+  studentId: integer("student_id").notNull().references(() => navodayaStudents.id),
+  pdfId: integer("pdf_id").references(() => pdfs.id),
+  examGrade: varchar("exam_grade", { length: 10 }).notNull(), // 6th, 9th
+  medium: varchar("medium", { length: 10 }).notNull(), // Hindi or English
+  score: integer("score"),
+  totalQuestions: integer("total_questions").default(10),
+  questions: jsonb("questions"),
+  answers: jsonb("answers"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Relations
 export const studentsRelations = relations(students, ({ many }) => ({
   quizSessions: many(quizSessions),
@@ -74,9 +99,14 @@ export const cpctStudentsRelations = relations(cpctStudents, ({ many }) => ({
   quizSessions: many(cpctQuizSessions),
 }));
 
+export const navodayaStudentsRelations = relations(navodayaStudents, ({ many }) => ({
+  quizSessions: many(navodayaQuizSessions),
+}));
+
 export const pdfsRelations = relations(pdfs, ({ many }) => ({
   quizSessions: many(quizSessions),
   cpctQuizSessions: many(cpctQuizSessions),
+  navodayaQuizSessions: many(navodayaQuizSessions),
 }));
 
 export const quizSessionsRelations = relations(quizSessions, ({ one }) => ({
@@ -97,6 +127,17 @@ export const cpctQuizSessionsRelations = relations(cpctQuizSessions, ({ one }) =
   }),
   pdf: one(pdfs, {
     fields: [cpctQuizSessions.pdfId],
+    references: [pdfs.id],
+  }),
+}));
+
+export const navodayaQuizSessionsRelations = relations(navodayaQuizSessions, ({ one }) => ({
+  student: one(navodayaStudents, {
+    fields: [navodayaQuizSessions.studentId],
+    references: [navodayaStudents.id],
+  }),
+  pdf: one(pdfs, {
+    fields: [navodayaQuizSessions.pdfId],
     references: [pdfs.id],
   }),
 }));
@@ -125,12 +166,24 @@ export const insertCpctQuizSessionSchema = createInsertSchema(cpctQuizSessions).
   createdAt: true,
 });
 
+export const insertNavodayaStudentSchema = createInsertSchema(navodayaStudents).omit({
+  id: true,
+});
+
+export const insertNavodayaQuizSessionSchema = createInsertSchema(navodayaQuizSessions).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type InsertStudent = z.infer<typeof insertStudentSchema>;
 export type Student = typeof students.$inferSelect;
 
 export type InsertCpctStudent = z.infer<typeof insertCpctStudentSchema>;
 export type CpctStudent = typeof cpctStudents.$inferSelect;
+
+export type InsertNavodayaStudent = z.infer<typeof insertNavodayaStudentSchema>;
+export type NavodayaStudent = typeof navodayaStudents.$inferSelect;
 
 export type InsertPdf = z.infer<typeof insertPdfSchema>;
 export type Pdf = typeof pdfs.$inferSelect;
@@ -140,6 +193,9 @@ export type QuizSession = typeof quizSessions.$inferSelect;
 
 export type InsertCpctQuizSession = z.infer<typeof insertCpctQuizSessionSchema>;
 export type CpctQuizSession = typeof cpctQuizSessions.$inferSelect;
+
+export type InsertNavodayaQuizSession = z.infer<typeof insertNavodayaQuizSessionSchema>;
+export type NavodayaQuizSession = typeof navodayaQuizSessions.$inferSelect;
 
 // Contact submissions table - stores contact form submissions
 export const contactSubmissions = pgTable("contact_submissions", {
