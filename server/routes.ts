@@ -142,8 +142,8 @@ export async function registerRoutes(
       // Check for CPCT format: CPCT_Year.pdf (e.g., CPCT_2024.pdf)
       const cpctMatch = filename.match(/^CPCT_(\d{4})\.pdf$/i);
       
-      // Check for Navodaya format: {grade}_navodaya.pdf (e.g., 6th_navodaya.pdf, 9th_navodaya.pdf)
-      const navodayaMatch = filename.match(/^(\d+(?:st|nd|rd|th)?)_navodaya\.pdf$/i);
+      // Check for Navodaya format: {grade}_navodaya.pdf (e.g., 6th_navodaya.pdf, 9th_navodaya.pdf, 6_navodaya.pdf)
+      const navodayaMatch = filename.match(/^(\d+(?:st|nd|rd|th)?|6th|9th)_navodaya\.pdf$/i);
       
       // Check for Board Exam format: {grade}_{board}_{subject}.pdf
       const boardMatch = filename.match(/^(.+)_(.+)_(.+)\.pdf$/i);
