@@ -263,10 +263,16 @@ export default function AdminPage() {
       return { isValid: true };
     }
     
+    // Check for Navodaya format: grade_navodaya.pdf (e.g., 6th_navodaya.pdf, 6_navodaya.pdf)
+    const navodayaMatch = filename.match(/^(\d+(?:st|nd|rd|th)?|6th|9th)_navodaya\.pdf$/i);
+    if (navodayaMatch) {
+      return { isValid: true };
+    }
+    
     // Check for Board Exam format: grade_board_subject.pdf
     const boardMatch = filename.match(/^(.+)_(.+)_(.+)\.pdf$/i);
     if (!boardMatch) {
-      return { isValid: false, error: "Format must be: grade_board_subject.pdf (Board Exam) or CPCT_Year.pdf (CPCT)" };
+      return { isValid: false, error: "Format must be: grade_board_subject.pdf (Board Exam), CPCT_Year.pdf (CPCT), or grade_navodaya.pdf (Navodaya)" };
     }
     
     const [, grade, board, subject] = boardMatch;
