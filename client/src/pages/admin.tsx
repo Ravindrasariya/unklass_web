@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Upload, FileText, Trash2, AlertCircle, CheckCircle2, Eye, Lock, LogOut, Users, Download, ChevronDown, ChevronUp, MessageSquare, TrendingUp, Phone } from "lucide-react";
+import { Upload, FileText, Trash2, AlertCircle, CheckCircle2, Eye, Lock, LogOut, Users, Download, ChevronDown, ChevronUp, MessageSquare, TrendingUp, Phone, Pencil } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -83,6 +84,14 @@ export default function AdminPage() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [selectedStudents, setSelectedStudents] = useState<number[]>([]);
   const [expandedStudent, setExpandedStudent] = useState<number | null>(null);
+  const [editingStudent, setEditingStudent] = useState<StudentProgress | null>(null);
+  const [editFormData, setEditFormData] = useState<{
+    name: string;
+    grade: string;
+    board: string;
+    location: string;
+    mobileNumber: string;
+  }>({ name: "", grade: "", board: "", location: "", mobileNumber: "" });
 
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -214,6 +223,71 @@ export default function AdminPage() {
       });
     },
   });
+
+  const updateStudentMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: typeof editFormData }) => {
+      const response = await apiRequest("PATCH", `/api/admin/students/${id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Student Updated",
+        description: "Student details have been updated successfully.",
+      });
+      setEditingStudent(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/students"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Update Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteStudentMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/admin/students/${id}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Student Deleted",
+        description: "Student and all their quiz data have been removed.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/students"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Delete Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleEditStudent = (student: StudentProgress) => {
+    setEditingStudent(student);
+    setEditFormData({
+      name: student.name,
+      grade: student.grade,
+      board: student.board,
+      location: student.location,
+      mobileNumber: student.mobileNumber,
+    });
+  };
+
+  const handleSaveStudent = () => {
+    if (editingStudent) {
+      updateStudentMutation.mutate({ id: editingStudent.id, data: editFormData });
+    }
+  };
+
+  const handleDeleteStudent = (studentId: number) => {
+    if (window.confirm("Are you sure you want to delete this student? This will also delete all their quiz history.")) {
+      deleteStudentMutation.mutate(studentId);
+    }
+  };
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -643,7 +717,7 @@ export default function AdminPage() {
                           ) : (
                             <p className="text-sm text-muted-foreground">No quizzes completed yet.</p>
                           )}
-                          <div className="mt-3 pt-2 border-t">
+                          <div className="mt-3 pt-2 border-t flex items-center gap-2 flex-wrap">
                             <Button
                               variant="outline"
                               size="sm"
@@ -652,6 +726,31 @@ export default function AdminPage() {
                             >
                               <Download className="h-3 w-3 mr-2" />
                               Download Report
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditStudent(student);
+                              }}
+                              data-testid={`button-edit-student-${student.id}`}
+                            >
+                              <Pencil className="h-3 w-3 mr-2" />
+                              Edit
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteStudent(student.id);
+                              }}
+                              disabled={deleteStudentMutation.isPending}
+                              data-testid={`button-delete-student-${student.id}`}
+                            >
+                              <Trash2 className="h-3 w-3 mr-2 text-destructive" />
+                              Delete
                             </Button>
                           </div>
                         </div>
@@ -795,6 +894,99 @@ export default function AdminPage() {
               {previewPdf?.content}
             </div>
           </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editingStudent} onOpenChange={(open) => !open && setEditingStudent(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="h-5 w-5" />
+              Edit Student
+            </DialogTitle>
+            <DialogDescription>
+              Update student details below
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Name</Label>
+              <Input
+                id="edit-name"
+                value={editFormData.name}
+                onChange={(e) => setEditFormData(prev => ({ ...prev, name: e.target.value }))}
+                data-testid="input-edit-student-name"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-grade">Grade</Label>
+                <Select
+                  value={editFormData.grade}
+                  onValueChange={(value) => setEditFormData(prev => ({ ...prev, grade: value }))}
+                >
+                  <SelectTrigger id="edit-grade" data-testid="select-edit-student-grade">
+                    <SelectValue placeholder="Select grade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {VALID_GRADES.map((grade) => (
+                      <SelectItem key={grade} value={grade}>{grade}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-board">Board</Label>
+                <Select
+                  value={editFormData.board}
+                  onValueChange={(value) => setEditFormData(prev => ({ ...prev, board: value }))}
+                >
+                  <SelectTrigger id="edit-board" data-testid="select-edit-student-board">
+                    <SelectValue placeholder="Select board" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {VALID_BOARDS.map((board) => (
+                      <SelectItem key={board} value={board}>{board}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-location">Location</Label>
+              <Input
+                id="edit-location"
+                value={editFormData.location}
+                onChange={(e) => setEditFormData(prev => ({ ...prev, location: e.target.value }))}
+                data-testid="input-edit-student-location"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-mobile">Mobile Number</Label>
+              <Input
+                id="edit-mobile"
+                value={editFormData.mobileNumber}
+                onChange={(e) => setEditFormData(prev => ({ ...prev, mobileNumber: e.target.value }))}
+                data-testid="input-edit-student-mobile"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setEditingStudent(null)}
+                data-testid="button-cancel-edit-student"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveStudent}
+                disabled={updateStudentMutation.isPending}
+                data-testid="button-save-student"
+              >
+                {updateStudentMutation.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

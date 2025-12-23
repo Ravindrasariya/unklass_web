@@ -585,6 +585,183 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     }
   });
 
+  // Admin: Update board exam student
+  const VALID_GRADES = ["8th", "10th"];
+  const VALID_BOARDS = ["MP", "CBSE"];
+  const VALID_MEDIUMS = ["Hindi", "English"];
+  
+  app.patch("/api/admin/students/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid student ID" });
+      }
+      
+      const { name, grade, board, medium, location, mobileNumber } = req.body;
+      
+      if (grade !== undefined && !VALID_GRADES.includes(grade)) {
+        return res.status(400).json({ error: `Invalid grade. Must be one of: ${VALID_GRADES.join(", ")}` });
+      }
+      if (board !== undefined && !VALID_BOARDS.includes(board)) {
+        return res.status(400).json({ error: `Invalid board. Must be one of: ${VALID_BOARDS.join(", ")}` });
+      }
+      if (medium !== undefined && !VALID_MEDIUMS.includes(medium)) {
+        return res.status(400).json({ error: `Invalid medium. Must be one of: ${VALID_MEDIUMS.join(", ")}` });
+      }
+      
+      const updates: any = {};
+      if (name !== undefined && typeof name === "string" && name.trim()) updates.name = name.trim();
+      if (grade !== undefined) updates.grade = grade;
+      if (board !== undefined) updates.board = board;
+      if (medium !== undefined) updates.medium = medium;
+      if (location !== undefined && typeof location === "string") updates.location = location.trim();
+      if (mobileNumber !== undefined && typeof mobileNumber === "string") updates.mobileNumber = mobileNumber.trim();
+      
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: "No valid fields to update" });
+      }
+      
+      const student = await storage.updateStudent(id, updates);
+      if (!student) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+      res.json(student);
+    } catch (error) {
+      console.error("Error updating student:", error);
+      res.status(500).json({ error: "Failed to update student" });
+    }
+  });
+
+  // Admin: Delete board exam student
+  app.delete("/api/admin/students/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid student ID" });
+      }
+      const success = await storage.deleteStudent(id);
+      if (!success) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting student:", error);
+      res.status(500).json({ error: "Failed to delete student" });
+    }
+  });
+
+  // Admin: Update CPCT student
+  app.patch("/api/admin/cpct-students/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid student ID" });
+      }
+      
+      const { name, medium, location, mobileNumber } = req.body;
+      
+      if (medium !== undefined && !VALID_MEDIUMS.includes(medium)) {
+        return res.status(400).json({ error: `Invalid medium. Must be one of: ${VALID_MEDIUMS.join(", ")}` });
+      }
+      
+      const updates: any = {};
+      if (name !== undefined && typeof name === "string" && name.trim()) updates.name = name.trim();
+      if (medium !== undefined) updates.medium = medium;
+      if (location !== undefined && typeof location === "string") updates.location = location.trim();
+      if (mobileNumber !== undefined && typeof mobileNumber === "string") updates.mobileNumber = mobileNumber.trim();
+      
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: "No valid fields to update" });
+      }
+      
+      const student = await storage.updateCpctStudent(id, updates);
+      if (!student) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+      res.json(student);
+    } catch (error) {
+      console.error("Error updating CPCT student:", error);
+      res.status(500).json({ error: "Failed to update student" });
+    }
+  });
+
+  // Admin: Delete CPCT student
+  app.delete("/api/admin/cpct-students/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid student ID" });
+      }
+      const success = await storage.deleteCpctStudent(id);
+      if (!success) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting CPCT student:", error);
+      res.status(500).json({ error: "Failed to delete student" });
+    }
+  });
+
+  // Admin: Update Navodaya student
+  const VALID_NAVODAYA_GRADES = ["6th", "9th"];
+  
+  app.patch("/api/admin/navodaya-students/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid student ID" });
+      }
+      
+      const { name, examGrade, medium, location, mobileNumber } = req.body;
+      
+      if (examGrade !== undefined && !VALID_NAVODAYA_GRADES.includes(examGrade)) {
+        return res.status(400).json({ error: `Invalid exam grade. Must be one of: ${VALID_NAVODAYA_GRADES.join(", ")}` });
+      }
+      if (medium !== undefined && !VALID_MEDIUMS.includes(medium)) {
+        return res.status(400).json({ error: `Invalid medium. Must be one of: ${VALID_MEDIUMS.join(", ")}` });
+      }
+      
+      const updates: any = {};
+      if (name !== undefined && typeof name === "string" && name.trim()) updates.name = name.trim();
+      if (examGrade !== undefined) updates.examGrade = examGrade;
+      if (medium !== undefined) updates.medium = medium;
+      if (location !== undefined && typeof location === "string") updates.location = location.trim();
+      if (mobileNumber !== undefined && typeof mobileNumber === "string") updates.mobileNumber = mobileNumber.trim();
+      
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: "No valid fields to update" });
+      }
+      
+      const student = await storage.updateNavodayaStudent(id, updates);
+      if (!student) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+      res.json(student);
+    } catch (error) {
+      console.error("Error updating Navodaya student:", error);
+      res.status(500).json({ error: "Failed to update student" });
+    }
+  });
+
+  // Admin: Delete Navodaya student
+  app.delete("/api/admin/navodaya-students/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid student ID" });
+      }
+      const success = await storage.deleteNavodayaStudent(id);
+      if (!success) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting Navodaya student:", error);
+      res.status(500).json({ error: "Failed to delete student" });
+    }
+  });
+
   // ============================================
   // CPCT EXAM PREP ROUTES
   // ============================================

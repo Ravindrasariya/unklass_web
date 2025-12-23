@@ -28,6 +28,8 @@ export interface IStorage {
   getStudent(id: number): Promise<Student | undefined>;
   getStudentByMobile(mobileNumber: string): Promise<Student | undefined>;
   createStudent(student: InsertStudent): Promise<Student>;
+  updateStudent(id: number, updates: Partial<InsertStudent>): Promise<Student | undefined>;
+  deleteStudent(id: number): Promise<boolean>;
   getAllStudents(): Promise<Student[]>;
 
   // PDFs
@@ -49,6 +51,8 @@ export interface IStorage {
   getCpctStudent(id: number): Promise<CpctStudent | undefined>;
   getCpctStudentByMobile(mobileNumber: string): Promise<CpctStudent | undefined>;
   createCpctStudent(student: InsertCpctStudent): Promise<CpctStudent>;
+  updateCpctStudent(id: number, updates: Partial<InsertCpctStudent>): Promise<CpctStudent | undefined>;
+  deleteCpctStudent(id: number): Promise<boolean>;
   getAllCpctStudents(): Promise<CpctStudent[]>;
 
   // CPCT Quiz Sessions
@@ -63,6 +67,8 @@ export interface IStorage {
   getNavodayaStudent(id: number): Promise<NavodayaStudent | undefined>;
   getNavodayaStudentByMobile(mobileNumber: string): Promise<NavodayaStudent | undefined>;
   createNavodayaStudent(student: InsertNavodayaStudent): Promise<NavodayaStudent>;
+  updateNavodayaStudent(id: number, updates: Partial<InsertNavodayaStudent>): Promise<NavodayaStudent | undefined>;
+  deleteNavodayaStudent(id: number): Promise<boolean>;
   getAllNavodayaStudents(): Promise<NavodayaStudent[]>;
 
   // Navodaya Quiz Sessions
@@ -119,6 +125,21 @@ export class DatabaseStorage implements IStorage {
 
   async getAllStudents(): Promise<Student[]> {
     return await db.select().from(students);
+  }
+
+  async updateStudent(id: number, updates: Partial<InsertStudent>): Promise<Student | undefined> {
+    const [student] = await db
+      .update(students)
+      .set(updates)
+      .where(eq(students.id, id))
+      .returning();
+    return student || undefined;
+  }
+
+  async deleteStudent(id: number): Promise<boolean> {
+    await db.delete(quizSessions).where(eq(quizSessions.studentId, id));
+    const result = await db.delete(students).where(eq(students.id, id)).returning();
+    return result.length > 0;
   }
 
   // PDFs
@@ -231,6 +252,21 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(cpctStudents);
   }
 
+  async updateCpctStudent(id: number, updates: Partial<InsertCpctStudent>): Promise<CpctStudent | undefined> {
+    const [student] = await db
+      .update(cpctStudents)
+      .set(updates)
+      .where(eq(cpctStudents.id, id))
+      .returning();
+    return student || undefined;
+  }
+
+  async deleteCpctStudent(id: number): Promise<boolean> {
+    await db.delete(cpctQuizSessions).where(eq(cpctQuizSessions.studentId, id));
+    const result = await db.delete(cpctStudents).where(eq(cpctStudents.id, id)).returning();
+    return result.length > 0;
+  }
+
   // CPCT Quiz Sessions
   async createCpctQuizSession(insertSession: InsertCpctQuizSession): Promise<CpctQuizSession> {
     const [session] = await db.insert(cpctQuizSessions).values(insertSession).returning();
@@ -296,6 +332,21 @@ export class DatabaseStorage implements IStorage {
 
   async getAllNavodayaStudents(): Promise<NavodayaStudent[]> {
     return await db.select().from(navodayaStudents);
+  }
+
+  async updateNavodayaStudent(id: number, updates: Partial<InsertNavodayaStudent>): Promise<NavodayaStudent | undefined> {
+    const [student] = await db
+      .update(navodayaStudents)
+      .set(updates)
+      .where(eq(navodayaStudents.id, id))
+      .returning();
+    return student || undefined;
+  }
+
+  async deleteNavodayaStudent(id: number): Promise<boolean> {
+    await db.delete(navodayaQuizSessions).where(eq(navodayaQuizSessions.studentId, id));
+    const result = await db.delete(navodayaStudents).where(eq(navodayaStudents.id, id)).returning();
+    return result.length > 0;
   }
 
   // Navodaya Quiz Sessions
