@@ -64,6 +64,44 @@ interface ContactSubmission {
   createdAt: string;
 }
 
+interface CpctStudentSession {
+  id: number;
+  score: number | null;
+  totalQuestions: number | null;
+  completedAt: string | null;
+}
+
+interface CpctStudentProgress {
+  id: number;
+  name: string;
+  medium: string;
+  location: string;
+  mobileNumber: string;
+  totalQuizzes: number;
+  averageScore: number;
+  sessions: CpctStudentSession[];
+}
+
+interface NavodayaStudentSession {
+  id: number;
+  examGrade: string;
+  score: number | null;
+  totalQuestions: number | null;
+  completedAt: string | null;
+}
+
+interface NavodayaStudentProgress {
+  id: number;
+  name: string;
+  examGrade: string;
+  medium: string;
+  location: string;
+  mobileNumber: string;
+  totalQuizzes: number;
+  averageScore: number;
+  sessions: NavodayaStudentSession[];
+}
+
 interface VisitorStats {
   totalVisitors: number;
   totalUniqueVisitors: number;
@@ -92,6 +130,16 @@ export default function AdminPage() {
     location: string;
     mobileNumber: string;
   }>({ name: "", grade: "", board: "", location: "", mobileNumber: "" });
+  const [studentTab, setStudentTab] = useState<"board" | "cpct" | "navodaya">("board");
+  const [expandedCpctStudent, setExpandedCpctStudent] = useState<number | null>(null);
+  const [expandedNavodayaStudent, setExpandedNavodayaStudent] = useState<number | null>(null);
+
+  const handleTabChange = (tab: "board" | "cpct" | "navodaya") => {
+    setStudentTab(tab);
+    setExpandedStudent(null);
+    setExpandedCpctStudent(null);
+    setExpandedNavodayaStudent(null);
+  };
 
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,6 +174,16 @@ export default function AdminPage() {
 
   const { data: students, isLoading: studentsLoading } = useQuery<StudentProgress[]>({
     queryKey: ["/api/admin/students"],
+    enabled: isAuthenticated,
+  });
+
+  const { data: cpctStudents, isLoading: cpctStudentsLoading } = useQuery<CpctStudentProgress[]>({
+    queryKey: ["/api/admin/cpct-students"],
+    enabled: isAuthenticated,
+  });
+
+  const { data: navodayaStudents, isLoading: navodayaStudentsLoading } = useQuery<NavodayaStudentProgress[]>({
+    queryKey: ["/api/admin/navodaya-students"],
     enabled: isAuthenticated,
   });
 
@@ -267,6 +325,48 @@ export default function AdminPage() {
     },
   });
 
+  const deleteCpctStudentMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/admin/cpct-students/${id}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "CPCT Student Deleted",
+        description: "Student and all their quiz data have been removed.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/cpct-students"] });
+      queryClient.refetchQueries({ queryKey: ["/api/leaderboard/weekly"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Delete Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteNavodayaStudentMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/admin/navodaya-students/${id}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Navodaya Student Deleted",
+        description: "Student and all their quiz data have been removed.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/navodaya-students"] });
+      queryClient.refetchQueries({ queryKey: ["/api/leaderboard/weekly"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Delete Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleEditStudent = (student: StudentProgress) => {
     setEditingStudent(student);
     setEditFormData({
@@ -287,6 +387,18 @@ export default function AdminPage() {
   const handleDeleteStudent = (studentId: number) => {
     if (window.confirm("Are you sure you want to delete this student? This will also delete all their quiz history.")) {
       deleteStudentMutation.mutate(studentId);
+    }
+  };
+
+  const handleDeleteCpctStudent = (studentId: number) => {
+    if (window.confirm("Are you sure you want to delete this CPCT student? This will also delete all their quiz history.")) {
+      deleteCpctStudentMutation.mutate(studentId);
+    }
+  };
+
+  const handleDeleteNavodayaStudent = (studentId: number) => {
+    if (window.confirm("Are you sure you want to delete this Navodaya student? This will also delete all their quiz history.")) {
+      deleteNavodayaStudentMutation.mutate(studentId);
     }
   };
 
@@ -624,6 +736,35 @@ export default function AdminPage() {
             </div>
           </CardHeader>
           <CardContent>
+            <div className="flex items-center gap-2 mb-4 border-b pb-3 flex-wrap">
+              <Button
+                variant={studentTab === "board" ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleTabChange("board")}
+                data-testid="tab-board-students"
+              >
+                Board Exam ({students?.length || 0})
+              </Button>
+              <Button
+                variant={studentTab === "cpct" ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleTabChange("cpct")}
+                data-testid="tab-cpct-students"
+              >
+                CPCT ({cpctStudents?.length || 0})
+              </Button>
+              <Button
+                variant={studentTab === "navodaya" ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleTabChange("navodaya")}
+                data-testid="tab-navodaya-students"
+              >
+                Navodaya ({navodayaStudents?.length || 0})
+              </Button>
+            </div>
+
+            {studentTab === "board" && (
+              <>
             {studentsLoading ? (
               <p className="text-muted-foreground text-center py-8">Loading students...</p>
             ) : !students || students.length === 0 ? (
@@ -760,6 +901,207 @@ export default function AdminPage() {
                   ))}
                 </div>
               </div>
+            )}
+              </>
+            )}
+
+            {studentTab === "cpct" && (
+              <>
+                {cpctStudentsLoading ? (
+                  <p className="text-muted-foreground text-center py-8">Loading CPCT students...</p>
+                ) : !cpctStudents || cpctStudents.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">
+                    No CPCT students registered yet.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {cpctStudents.map((student) => (
+                      <div
+                        key={student.id}
+                        className="border rounded-lg overflow-hidden"
+                        data-testid={`cpct-student-row-${student.id}`}
+                      >
+                        <div 
+                          className="flex items-center gap-3 p-3 bg-muted/50 cursor-pointer"
+                          onClick={() => setExpandedCpctStudent(expandedCpctStudent === student.id ? null : student.id)}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-medium">{student.name}</p>
+                              <Badge variant="secondary" className="text-xs">{student.medium}</Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">{student.mobileNumber}</p>
+                          </div>
+                          <div className="text-right mr-2">
+                            <p className="font-medium">{student.totalQuizzes} quizzes</p>
+                            <p className="text-sm text-muted-foreground">
+                              {student.averageScore}% avg
+                            </p>
+                          </div>
+                          {expandedCpctStudent === student.id ? (
+                            <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </div>
+                        {expandedCpctStudent === student.id && (
+                          <div className="p-3 border-t bg-background">
+                            <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+                              <div>
+                                <span className="text-muted-foreground">Location:</span> {student.location}
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Medium:</span> {student.medium}
+                              </div>
+                            </div>
+                            {student.sessions.length > 0 ? (
+                              <div className="space-y-1">
+                                <p className="text-sm font-medium mb-2">Quiz History:</p>
+                                {student.sessions.map((session) => (
+                                  <div 
+                                    key={session.id}
+                                    className="flex items-center justify-between text-sm p-2 bg-muted rounded"
+                                  >
+                                    <span>CPCT Quiz</span>
+                                    <div className="flex items-center gap-4">
+                                      <span>
+                                        {session.score}/{session.totalQuestions} 
+                                        ({session.totalQuestions ? Math.round((session.score || 0) / session.totalQuestions * 100) : 0}%)
+                                      </span>
+                                      <span className="text-muted-foreground">
+                                        {session.completedAt 
+                                          ? new Date(session.completedAt).toLocaleDateString("en-IN")
+                                          : "In progress"}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">No quizzes completed yet.</p>
+                            )}
+                            <div className="mt-3 pt-2 border-t flex items-center gap-2 flex-wrap">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteCpctStudent(student.id);
+                                }}
+                                disabled={deleteCpctStudentMutation.isPending}
+                                data-testid={`button-delete-cpct-student-${student.id}`}
+                              >
+                                <Trash2 className="h-3 w-3 mr-2 text-destructive" />
+                                Delete
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {studentTab === "navodaya" && (
+              <>
+                {navodayaStudentsLoading ? (
+                  <p className="text-muted-foreground text-center py-8">Loading Navodaya students...</p>
+                ) : !navodayaStudents || navodayaStudents.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">
+                    No Navodaya students registered yet.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {navodayaStudents.map((student) => (
+                      <div
+                        key={student.id}
+                        className="border rounded-lg overflow-hidden"
+                        data-testid={`navodaya-student-row-${student.id}`}
+                      >
+                        <div 
+                          className="flex items-center gap-3 p-3 bg-muted/50 cursor-pointer"
+                          onClick={() => setExpandedNavodayaStudent(expandedNavodayaStudent === student.id ? null : student.id)}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-medium">{student.name}</p>
+                              <Badge variant="secondary" className="text-xs">{student.examGrade}</Badge>
+                              <Badge variant="secondary" className="text-xs">{student.medium}</Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">{student.mobileNumber}</p>
+                          </div>
+                          <div className="text-right mr-2">
+                            <p className="font-medium">{student.totalQuizzes} quizzes</p>
+                            <p className="text-sm text-muted-foreground">
+                              {student.averageScore}% avg
+                            </p>
+                          </div>
+                          {expandedNavodayaStudent === student.id ? (
+                            <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </div>
+                        {expandedNavodayaStudent === student.id && (
+                          <div className="p-3 border-t bg-background">
+                            <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+                              <div>
+                                <span className="text-muted-foreground">Location:</span> {student.location}
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Grade/Medium:</span> {student.examGrade} / {student.medium}
+                              </div>
+                            </div>
+                            {student.sessions.length > 0 ? (
+                              <div className="space-y-1">
+                                <p className="text-sm font-medium mb-2">Quiz History:</p>
+                                {student.sessions.map((session) => (
+                                  <div 
+                                    key={session.id}
+                                    className="flex items-center justify-between text-sm p-2 bg-muted rounded"
+                                  >
+                                    <span>Navodaya ({session.examGrade})</span>
+                                    <div className="flex items-center gap-4">
+                                      <span>
+                                        {session.score}/{session.totalQuestions} 
+                                        ({session.totalQuestions ? Math.round((session.score || 0) / session.totalQuestions * 100) : 0}%)
+                                      </span>
+                                      <span className="text-muted-foreground">
+                                        {session.completedAt 
+                                          ? new Date(session.completedAt).toLocaleDateString("en-IN")
+                                          : "In progress"}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">No quizzes completed yet.</p>
+                            )}
+                            <div className="mt-3 pt-2 border-t flex items-center gap-2 flex-wrap">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteNavodayaStudent(student.id);
+                                }}
+                                disabled={deleteNavodayaStudentMutation.isPending}
+                                data-testid={`button-delete-navodaya-student-${student.id}`}
+                              >
+                                <Trash2 className="h-3 w-3 mr-2 text-destructive" />
+                                Delete
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
