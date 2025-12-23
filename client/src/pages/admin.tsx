@@ -256,6 +256,7 @@ export default function AdminPage() {
         description: "Student and all their quiz data have been removed.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/students"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/leaderboard/weekly"] });
     },
     onError: (error: Error) => {
       toast({
