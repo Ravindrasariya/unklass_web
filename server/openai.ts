@@ -78,7 +78,7 @@ QUESTION ROTATION RULES:
     ? `IMPORTANT LANGUAGE INSTRUCTION: Generate ALL content in Hindi (Devanagari script). The questions, all 4 options, and explanations MUST be written in Hindi. Use proper Hindi language and Devanagari script throughout.`
     : `Generate all content in English.`;
 
-  const systemPrompt = `You are an expert educational content creator. Generate ${numQuestions} multiple-choice quiz questions for ${grade} grade ${board} board students in India.
+  const systemPrompt = `You are an EXPERT TEACHER and educational content creator. Generate ${numQuestions} multiple-choice quiz questions for ${grade} grade ${board} board students in India.
 
 ${languageInstruction}
 
@@ -103,10 +103,6 @@ RULES:
   - If correct answer is the THIRD option (index 2), set correctAnswer: 2
   - If correct answer is the FOURTH option (index 3), set correctAnswer: 3
 - "explanation" must explain why the answer is correct AND the explanation MUST match the correctAnswer index
-- CRITICAL VALIDATION: Before outputting each question, VERIFY that:
-  1. The answer in the explanation matches options[correctAnswer]
-  2. For numerical questions, solve the problem and ensure the calculated answer equals options[correctAnswer]
-  3. Double-check: if explanation says "answer is 8" and "8" is at options[0], then correctAnswer MUST be 0
 - Generate exactly ${numQuestions} questions based on the CONCEPTS covered in the study material
 - Questions should TEST UNDERSTANDING of concepts, not just repeat exact text from the material
 - Create application-based, analytical, and conceptual questions that assess deep understanding
@@ -118,7 +114,26 @@ QUESTION TYPES TO INCLUDE:
 3. CONCEPTUAL: Ask why/how questions that test understanding
 4. APPLICATION: Real-world problem-solving using concepts from the material
 
-Aim for a MIX of question types: at least 2-3 numerical/formula-based, 2-3 diagram/parts-based, and the rest conceptual/application questions.${excludeSection}`;
+Aim for a MIX of question types: at least 2-3 numerical/formula-based, 2-3 diagram/parts-based, and the rest conceptual/application questions.
+
+CRITICAL EXPERT TEACHER VERIFICATION (MANDATORY FOR EVERY QUESTION):
+As an expert teacher, you MUST critically verify EACH question before including it:
+1. SOLVE the problem yourself step-by-step and note the calculated answer
+2. VERIFY that your calculated answer matches options[correctAnswer]
+3. CHECK that correctAnswer index (0,1,2,3) points to the EXACT correct option in the options array
+4. CONFIRM the explanation's answer matches options[correctAnswer]
+5. For arithmetic: If the question asks "Sum of two numbers is 40, one is 18, what is the other?" → Calculate: 40-18=22 → Find "22" in options → Set correctAnswer to that index
+6. DOUBLE-CHECK: Read options[correctAnswer] - is it truly the correct answer? If not, FIX the correctAnswer index
+
+EXAMPLE VERIFICATION:
+Question: "What is 25% of 80?"
+Step 1: Calculate → 25/100 × 80 = 20
+Step 2: options = ["15", "20", "25", "30"]
+Step 3: "20" is at index 1
+Step 4: correctAnswer MUST be 1
+Step 5: Explanation must say "25% of 80 = 20"
+
+REJECT any question where the correctAnswer index does not match the calculated/verified answer.${excludeSection}`;
 
   const userPrompt = `Generate ${numQuestions} NEW and UNIQUE multiple-choice questions for ${subject}.
 
@@ -278,7 +293,7 @@ QUESTION ROTATION RULES:
     ? `IMPORTANT: Generate ALL content (questions, options, explanations) in HINDI (Devanagari script). The entire quiz must be in Hindi language.`
     : `Generate all content in clear, simple English.`;
 
-  const systemPrompt = `You are an expert CPCT (Computer Proficiency Certification Test) exam content creator for Madhya Pradesh, India.
+  const systemPrompt = `You are an EXPERT TEACHER and CPCT (Computer Proficiency Certification Test) exam content creator for Madhya Pradesh, India.
 ${languageInstruction}
 
 Generate ${numQuestions} multiple-choice quiz questions for CPCT exam preparation.
@@ -304,13 +319,28 @@ RULES:
   - If correct answer is the THIRD option (index 2), set correctAnswer: 2
   - If correct answer is the FOURTH option (index 3), set correctAnswer: 3
 - "explanation" must explain why the answer is correct in ${medium} AND MUST match the correctAnswer index
-- CRITICAL VALIDATION: Before outputting each question, VERIFY that:
-  1. The answer in the explanation matches options[correctAnswer]
-  2. For numerical questions, solve the problem and ensure the calculated answer equals options[correctAnswer]
-  3. Double-check: if explanation says "answer is X" and "X" is at options[0], then correctAnswer MUST be 0
 - Generate exactly ${numQuestions} questions based on CPCT syllabus concepts
 - Include questions on: Computer basics, MS Office, Internet, Operating Systems, Typing
-- Questions should be similar to actual CPCT exam pattern${excludeSection}`;
+- Questions should be similar to actual CPCT exam pattern
+
+CRITICAL EXPERT TEACHER VERIFICATION (MANDATORY FOR EVERY QUESTION):
+As an expert teacher, you MUST critically verify EACH question before including it:
+1. SOLVE the problem yourself step-by-step and note the calculated answer
+2. VERIFY that your calculated answer matches options[correctAnswer]
+3. CHECK that correctAnswer index (0,1,2,3) points to the EXACT correct option in the options array
+4. CONFIRM the explanation's answer matches options[correctAnswer]
+5. For arithmetic: If the question asks "1 KB = ? bytes" and correct answer is 1024 → Find "1024" in options → Set correctAnswer to that index
+6. DOUBLE-CHECK: Read options[correctAnswer] - is it truly the correct answer? If not, FIX the correctAnswer index
+
+EXAMPLE VERIFICATION:
+Question: "1 KB कितने बाइट्स के बराबर है?"
+Step 1: Factual answer → 1024 bytes
+Step 2: options = ["1000 बाइट्स", "1024 बाइट्स", "100 बाइट्स", "512 बाइट्स"]
+Step 3: "1024 बाइट्स" is at index 1
+Step 4: correctAnswer MUST be 1
+Step 5: Explanation must say "1 KB = 1024 bytes"
+
+REJECT any question where the correctAnswer index does not match the verified answer.${excludeSection}`;
 
   const userPrompt = `Generate ${numQuestions} CPCT exam questions in ${medium} language.
 
@@ -483,7 +513,7 @@ QUESTION ROTATION RULES:
     ? `IMPORTANT: Generate ALL content (questions, options, explanations) in HINDI (Devanagari script). The entire quiz must be in Hindi language.`
     : `Generate all content in clear, simple English.`;
 
-  const systemPrompt = `You are an expert Jawahar Navodaya Vidyalaya (JNV) entrance exam content creator for India.
+  const systemPrompt = `You are an EXPERT TEACHER and Jawahar Navodaya Vidyalaya (JNV) entrance exam content creator for India.
 ${languageInstruction}
 
 Generate ${numQuestions} multiple-choice quiz questions for Navodaya entrance exam preparation - ${gradeInfo}.
@@ -507,7 +537,26 @@ RULES:
 - "explanation" must explain why the answer is correct in ${medium} AND MUST match the correctAnswer index
 - Generate exactly ${numQuestions} questions appropriate for ${gradeInfo}
 - Include questions on: Mental Ability, Arithmetic, Language (${medium}), General Knowledge
-- Questions should be similar to actual JNVST (Jawahar Navodaya Vidyalaya Selection Test) pattern${excludeSection}`;
+- Questions should be similar to actual JNVST (Jawahar Navodaya Vidyalaya Selection Test) pattern
+
+CRITICAL EXPERT TEACHER VERIFICATION (MANDATORY FOR EVERY QUESTION):
+As an expert teacher, you MUST critically verify EACH question before including it:
+1. SOLVE the problem yourself step-by-step and note the calculated answer
+2. VERIFY that your calculated answer matches options[correctAnswer]
+3. CHECK that correctAnswer index (0,1,2,3) points to the EXACT correct option in the options array
+4. CONFIRM the explanation's answer matches options[correctAnswer]
+5. For arithmetic: If the question asks "Sum of two numbers is 40, one is 18, what is the other?" → Calculate: 40-18=22 → Find "22" in options → Set correctAnswer to that index
+6. DOUBLE-CHECK: Read options[correctAnswer] - is it truly the correct answer? If not, FIX the correctAnswer index
+
+EXAMPLE VERIFICATION:
+Question: "दो संख्याओं का योग 40 है। एक संख्या 18 है, दूसरी क्या होगी?"
+Step 1: Calculate → 40 - 18 = 22
+Step 2: options = ["20", "22", "24", "26"]
+Step 3: "22" is at index 1
+Step 4: correctAnswer MUST be 1
+Step 5: Explanation must say "40 - 18 = 22"
+
+REJECT any question where the correctAnswer index does not match the calculated/verified answer.${excludeSection}`;
 
   const userPrompt = `Generate ${numQuestions} Navodaya entrance exam questions in ${medium} language for ${gradeInfo}.
 
