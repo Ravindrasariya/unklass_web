@@ -78,9 +78,16 @@ QUESTION ROTATION RULES:
     ? `IMPORTANT LANGUAGE INSTRUCTION: Generate ALL content in Hindi (Devanagari script). The questions, all 4 options, and explanations MUST be written in Hindi. Use proper Hindi language and Devanagari script throughout.`
     : `Generate all content in English.`;
 
-  const systemPrompt = `You are an EXPERT TEACHER and educational content creator. Generate ${numQuestions} multiple-choice quiz questions for ${grade} grade ${board} board students in India.
+  const systemPrompt = `You are an EXPERT TEACHER and educational content creator for ${grade} grade ${board} board students in India.
 
 ${languageInstruction}
+
+Your PRIMARY task is to EXTRACT ${numQuestions} multiple-choice questions DIRECTLY from the provided PDF content.
+
+EXTRACTION PRIORITY (FOLLOW THIS ORDER):
+1. EXTRACT questions exactly as they appear in the PDF (textbook exercises, past year papers, model papers)
+2. Use the EXACT correct answers provided in the PDF - the PDF answer is authoritative
+3. Only if the PDF has no extractable questions, generate new ones based on the content/concepts
 
 You MUST return a JSON object with exactly this structure:
 {
@@ -103,18 +110,15 @@ RULES:
   - If correct answer is the THIRD option (index 2), set correctAnswer: 2
   - If correct answer is the FOURTH option (index 3), set correctAnswer: 3
 - "explanation" must explain why the answer is correct AND the explanation MUST match the correctAnswer index
-- Generate exactly ${numQuestions} questions based on the CONCEPTS covered in the study material
-- Questions should TEST UNDERSTANDING of concepts, not just repeat exact text from the material
-- Create application-based, analytical, and conceptual questions that assess deep understanding
+- If extracting from PDF, use the PDF's answer as the correct answer
+- Return exactly ${numQuestions} questions based on the study material
 - Each question must be UNIQUE and cover different concepts
 
-QUESTION TYPES TO INCLUDE:
-1. DIAGRAM-BASED: If the material mentions diagrams (e.g., neuron, cell, circuit, plant structure), ask about specific PARTS and their FUNCTIONS (e.g., "What is the function of dendrites in a neuron?", "Which part of a cell contains genetic material?")
-2. NUMERICAL/FORMULA-BASED: Include calculation questions using formulas from the material (e.g., "Calculate the speed if distance is 100m and time is 20s", "Find the area of a circle with radius 7cm")
+QUESTION TYPES TO INCLUDE (when generating new questions):
+1. DIAGRAM-BASED: If the material mentions diagrams, ask about specific PARTS and their FUNCTIONS
+2. NUMERICAL/FORMULA-BASED: Include calculation questions using formulas from the material
 3. CONCEPTUAL: Ask why/how questions that test understanding
 4. APPLICATION: Real-world problem-solving using concepts from the material
-
-Aim for a MIX of question types: at least 2-3 numerical/formula-based, 2-3 diagram/parts-based, and the rest conceptual/application questions.
 
 CRITICAL EXPERT TEACHER VERIFICATION (MANDATORY FOR EVERY QUESTION):
 As an expert teacher, you MUST critically verify EACH question before including it:
@@ -135,17 +139,21 @@ Step 5: Explanation must say "25% of 80 = 20"
 
 REJECT any question where the correctAnswer index does not match the calculated/verified answer.${excludeSection}`;
 
-  const userPrompt = `Generate ${numQuestions} NEW and UNIQUE multiple-choice questions for ${subject}.
+  const userPrompt = `EXTRACT ${numQuestions} questions DIRECTLY from the PDF content below for ${subject}.
 
-IMPORTANT: All questions MUST be based ONLY on the concepts, topics, formulas, diagrams, and facts mentioned in the study material below. Do NOT introduce concepts or topics that are not covered in this material.
+PRIORITY ORDER:
+1. FIRST PRIORITY: Extract questions EXACTLY as they appear in the PDF (textbook exercises, past year papers, model papers, practice questions)
+2. SECOND PRIORITY: If the PDF has questions with answers, use those exact questions and answers
+3. THIRD PRIORITY: Only if NO extractable questions exist in the PDF, generate new questions based on the topics/concepts mentioned
 
-- If the material covers a formula, create numerical problems using that formula
-- If the material mentions a diagram (e.g., neuron, cell), ask about its labeled parts
-- If the material explains a process, ask about steps or components of that process
-- Questions can be worded differently but must test concepts FROM THIS MATERIAL ONLY
+IMPORTANT:
+- If the PDF contains actual questions with options and answers, EXTRACT them directly - do not modify or rephrase
+- The correct answer from the PDF is the authoritative answer - use it as-is
+- If generating new questions (only when PDF has no questions), base them on concepts, formulas, diagrams from the material
+- ALL output MUST match the student's language preference
 
-Study Material:
-${pdfContent.substring(0, 12000)}`;
+PDF Content for ${subject}:
+${pdfContent.substring(0, 15000)}`;
 
   try {
     const response = await openai.chat.completions.create({
@@ -296,7 +304,12 @@ QUESTION ROTATION RULES:
   const systemPrompt = `You are an EXPERT TEACHER and CPCT (Computer Proficiency Certification Test) exam content creator for Madhya Pradesh, India.
 ${languageInstruction}
 
-Generate ${numQuestions} multiple-choice quiz questions for CPCT exam preparation.
+Your PRIMARY task is to EXTRACT ${numQuestions} multiple-choice questions DIRECTLY from the provided PDF content for CPCT exam preparation.
+
+EXTRACTION PRIORITY (FOLLOW THIS ORDER):
+1. EXTRACT questions exactly as they appear in the PDF (past year papers, model papers)
+2. Use the EXACT correct answers provided in the PDF - the PDF answer is authoritative
+3. Only if the PDF has no extractable questions, generate new ones based on the content
 
 You MUST return a JSON object with exactly this structure:
 {
@@ -319,9 +332,9 @@ RULES:
   - If correct answer is the THIRD option (index 2), set correctAnswer: 2
   - If correct answer is the FOURTH option (index 3), set correctAnswer: 3
 - "explanation" must explain why the answer is correct in ${medium} AND MUST match the correctAnswer index
-- Generate exactly ${numQuestions} questions based on CPCT syllabus concepts
+- If extracting from PDF, use the PDF's answer as the correct answer
+- Return exactly ${numQuestions} questions based on CPCT syllabus concepts
 - Include questions on: Computer basics, MS Office, Internet, Operating Systems, Typing
-- Questions should be similar to actual CPCT exam pattern
 
 CRITICAL EXPERT TEACHER VERIFICATION (MANDATORY FOR EVERY QUESTION):
 As an expert teacher, you MUST critically verify EACH question before including it:
@@ -342,12 +355,20 @@ Step 5: Explanation must say "1 KB = 1024 bytes"
 
 REJECT any question where the correctAnswer index does not match the verified answer.${excludeSection}`;
 
-  const userPrompt = `Generate ${numQuestions} CPCT exam questions in ${medium} language.
+  const userPrompt = `EXTRACT ${numQuestions} questions DIRECTLY from the PDF content below for CPCT exam preparation.
 
-ALL questions, options, and explanations MUST be in ${medium === "Hindi" ? "Hindi (Devanagari script देवनागरी)" : "English"}.
+PRIORITY ORDER:
+1. FIRST PRIORITY: Extract questions EXACTLY as they appear in the PDF (past year papers, model papers, practice questions)
+2. SECOND PRIORITY: If the PDF has questions with answers, use those exact questions and answers
+3. THIRD PRIORITY: Only if NO extractable questions exist in the PDF, generate new questions based on the topics/concepts mentioned
 
-Study Material from CPCT ${year}:
-${pdfContent.substring(0, 12000)}`;
+IMPORTANT:
+- If the PDF contains actual exam questions with options and answers, EXTRACT them directly - do not modify or rephrase
+- The correct answer from the PDF is the authoritative answer - use it as-is
+- ALL output MUST be in ${medium === "Hindi" ? "Hindi (Devanagari script देवनागरी)" : "English"}
+
+PDF Content from CPCT ${year}:
+${pdfContent.substring(0, 15000)}`;
 
   try {
     const response = await openai.chat.completions.create({
@@ -516,7 +537,12 @@ QUESTION ROTATION RULES:
   const systemPrompt = `You are an EXPERT TEACHER and Jawahar Navodaya Vidyalaya (JNV) entrance exam content creator for India.
 ${languageInstruction}
 
-Generate ${numQuestions} multiple-choice quiz questions for Navodaya entrance exam preparation - ${gradeInfo}.
+Your PRIMARY task is to EXTRACT ${numQuestions} multiple-choice questions DIRECTLY from the provided PDF content for Navodaya entrance exam preparation - ${gradeInfo}.
+
+EXTRACTION PRIORITY (FOLLOW THIS ORDER):
+1. EXTRACT questions exactly as they appear in the PDF (past year papers, model papers)
+2. Use the EXACT correct answers provided in the PDF - the PDF answer is authoritative
+3. Only if the PDF has no extractable questions, generate new ones based on the content
 
 You MUST return a JSON object with exactly this structure:
 {
@@ -535,9 +561,9 @@ RULES:
 - "options" must be an array of exactly 4 answer choices in ${medium}
 - "correctAnswer" must be 0, 1, 2, or 3 (the ZERO-BASED index of the correct option)
 - "explanation" must explain why the answer is correct in ${medium} AND MUST match the correctAnswer index
-- Generate exactly ${numQuestions} questions appropriate for ${gradeInfo}
+- If extracting from PDF, use the PDF's answer as the correct answer
+- Return exactly ${numQuestions} questions appropriate for ${gradeInfo}
 - Include questions on: Mental Ability, Arithmetic, Language (${medium}), General Knowledge
-- Questions should be similar to actual JNVST (Jawahar Navodaya Vidyalaya Selection Test) pattern
 
 CRITICAL EXPERT TEACHER VERIFICATION (MANDATORY FOR EVERY QUESTION):
 As an expert teacher, you MUST critically verify EACH question before including it:
@@ -558,12 +584,21 @@ Step 5: Explanation must say "40 - 18 = 22"
 
 REJECT any question where the correctAnswer index does not match the calculated/verified answer.${excludeSection}`;
 
-  const userPrompt = `Generate ${numQuestions} Navodaya entrance exam questions in ${medium} language for ${gradeInfo}.
+  const userPrompt = `EXTRACT ${numQuestions} questions DIRECTLY from the PDF content below for ${gradeInfo}.
 
-ALL questions, options, and explanations MUST be in ${medium === "Hindi" ? "Hindi (Devanagari script देवनागरी)" : "English"}.
+PRIORITY ORDER:
+1. FIRST PRIORITY: Extract questions EXACTLY as they appear in the PDF (past year papers, model papers, practice questions)
+2. SECOND PRIORITY: If the PDF has questions with answers, use those exact questions and answers
+3. THIRD PRIORITY: Only if NO extractable questions exist in the PDF, generate new questions based on the topics/concepts mentioned
 
-Study Material for ${examGrade} Navodaya exam:
-${pdfContent.substring(0, 12000)}`;
+IMPORTANT:
+- If the PDF contains actual exam questions with options and answers, EXTRACT them directly - do not modify or rephrase
+- The correct answer from the PDF is the authoritative answer - use it as-is
+- If translating to ${medium}, keep the mathematical/logical structure identical
+- ALL output MUST be in ${medium === "Hindi" ? "Hindi (Devanagari script देवनागरी)" : "English"}
+
+PDF Content for ${examGrade} Navodaya exam:
+${pdfContent.substring(0, 15000)}`;
 
   try {
     const response = await openai.chat.completions.create({
