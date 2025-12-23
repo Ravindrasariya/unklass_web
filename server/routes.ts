@@ -1369,6 +1369,11 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
 
   // Weekly Leaderboard - IST timezone (Monday to Sunday)
   app.get("/api/leaderboard/weekly", async (req, res) => {
+    // Prevent caching to ensure fresh data after student deletions
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    
     try {
       // IST is UTC+5:30
       const IST_OFFSET_HOURS = 5;
