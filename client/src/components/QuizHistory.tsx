@@ -48,9 +48,10 @@ interface QuizHistoryProps {
 
 function formatChemicalFormulas(text: string): string {
   return text
-    .replace(/(\d+)/g, (match) => {
+    .replace(/([A-Za-z])(\d+)/g, (_, letter, digits) => {
       const subscripts = "₀₁₂₃₄₅₆₇₈₉";
-      return match.split("").map(d => subscripts[parseInt(d)]).join("");
+      const subscriptDigits = digits.split("").map((d: string) => subscripts[parseInt(d)]).join("");
+      return letter + subscriptDigits;
     })
     .replace(/\^(\+|\-)/g, (_, sign) => sign === "+" ? "⁺" : "⁻");
 }
