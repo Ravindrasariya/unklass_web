@@ -309,7 +309,7 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick, onNavodayaC
                     UNKLASS Board Exam Prep
                   </h3>
                   <p className="text-gray-600 text-sm mb-4 flex-1">
-                    Prepare for 8th, 10th, and 12th board exams with Exam Important Quizzes
+                    Prepare for 8th and 10th board exams with Exam Important Quizzes
                   </p>
                   <Button 
                     className="w-full bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 text-white font-medium py-5 rounded-xl shadow-lg shadow-sky-200 transition-all group-hover:shadow-xl mt-auto"
