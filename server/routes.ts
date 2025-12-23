@@ -1009,6 +1009,10 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
 
       // Get PDF content for the student's exam grade
       const pdf = await storage.getNavodayaPdf(student.examGrade);
+      console.log(`Looking for PDF for examGrade: ${student.examGrade}, Found: ${pdf ? pdf.filename : 'NO PDF FOUND'}`);
+      if (pdf) {
+        console.log(`PDF content length: ${pdf.content.length}, First 200 chars: ${pdf.content.substring(0, 200)}`);
+      }
       
       // Get previous questions to avoid duplicates
       const previousQuestions = await storage.getNavodayaStudentPreviousQuestions(studentId);
