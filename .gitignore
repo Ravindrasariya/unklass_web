@@ -1,3 +1,8 @@
+# Production-only files
+ecosystem.config.cjs
+.env
+.env.*
+server/.env
 node_modules
 dist
 .DS_Store
