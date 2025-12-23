@@ -1232,6 +1232,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         weekEnd: formatDateIST(new Date(sundayUtc.getTime() - 1)),
         boardExam: leaderboard.boardExam,
         cpct: leaderboard.cpct,
+        navodaya: leaderboard.navodaya,
       });
     } catch (error) {
       console.error("Error fetching weekly leaderboard:", error);

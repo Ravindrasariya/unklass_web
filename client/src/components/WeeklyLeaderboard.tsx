@@ -16,6 +16,7 @@ interface LeaderboardData {
   weekEnd: string;
   boardExam: LeaderboardEntry[];
   cpct: LeaderboardEntry[];
+  navodaya: LeaderboardEntry[];
 }
 
 function getRankIcon(rank: number) {
@@ -97,6 +98,7 @@ export default function WeeklyLeaderboard() {
 
   const hasBoardExam = data?.boardExam && data.boardExam.length > 0;
   const hasCpct = data?.cpct && data.cpct.length > 0;
+  const hasNavodaya = data?.navodaya && data.navodaya.length > 0;
   
   if (isLoading) {
     return (
@@ -115,9 +117,11 @@ export default function WeeklyLeaderboard() {
     );
   }
 
-  if (!hasBoardExam && !hasCpct) {
+  if (!hasBoardExam && !hasCpct && !hasNavodaya) {
     return null;
   }
+  
+  const activeCount = [hasBoardExam, hasCpct, hasNavodaya].filter(Boolean).length;
 
   return (
     <section className="bg-gradient-to-b from-white to-gray-50 py-14 md:py-18 relative overflow-hidden" data-testid="section-weekly-leaderboard">
@@ -138,7 +142,7 @@ export default function WeeklyLeaderboard() {
           </p>
         </div>
 
-        <div className={`grid gap-6 ${hasBoardExam && hasCpct ? 'md:grid-cols-2' : 'max-w-lg mx-auto'}`}>
+        <div className={`grid gap-6 ${activeCount === 3 ? 'md:grid-cols-3' : activeCount === 2 ? 'md:grid-cols-2' : 'max-w-lg mx-auto'}`}>
           {hasBoardExam && (
             <LeaderboardCard 
               title="Board Exam Prep" 
@@ -153,6 +157,14 @@ export default function WeeklyLeaderboard() {
               entries={data!.cpct} 
               icon={Trophy}
               accentColor="bg-gradient-to-r from-purple-500 to-indigo-600"
+            />
+          )}
+          {hasNavodaya && (
+            <LeaderboardCard 
+              title="Navodaya Prep" 
+              entries={data!.navodaya} 
+              icon={Trophy}
+              accentColor="bg-gradient-to-r from-sky-500 to-sky-600"
             />
           )}
         </div>

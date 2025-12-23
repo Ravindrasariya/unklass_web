@@ -422,8 +422,9 @@ export class DatabaseStorage implements IStorage {
   async getWeeklyLeaderboard(weekStartUtc: Date, weekEndUtc: Date): Promise<{
     boardExam: LeaderboardEntry[];
     cpct: LeaderboardEntry[];
+    navodaya: LeaderboardEntry[];
   }> {
-    // Board Exam Leaderboard
+    // Board Exam Leaderboard (top 3)
     const boardExamResults = await db
       .select({
         studentId: quizSessions.studentId,
@@ -445,7 +446,7 @@ export class DatabaseStorage implements IStorage {
       )
       .groupBy(quizSessions.studentId, students.name)
       .orderBy(sql`(COALESCE(SUM(${quizSessions.score}), 0)::float / NULLIF(SUM(${quizSessions.totalQuestions}), 0)) DESC NULLS LAST`)
-      .limit(5);
+      .limit(3);
 
     const boardExam: LeaderboardEntry[] = boardExamResults.map((row, index) => ({
       rank: index + 1,
@@ -457,7 +458,7 @@ export class DatabaseStorage implements IStorage {
       testsCompleted: Number(row.testsCompleted),
     }));
 
-    // CPCT Leaderboard
+    // CPCT Leaderboard (top 3)
     const cpctResults = await db
       .select({
         studentId: cpctQuizSessions.studentId,
@@ -479,7 +480,7 @@ export class DatabaseStorage implements IStorage {
       )
       .groupBy(cpctQuizSessions.studentId, cpctStudents.name)
       .orderBy(sql`(COALESCE(SUM(${cpctQuizSessions.score}), 0)::float / NULLIF(SUM(${cpctQuizSessions.totalQuestions}), 0)) DESC NULLS LAST`)
-      .limit(5);
+      .limit(3);
 
     const cpct: LeaderboardEntry[] = cpctResults.map((row, index) => ({
       rank: index + 1,
@@ -491,7 +492,41 @@ export class DatabaseStorage implements IStorage {
       testsCompleted: Number(row.testsCompleted),
     }));
 
-    return { boardExam, cpct };
+    // Navodaya Leaderboard (top 3)
+    const navodayaResults = await db
+      .select({
+        studentId: navodayaQuizSessions.studentId,
+        studentName: navodayaStudents.name,
+        totalScore: sql<number>`COALESCE(SUM(${navodayaQuizSessions.score}), 0)`,
+        totalQuestions: sql<number>`COALESCE(SUM(${navodayaQuizSessions.totalQuestions}), 0)`,
+        testsCompleted: sql<number>`COUNT(*)`,
+      })
+      .from(navodayaQuizSessions)
+      .innerJoin(navodayaStudents, eq(navodayaQuizSessions.studentId, navodayaStudents.id))
+      .where(
+        and(
+          isNotNull(navodayaQuizSessions.score),
+          isNotNull(navodayaQuizSessions.completedAt),
+          sql`${navodayaQuizSessions.totalQuestions} > 0`,
+          gte(navodayaQuizSessions.completedAt, weekStartUtc),
+          lte(navodayaQuizSessions.completedAt, weekEndUtc)
+        )
+      )
+      .groupBy(navodayaQuizSessions.studentId, navodayaStudents.name)
+      .orderBy(sql`(COALESCE(SUM(${navodayaQuizSessions.score}), 0)::float / NULLIF(SUM(${navodayaQuizSessions.totalQuestions}), 0)) DESC NULLS LAST`)
+      .limit(3);
+
+    const navodaya: LeaderboardEntry[] = navodayaResults.map((row, index) => ({
+      rank: index + 1,
+      studentId: row.studentId,
+      studentName: row.studentName,
+      totalScore: Number(row.totalScore),
+      totalQuestions: Number(row.totalQuestions),
+      accuracy: row.totalQuestions > 0 ? Math.round((Number(row.totalScore) / Number(row.totalQuestions)) * 100) : 0,
+      testsCompleted: Number(row.testsCompleted),
+    }));
+
+    return { boardExam, cpct, navodaya };
   }
 }
 
