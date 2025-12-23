@@ -234,7 +234,6 @@ export default function StudentOnboardingForm({ onSubmit, onLogin, onBack }: Stu
                       <SelectContent>
                         <SelectItem value="8th">8th Grade</SelectItem>
                         <SelectItem value="10th">10th Grade</SelectItem>
-                        <SelectItem value="12th">12th Grade</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

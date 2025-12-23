@@ -12,9 +12,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 
-const VALID_GRADES = ["8th", "10th", "12th"];
+const VALID_GRADES = ["8th", "10th"];
 const VALID_BOARDS = ["MP", "CBSE"];
-const VALID_SUBJECTS = ["Mathematics", "Science", "SST", "Hindi", "English", "Physics", "Chemistry", "Biology"];
+const VALID_SUBJECTS = ["Mathematics", "Science", "SST", "Hindi", "English"];
 
 interface Pdf {
   id: number;

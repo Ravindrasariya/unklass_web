@@ -66,9 +66,6 @@ const SUBJECTS = [
   "SST",
   "Hindi",
   "English",
-  "Physics",
-  "Chemistry",
-  "Biology",
 ] as const;
 
 function App() {
