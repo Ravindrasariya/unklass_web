@@ -75,7 +75,7 @@ export default function CpctOnboardingForm({ onSubmit, onLogin, onBack }: CpctOn
                 data-testid="img-cpct-logo"
               />
               <p className="text-sm text-muted-foreground" data-testid="text-cpct-tagline">
-                MP CPCT Exam Preparation
+                Learning Beyond Classroom
               </p>
             </div>
             <CardDescription className="text-base">

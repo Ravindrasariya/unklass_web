@@ -75,8 +75,8 @@ export default function NavodayaOnboardingForm({ onSubmit, onLogin, onBack }: Na
                 className="h-10 dark:invert" 
                 data-testid="img-navodaya-logo"
               />
-              <p className="text-sm text-green-600 font-medium" data-testid="text-navodaya-tagline">
-                Navodaya Exam Preparation
+              <p className="text-sm text-muted-foreground" data-testid="text-navodaya-tagline">
+                Learning Beyond Classroom
               </p>
             </div>
             <CardDescription className="text-base">
@@ -130,7 +130,7 @@ export default function NavodayaOnboardingForm({ onSubmit, onLogin, onBack }: Na
 
                 <Button 
                   type="submit" 
-                  className="w-full mt-6 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700" 
+                  className="w-full mt-6 bg-gradient-to-r from-sky-500 to-sky-600" 
                   data-testid="button-navodaya-continue"
                 >
                   Continue
@@ -142,7 +142,7 @@ export default function NavodayaOnboardingForm({ onSubmit, onLogin, onBack }: Na
                   <Button 
                     type="button"
                     variant="outline"
-                    className="w-full border-green-200 hover:bg-green-50"
+                    className="w-full"
                     onClick={() => {
                       const loginValues = loginForm.getValues();
                       form.setValue("name", loginValues.name);
@@ -184,8 +184,8 @@ export default function NavodayaOnboardingForm({ onSubmit, onLogin, onBack }: Na
               className="h-10 dark:invert" 
               data-testid="img-navodaya-logo"
             />
-            <p className="text-sm text-green-600 font-medium" data-testid="text-navodaya-tagline">
-              Navodaya Exam Preparation
+            <p className="text-sm text-muted-foreground" data-testid="text-navodaya-tagline">
+              Learning Beyond Classroom
             </p>
           </div>
           <CardDescription className="text-base">
@@ -297,7 +297,7 @@ export default function NavodayaOnboardingForm({ onSubmit, onLogin, onBack }: Na
 
               <Button 
                 type="submit" 
-                className="w-full mt-6 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700" 
+                className="w-full mt-6 bg-gradient-to-r from-sky-500 to-sky-600" 
                 data-testid="button-navodaya-submit"
               >
                 Start Navodaya Preparation
