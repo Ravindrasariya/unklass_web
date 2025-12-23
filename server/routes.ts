@@ -77,15 +77,20 @@ export async function registerRoutes(
   // Student login (for returning students)
   app.post("/api/students/login", async (req, res) => {
     try {
-      const { mobileNumber } = req.body;
+      const { name, mobileNumber } = req.body;
       
-      if (!mobileNumber) {
-        return res.status(400).json({ error: "Mobile number is required" });
+      if (!name || !mobileNumber) {
+        return res.status(400).json({ error: "Name and mobile number are required" });
       }
       
       const student = await storage.getStudentByMobile(mobileNumber);
       if (!student) {
-        return res.status(404).json({ error: "Student not found" });
+        return res.status(404).json({ error: "Student not found. Please check your name and mobile number." });
+      }
+      
+      // Verify name matches (case-insensitive, trimmed)
+      if (student.name.trim().toLowerCase() !== name.trim().toLowerCase()) {
+        return res.status(404).json({ error: "Student not found. Please check your name and mobile number." });
       }
       
       res.json(student);
@@ -791,18 +796,18 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     try {
       const { name, mobileNumber } = req.body;
       
-      if (!mobileNumber) {
-        return res.status(400).json({ error: "Mobile number is required" });
+      if (!name || !mobileNumber) {
+        return res.status(400).json({ error: "Name and mobile number are required" });
       }
       
       const student = await storage.getCpctStudentByMobile(mobileNumber);
       if (!student) {
-        return res.status(404).json({ error: "Student not found. Please register first." });
+        return res.status(404).json({ error: "Student not found. Please check your name and mobile number." });
       }
       
-      // Optionally verify name matches
-      if (name && student.name.toLowerCase() !== name.toLowerCase()) {
-        return res.status(400).json({ error: "Name does not match registered details" });
+      // Verify name matches (case-insensitive, trimmed)
+      if (student.name.trim().toLowerCase() !== name.trim().toLowerCase()) {
+        return res.status(404).json({ error: "Student not found. Please check your name and mobile number." });
       }
       
       res.json(student);
@@ -1148,17 +1153,17 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     try {
       const { name, mobileNumber } = req.body;
       
-      if (!mobileNumber) {
-        return res.status(400).json({ error: "Mobile number is required" });
+      if (!name || !mobileNumber) {
+        return res.status(400).json({ error: "Name and mobile number are required" });
       }
       
       const student = await storage.getNavodayaStudentByMobile(mobileNumber);
       if (!student) {
-        return res.status(404).json({ error: "Student not found. Please register first." });
+        return res.status(404).json({ error: "Student not found. Please check your name and mobile number." });
       }
       
-      // Optionally verify name matches
-      if (name && student.name.toLowerCase() !== name.toLowerCase()) {
+      // Verify name matches (case-insensitive, trimmed)
+      if (student.name.trim().toLowerCase() !== name.trim().toLowerCase()) {
         return res.status(404).json({ error: "Student not found. Please check your name and mobile number." });
       }
       
