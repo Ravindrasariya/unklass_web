@@ -141,16 +141,23 @@ REJECT any question where the correctAnswer index does not match the calculated/
 
   const userPrompt = `EXTRACT ${numQuestions} questions DIRECTLY from the PDF content below for ${subject}.
 
-PRIORITY ORDER:
-1. FIRST PRIORITY: Extract questions EXACTLY as they appear in the PDF (textbook exercises, past year papers, model papers, practice questions)
-2. SECOND PRIORITY: If the PDF has questions with answers, use those exact questions and answers
-3. THIRD PRIORITY: Only if NO extractable questions exist in the PDF, generate new questions based on the topics/concepts mentioned
+STRICT RULE: ALL questions MUST come from the PDF content. Do NOT create questions from outside knowledge.
 
-IMPORTANT:
-- If the PDF contains actual questions with options and answers, EXTRACT them directly - do not modify or rephrase
-- The correct answer from the PDF is the authoritative answer - use it as-is
-- If generating new questions (only when PDF has no questions), base them on concepts, formulas, diagrams from the material
-- ALL output MUST match the student's language preference
+EXTRACTION METHODS (in priority order):
+1. MCQ EXTRACTION: If the PDF has MCQ questions with options, extract them exactly as-is
+2. LONG ANSWER TO MCQ CONVERSION: If the PDF has long-answer/short-answer questions with answers:
+   - Convert the question to MCQ format
+   - Use the answer from the PDF to create the correct option
+   - Generate 3 plausible wrong options based on the topic
+   - The correct answer MUST come from the PDF's provided answer
+3. FILL-IN-THE-BLANK CONVERSION: Convert fill-in-the-blank questions to MCQ using the PDF's answer
+
+LANGUAGE FLEXIBILITY:
+- You may translate or rephrase questions to match the student's language preference
+- The core meaning/gist of the question MUST remain identical to the PDF
+- Mathematical/scientific notation should stay consistent
+
+CRITICAL: NEVER create questions from topics not covered in the PDF. Every question must trace back to specific content in the PDF.
 
 PDF Content for ${subject}:
 ${pdfContent.substring(0, 15000)}`;
@@ -357,15 +364,23 @@ REJECT any question where the correctAnswer index does not match the verified an
 
   const userPrompt = `EXTRACT ${numQuestions} questions DIRECTLY from the PDF content below for CPCT exam preparation.
 
-PRIORITY ORDER:
-1. FIRST PRIORITY: Extract questions EXACTLY as they appear in the PDF (past year papers, model papers, practice questions)
-2. SECOND PRIORITY: If the PDF has questions with answers, use those exact questions and answers
-3. THIRD PRIORITY: Only if NO extractable questions exist in the PDF, generate new questions based on the topics/concepts mentioned
+STRICT RULE: ALL questions MUST come from the PDF content. Do NOT create questions from outside knowledge.
 
-IMPORTANT:
-- If the PDF contains actual exam questions with options and answers, EXTRACT them directly - do not modify or rephrase
-- The correct answer from the PDF is the authoritative answer - use it as-is
-- ALL output MUST be in ${medium === "Hindi" ? "Hindi (Devanagari script देवनागरी)" : "English"}
+EXTRACTION METHODS (in priority order):
+1. MCQ EXTRACTION: If the PDF has MCQ questions with options, extract them exactly as-is
+2. LONG ANSWER TO MCQ CONVERSION: If the PDF has long-answer/short-answer questions with answers:
+   - Convert the question to MCQ format
+   - Use the answer from the PDF to create the correct option
+   - Generate 3 plausible wrong options based on the topic
+   - The correct answer MUST come from the PDF's provided answer
+3. FILL-IN-THE-BLANK CONVERSION: Convert fill-in-the-blank questions to MCQ using the PDF's answer
+
+LANGUAGE FLEXIBILITY:
+- You may translate or rephrase questions to match ${medium === "Hindi" ? "Hindi (Devanagari script देवनागरी)" : "English"}
+- The core meaning/gist of the question MUST remain identical to the PDF
+- Technical terms should stay consistent
+
+CRITICAL: NEVER create questions from topics not covered in the PDF. Every question must trace back to specific content in the PDF.
 
 PDF Content from CPCT ${year}:
 ${pdfContent.substring(0, 15000)}`;
@@ -586,16 +601,23 @@ REJECT any question where the correctAnswer index does not match the calculated/
 
   const userPrompt = `EXTRACT ${numQuestions} questions DIRECTLY from the PDF content below for ${gradeInfo}.
 
-PRIORITY ORDER:
-1. FIRST PRIORITY: Extract questions EXACTLY as they appear in the PDF (past year papers, model papers, practice questions)
-2. SECOND PRIORITY: If the PDF has questions with answers, use those exact questions and answers
-3. THIRD PRIORITY: Only if NO extractable questions exist in the PDF, generate new questions based on the topics/concepts mentioned
+STRICT RULE: ALL questions MUST come from the PDF content. Do NOT create questions from outside knowledge.
 
-IMPORTANT:
-- If the PDF contains actual exam questions with options and answers, EXTRACT them directly - do not modify or rephrase
-- The correct answer from the PDF is the authoritative answer - use it as-is
-- If translating to ${medium}, keep the mathematical/logical structure identical
-- ALL output MUST be in ${medium === "Hindi" ? "Hindi (Devanagari script देवनागरी)" : "English"}
+EXTRACTION METHODS (in priority order):
+1. MCQ EXTRACTION: If the PDF has MCQ questions with options, extract them exactly as-is
+2. LONG ANSWER TO MCQ CONVERSION: If the PDF has long-answer/short-answer questions with answers:
+   - Convert the question to MCQ format
+   - Use the answer from the PDF to create the correct option
+   - Generate 3 plausible wrong options based on the topic
+   - The correct answer MUST come from the PDF's provided answer
+3. FILL-IN-THE-BLANK CONVERSION: Convert fill-in-the-blank questions to MCQ using the PDF's answer
+
+LANGUAGE FLEXIBILITY:
+- You may translate or rephrase questions to match ${medium === "Hindi" ? "Hindi (Devanagari script देवनागरी)" : "English"}
+- The core meaning/gist of the question MUST remain identical to the PDF
+- Mathematical/logical structure should stay consistent
+
+CRITICAL: NEVER create questions from topics not covered in the PDF. Every question must trace back to specific content in the PDF.
 
 PDF Content for ${examGrade} Navodaya exam:
 ${pdfContent.substring(0, 15000)}`;
