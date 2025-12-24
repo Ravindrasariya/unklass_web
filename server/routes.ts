@@ -246,6 +246,7 @@ export async function registerRoutes(
         board: pdf.board,
         subject: pdf.subject,
         uploadedAt: pdf.uploadedAt,
+        isArchived: pdf.isArchived ?? false,
       })));
     } catch (error) {
       console.error("Error fetching PDFs:", error);
