@@ -156,7 +156,7 @@ MCQ CONVERSION RULES:
 13. NEVER create questions from topics not in PDF.
 
 PDF Content for ${subject}:
-${pdfContent.substring(0, 50000)}`;
+${pdfContent.substring(0, 150000)}`;
 
   try {
     const response = await openai.chat.completions.create({
@@ -380,7 +380,7 @@ MCQ CONVERSION RULES:
 LANGUAGE: Generate all content in ${medium === "Hindi" ? "Hindi (Devanagari script देवनागरी)" : "English"}
 
 PDF Content from CPCT ${year}:
-${pdfContent.substring(0, 50000)}`;
+${pdfContent.substring(0, 150000)}`;
 
   try {
     const response = await openai.chat.completions.create({
@@ -619,7 +619,7 @@ MCQ CONVERSION RULES:
 LANGUAGE: Generate all content in ${medium === "Hindi" ? "Hindi (Devanagari script देवनागरी)" : "English"}
 
 PDF Content for ${examGrade} Navodaya exam:
-${pdfContent.substring(0, 50000)}`;
+${pdfContent.substring(0, 150000)}`;
 
   try {
     const response = await openai.chat.completions.create({
