@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, CheckCircle, XCircle, Clock, BookOpen } from "lucide-react";
 import { type Question } from "./QuizQuestion";
+import { MathText } from "@/components/MathText";
 
 interface QuizSession {
   id: number;
@@ -46,15 +47,6 @@ interface QuizHistoryProps {
   isNavodaya?: boolean;
 }
 
-function formatChemicalFormulas(text: string): string {
-  return text
-    .replace(/([A-Za-z])(\d+)/g, (_, letter, digits) => {
-      const subscripts = "₀₁₂₃₄₅₆₇₈₉";
-      const subscriptDigits = digits.split("").map((d: string) => subscripts[parseInt(d)]).join("");
-      return letter + subscriptDigits;
-    })
-    .replace(/\^(\+|\-)/g, (_, sign) => sign === "+" ? "⁺" : "⁻");
-}
 
 export default function QuizHistory({ studentId, onBack, isCpct = false, isNavodaya = false }: QuizHistoryProps) {
   const [sessions, setSessions] = useState<QuizSession[]>([]);
@@ -174,7 +166,7 @@ export default function QuizHistory({ studentId, onBack, isCpct = false, isNavod
                         <p className="font-medium text-sm text-muted-foreground mb-1">
                           Question {index + 1}
                         </p>
-                        <p className="text-base">{formatChemicalFormulas(question.question)}</p>
+                        <p className="text-base"><MathText text={question.question} /></p>
                       </div>
                     </div>
 
@@ -197,7 +189,7 @@ export default function QuizHistory({ studentId, onBack, isCpct = false, isNavod
                             <span className="font-medium mr-2">
                               {String.fromCharCode(65 + optIndex)}.
                             </span>
-                            {formatChemicalFormulas(option)}
+                            <MathText text={option} />
                             {isCorrectOption && (
                               <Badge variant="outline" className="ml-2 text-green-600 border-green-300">
                                 Correct
@@ -219,7 +211,7 @@ export default function QuizHistory({ studentId, onBack, isCpct = false, isNavod
                           Explanation:
                         </p>
                         <p className="text-sm text-blue-600 dark:text-blue-400">
-                          {formatChemicalFormulas(question.explanation)}
+                          <MathText text={question.explanation} />
                         </p>
                       </div>
                     )}

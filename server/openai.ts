@@ -124,6 +124,13 @@ RULES:
 - Return exactly ${numQuestions} questions based on the study material
 - Each question must be UNIQUE and cover different concepts
 
+MATH FORMATTING (IMPORTANT):
+- For exponents/powers, use caret notation: a^2 for a squared, x^3 for x cubed
+- For complex expressions: (a^0 + b^0) means a to the power 0 plus b to the power 0
+- Examples: "2^3 = 8", "x^2 + y^2", "(a+b)^2", "10^-3"
+- For subscripts: Use underscore notation like H_2O, CO_2
+- For fractions: Use a/b format or "a divided by b"
+
 QUESTION TYPES TO INCLUDE (when generating new questions):
 1. DIAGRAM-BASED: If the material mentions diagrams, ask about specific PARTS and their FUNCTIONS
 2. NUMERICAL/FORMULA-BASED: Include calculation questions using formulas from the material
@@ -392,6 +399,11 @@ RULES:
 - If extracting from PDF, use the PDF's answer as the correct answer
 - Return exactly ${numQuestions} questions based on CPCT syllabus concepts
 - Include questions on: Computer basics, MS Office, Internet, Operating Systems, Typing
+
+MATH FORMATTING (IMPORTANT):
+- For exponents/powers, use caret notation: a^2 for a squared, x^3 for x cubed
+- Examples: "2^3 = 8", "10^6 bytes = 1 MB"
+- For subscripts: Use underscore notation like H_2O, CO_2
 
 CRITICAL EXPERT TEACHER VERIFICATION (MANDATORY FOR EVERY QUESTION):
 As an expert teacher, you MUST critically verify EACH question before including it:
@@ -669,6 +681,12 @@ RULES:
 - If extracting from PDF, use the PDF's answer as the correct answer
 - Return exactly ${numQuestions} questions appropriate for ${gradeInfo}
 - Include questions on: Mental Ability, Arithmetic, Language (${medium}), General Knowledge
+
+MATH FORMATTING (IMPORTANT):
+- For exponents/powers, use caret notation: a^2 for a squared, x^3 for x cubed
+- Examples: "2^3 = 8", "x^2 + y^2", "(a+b)^2", "10^-3"
+- For subscripts: Use underscore notation like H_2O, CO_2
+- For fractions: Use a/b format or "a divided by b"
 
 CRITICAL EXPERT TEACHER VERIFICATION (MANDATORY FOR EVERY QUESTION):
 As an expert teacher, you MUST critically verify EACH question before including it:

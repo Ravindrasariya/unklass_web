@@ -3,52 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { CheckCircle, XCircle, ChevronRight } from "lucide-react";
-
-// Convert chemical formulas to proper subscript/superscript notation
-function formatChemical(text: string): JSX.Element {
-  // Pattern to match chemical formulas: letters followed by numbers, or charge notation
-  const parts: (string | JSX.Element)[] = [];
-  let lastIndex = 0;
-  
-  // Match patterns like H2O, CO2, H2SO4, Ca(OH)2, Fe2O3, Na+, Cl-, SO4^2-
-  const regex = /([A-Z][a-z]?)(\d+)|(\()(\d+)\)|(\^)(\d*[+-])|([A-Z][a-z]?)([+-])/g;
-  let match;
-  
-  const textStr = String(text);
-  
-  while ((match = regex.exec(textStr)) !== null) {
-    // Add text before match
-    if (match.index > lastIndex) {
-      parts.push(textStr.substring(lastIndex, match.index));
-    }
-    
-    if (match[1] && match[2]) {
-      // Element with subscript number (like H2, O3)
-      parts.push(match[1]);
-      parts.push(<sub key={`sub-${match.index}`}>{match[2]}</sub>);
-    } else if (match[3] && match[4]) {
-      // Parenthesis with subscript (like (OH)2)
-      parts.push(match[3]);
-      parts.push(<sub key={`sub-${match.index}`}>{match[4]}</sub>);
-    } else if (match[5] && match[6]) {
-      // Superscript charge (like ^2-)
-      parts.push(<sup key={`sup-${match.index}`}>{match[6]}</sup>);
-    } else if (match[7] && match[8]) {
-      // Element with charge (like Na+, Cl-)
-      parts.push(match[7]);
-      parts.push(<sup key={`sup-${match.index}`}>{match[8]}</sup>);
-    }
-    
-    lastIndex = match.index + match[0].length;
-  }
-  
-  // Add remaining text
-  if (lastIndex < textStr.length) {
-    parts.push(textStr.substring(lastIndex));
-  }
-  
-  return <>{parts.length > 0 ? parts : text}</>;
-}
+import { MathText } from "@/components/MathText";
 
 export interface Question {
   id: number;
@@ -132,7 +87,7 @@ export default function QuizQuestion({
         <Card className="w-full max-w-3xl">
           <CardContent className="p-6 md:p-8">
             <h2 className="text-xl md:text-2xl font-medium mb-6" data-testid="text-question">
-              {formatChemical(question.question)}
+              <MathText text={question.question} />
             </h2>
 
             <div className="space-y-3">
@@ -152,7 +107,7 @@ export default function QuizQuestion({
                   <span className="flex-shrink-0 w-8 h-8 rounded-full border-2 flex items-center justify-center font-medium text-sm">
                     {String.fromCharCode(65 + index)}
                   </span>
-                  <span className="flex-1">{formatChemical(option)}</span>
+                  <span className="flex-1"><MathText text={option} /></span>
                   {hasSubmitted && index === question.correctAnswer && (
                     <CheckCircle className="w-5 h-5 text-green-500" />
                   )}
@@ -179,10 +134,10 @@ export default function QuizQuestion({
                   )}
                 </div>
                 <p className="text-sm text-muted-foreground mb-2">
-                  <strong>Correct Answer:</strong> {String.fromCharCode(65 + question.correctAnswer)}. {formatChemical(question.options[question.correctAnswer])}
+                  <strong>Correct Answer:</strong> {String.fromCharCode(65 + question.correctAnswer)}. <MathText text={question.options[question.correctAnswer]} />
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  <strong>Explanation:</strong> {formatChemical(question.explanation)}
+                  <strong>Explanation:</strong> <MathText text={question.explanation} />
                 </p>
               </div>
             )}
