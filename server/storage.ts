@@ -39,7 +39,9 @@ export interface IStorage {
   getPdfByGradeBoardSubject(grade: string, board: string, subject: string): Promise<Pdf | undefined>;
   createPdf(pdf: InsertPdf): Promise<Pdf>;
   getAllPdfs(): Promise<Pdf[]>;
+  getActivePdfs(): Promise<Pdf[]>;
   deletePdf(id: number): Promise<boolean>;
+  restorePdf(id: number): Promise<boolean>;
 
   // Quiz Sessions
   createQuizSession(session: InsertQuizSession): Promise<QuizSession>;
@@ -188,13 +190,30 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deletePdf(id: number): Promise<boolean> {
-    // Delete all related records that reference this PDF
-    await db.delete(quizSessions).where(eq(quizSessions.pdfId, id));
-    await db.delete(cpctQuizSessions).where(eq(cpctQuizSessions.pdfId, id));
-    await db.delete(navodayaQuizSessions).where(eq(navodayaQuizSessions.pdfId, id));
+    // Soft delete: archive the PDF instead of deleting it
+    // This preserves quiz history and leaderboard data
+    const result = await db.update(pdfs)
+      .set({ isArchived: true })
+      .where(eq(pdfs.id, id))
+      .returning();
+    
+    // Only delete question pointers (not quiz sessions - those are history)
     await db.delete(questionPointers).where(eq(questionPointers.pdfId, id));
-    // Then delete the PDF
-    const result = await db.delete(pdfs).where(eq(pdfs.id, id)).returning();
+    
+    return result.length > 0;
+  }
+  
+  async getActivePdfs(): Promise<Pdf[]> {
+    // Get only non-archived PDFs for quiz generation
+    return await db.select().from(pdfs).where(eq(pdfs.isArchived, false));
+  }
+  
+  async restorePdf(id: number): Promise<boolean> {
+    // Restore an archived PDF
+    const result = await db.update(pdfs)
+      .set({ isArchived: false })
+      .where(eq(pdfs.id, id))
+      .returning();
     return result.length > 0;
   }
 

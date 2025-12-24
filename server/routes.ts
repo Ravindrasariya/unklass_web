@@ -280,21 +280,39 @@ export async function registerRoutes(
     }
   });
 
-  // Delete PDF (admin)
+  // Archive PDF (admin) - soft delete to preserve quiz history
   app.delete("/api/admin/pdfs/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
         return res.status(400).json({ error: "Invalid PDF ID" });
       }
-      const deleted = await storage.deletePdf(id);
-      if (!deleted) {
+      const archived = await storage.deletePdf(id);
+      if (!archived) {
         return res.status(404).json({ error: "PDF not found" });
       }
-      res.json({ message: "PDF deleted successfully" });
+      res.json({ message: "PDF archived successfully. Quiz history is preserved." });
     } catch (error) {
-      console.error("Error deleting PDF:", error);
-      res.status(500).json({ error: "Failed to delete PDF" });
+      console.error("Error archiving PDF:", error);
+      res.status(500).json({ error: "Failed to archive PDF" });
+    }
+  });
+
+  // Restore archived PDF (admin)
+  app.post("/api/admin/pdfs/:id/restore", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid PDF ID" });
+      }
+      const restored = await storage.restorePdf(id);
+      if (!restored) {
+        return res.status(404).json({ error: "PDF not found" });
+      }
+      res.json({ message: "PDF restored successfully" });
+    } catch (error) {
+      console.error("Error restoring PDF:", error);
+      res.status(500).json({ error: "Failed to restore PDF" });
     }
   });
 

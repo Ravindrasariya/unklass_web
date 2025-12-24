@@ -1,4 +1,4 @@
-import { pgTable, text, varchar, integer, serial, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, serial, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -43,6 +43,7 @@ export const pdfs = pgTable("pdfs", {
   content: text("content").notNull(), // Extracted text from PDF
   parsedQuestions: jsonb("parsed_questions"), // Array of pre-parsed question objects from PDF
   totalQuestions: integer("total_questions").default(0), // Count of parsed questions
+  isArchived: boolean("is_archived").default(false), // Soft delete - archived PDFs are hidden but quiz history preserved
   uploadedAt: timestamp("uploaded_at").defaultNow(),
 });
 

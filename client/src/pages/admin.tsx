@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Upload, FileText, Trash2, AlertCircle, CheckCircle2, Eye, Lock, LogOut, Users, Download, ChevronDown, ChevronUp, MessageSquare, TrendingUp, Phone, Pencil } from "lucide-react";
+import { Upload, FileText, Trash2, AlertCircle, CheckCircle2, Eye, Lock, LogOut, Users, Download, ChevronDown, ChevronUp, MessageSquare, TrendingUp, Phone, Pencil, RotateCcw, Archive } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -24,6 +24,7 @@ interface Pdf {
   board: string;
   subject: string;
   createdAt: string;
+  isArchived?: boolean;
 }
 
 interface PdfPreview {
@@ -268,14 +269,34 @@ export default function AdminPage() {
     },
     onSuccess: () => {
       toast({
-        title: "PDF Deleted",
-        description: "The PDF has been removed.",
+        title: "PDF Archived",
+        description: "The PDF has been archived. Quiz history is preserved.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/pdfs"] });
     },
     onError: (error: Error) => {
       toast({
-        title: "Delete Failed",
+        title: "Archive Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const restoreMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("POST", `/api/admin/pdfs/${id}/restore`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "PDF Restored",
+        description: "The PDF is now active and available for quizzes.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pdfs"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Restore Failed",
         description: error.message,
         variant: "destructive",
       });
@@ -642,7 +663,7 @@ export default function AdminPage() {
               Uploaded PDFs
             </CardTitle>
             <CardDescription>
-              These PDFs are used to generate quiz questions for students
+              These PDFs are used to generate quiz questions for students. Archived PDFs preserve quiz history.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -653,50 +674,102 @@ export default function AdminPage() {
                 No PDFs uploaded yet. Upload your first PDF above.
               </p>
             ) : (
-              <div className="space-y-3">
-                {pdfs.map((pdf) => (
-                  <div
-                    key={pdf.id}
-                    className="flex items-center gap-3 p-3 bg-muted rounded-lg"
-                    data-testid={`pdf-item-${pdf.id}`}
-                  >
-                    <FileText className="h-5 w-5 flex-shrink-0 text-primary" />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{pdf.filename}</p>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        <Badge variant="secondary" className="text-xs">
-                          {pdf.grade}
-                        </Badge>
-                        <Badge variant="secondary" className="text-xs">
-                          {pdf.board}
-                        </Badge>
-                        <Badge variant="secondary" className="text-xs">
-                          {pdf.subject}
-                        </Badge>
+              <div className="space-y-4">
+                {/* Active PDFs */}
+                {pdfs.filter(p => !p.isArchived).length > 0 && (
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium text-muted-foreground">Active PDFs</p>
+                    {pdfs.filter(p => !p.isArchived).map((pdf) => (
+                      <div
+                        key={pdf.id}
+                        className="flex items-center gap-3 p-3 bg-muted rounded-lg"
+                        data-testid={`pdf-item-${pdf.id}`}
+                      >
+                        <FileText className="h-5 w-5 flex-shrink-0 text-primary" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{pdf.filename}</p>
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            <Badge variant="secondary" className="text-xs">
+                              {pdf.grade}
+                            </Badge>
+                            <Badge variant="secondary" className="text-xs">
+                              {pdf.board}
+                            </Badge>
+                            <Badge variant="secondary" className="text-xs">
+                              {pdf.subject}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handlePreview(pdf.id)}
+                            disabled={previewLoading}
+                            data-testid={`button-preview-pdf-${pdf.id}`}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => deleteMutation.mutate(pdf.id)}
+                            disabled={deleteMutation.isPending}
+                            data-testid={`button-archive-pdf-${pdf.id}`}
+                            title="Archive PDF (preserves quiz history)"
+                          >
+                            <Archive className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handlePreview(pdf.id)}
-                        disabled={previewLoading}
-                        data-testid={`button-preview-pdf-${pdf.id}`}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => deleteMutation.mutate(pdf.id)}
-                        disabled={deleteMutation.isPending}
-                        data-testid={`button-delete-pdf-${pdf.id}`}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
+                    ))}
                   </div>
-                ))}
+                )}
+                
+                {/* Archived PDFs */}
+                {pdfs.filter(p => p.isArchived).length > 0 && (
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium text-muted-foreground">Archived PDFs</p>
+                    {pdfs.filter(p => p.isArchived).map((pdf) => (
+                      <div
+                        key={pdf.id}
+                        className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg opacity-70"
+                        data-testid={`pdf-item-archived-${pdf.id}`}
+                      >
+                        <Archive className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{pdf.filename}</p>
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            <Badge variant="outline" className="text-xs">
+                              {pdf.grade}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              {pdf.board}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              {pdf.subject}
+                            </Badge>
+                            <Badge variant="secondary" className="text-xs">
+                              Archived
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => restoreMutation.mutate(pdf.id)}
+                            disabled={restoreMutation.isPending}
+                            data-testid={`button-restore-pdf-${pdf.id}`}
+                            title="Restore PDF"
+                          >
+                            <RotateCcw className="h-4 w-4 text-primary" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
