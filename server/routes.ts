@@ -124,7 +124,7 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Grade and board are required" });
       }
       
-      const allPdfs = await storage.getAllPdfs();
+      const allPdfs = await storage.getActivePdfs();
       const availableSubjects = allPdfs
         .filter(pdf => pdf.grade === grade && pdf.board === board)
         .map(pdf => pdf.subject);
@@ -945,7 +945,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
   // Get available CPCT years (PDFs named CPCT_Year.pdf)
   app.get("/api/cpct/available-years", async (req, res) => {
     try {
-      const allPdfs = await storage.getAllPdfs();
+      const allPdfs = await storage.getActivePdfs();
       const cpctYears = allPdfs
         .filter(pdf => pdf.filename.startsWith("CPCT_") && pdf.filename.endsWith(".pdf"))
         .map(pdf => {
@@ -976,8 +976,8 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         return res.status(404).json({ error: "Student not found" });
       }
 
-      // Get all available CPCT PDFs
-      const allPdfs = await storage.getAllPdfs();
+      // Get all available CPCT PDFs (only active, not archived)
+      const allPdfs = await storage.getActivePdfs();
       const cpctPdfs = allPdfs.filter(pdf => 
         pdf.filename.startsWith("CPCT_") && pdf.filename.endsWith(".pdf")
       );

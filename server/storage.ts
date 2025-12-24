@@ -467,14 +467,19 @@ export class DatabaseStorage implements IStorage {
   async getNavodayaPdf(examGrade: string): Promise<Pdf | undefined> {
     // Look for {grade}_navodaya.pdf format (e.g., 6th_navodaya.pdf, 9th_navodaya.pdf)
     // Also try without ordinal suffix (e.g., 6_navodaya.pdf)
+    // Only return active (non-archived) PDFs
     const filename = `${examGrade}_navodaya.pdf`;
-    let [pdf] = await db.select().from(pdfs).where(eq(pdfs.filename, filename));
+    let [pdf] = await db.select().from(pdfs).where(
+      and(eq(pdfs.filename, filename), eq(pdfs.isArchived, false))
+    );
     
     // Fallback: try without ordinal suffix (6th -> 6)
     if (!pdf) {
       const numericGrade = examGrade.replace(/(?:st|nd|rd|th)$/i, '');
       const fallbackFilename = `${numericGrade}_navodaya.pdf`;
-      [pdf] = await db.select().from(pdfs).where(eq(pdfs.filename, fallbackFilename));
+      [pdf] = await db.select().from(pdfs).where(
+        and(eq(pdfs.filename, fallbackFilename), eq(pdfs.isArchived, false))
+      );
     }
     
     return pdf || undefined;
