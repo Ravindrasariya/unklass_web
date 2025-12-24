@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "wouter";
 import { ArrowLeft, Users, School, BookOpen, BarChart3 } from "lucide-react";
-import logoImage from "@assets/Screenshot_2025-12-11_at_12.16.26_AM_1765392397522.png";
+import logoImage from "@assets/Unklass_-_1_1765392666171.png";
 
 export default function AboutPage() {
   return (

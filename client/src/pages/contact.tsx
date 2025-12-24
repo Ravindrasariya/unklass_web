@@ -8,7 +8,7 @@ import { Mail, Send } from "lucide-react";
 import { SiWhatsapp } from "react-icons/si";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import logoImage from "@assets/Screenshot_2025-12-11_at_12.16.26_AM_1765392397522.png";
+import logoImage from "@assets/Unklass_-_1_1765392666171.png";
 
 export default function ContactPage() {
   const [name, setName] = useState("");

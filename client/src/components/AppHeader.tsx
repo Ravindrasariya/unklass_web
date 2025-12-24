@@ -1,5 +1,5 @@
 import { User } from "lucide-react";
-import logoImage from "@assets/Screenshot_2025-12-11_at_12.16.26_AM_1765392397522.png";
+import logoImage from "@assets/Unklass_-_1_1765392666171.png";
 
 interface AppHeaderProps {
   studentName?: string;
