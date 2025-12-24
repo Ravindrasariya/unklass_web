@@ -72,9 +72,7 @@ Task: Select exactly ${numQuestions} questions from the provided PDF content bas
    2b. Sequential Count: Select the next ${numQuestions} questions in numerical order.
    
    The Loop Rule: If you reach the final question number in the PDF before hitting a count of ${numQuestions}, "cycle" back to Question #1 and continue until the total count of ${numQuestions} is reached.
-   - Example: PDF if has N=25 questions, and X=22 → pick Q23, Q24, Q25 (3) + Q1-Q7 (7) = 10 total
-
-${previousQuestions.length > 0 ? `SKIP THESE (already asked):\n${previousQuestions.slice(-20).map((q, i) => `- ${q.substring(0, 80)}`).join('\n')}` : ''}`;
+   - Example: PDF if has N=25 questions, and X=22 → pick Q23, Q24, Q25 (3) + Q1-Q7 (7) = 10 total`;
 
   const languageInstruction = medium === "Hindi" 
     ? `IMPORTANT LANGUAGE INSTRUCTION: Generate ALL content in Hindi (Devanagari script). The questions, all 4 options, and explanations MUST be written in Hindi. Use proper Hindi language and Devanagari script throughout.`
@@ -300,9 +298,7 @@ Task: Select exactly ${numQuestions} questions from the provided PDF content bas
    2b. Sequential Count: Select the next ${numQuestions} questions in numerical order.
    
    The Loop Rule: If you reach the final question number in the PDF before hitting a count of ${numQuestions}, "cycle" back to Question #1 and continue until the total count of ${numQuestions} is reached.
-   - Example: PDF if has N=25 questions, and X=22 → pick Q23, Q24, Q25 (3) + Q1-Q7 (7) = 10 total
-
-${previousQuestions.length > 0 ? `SKIP THESE (already asked):\n${previousQuestions.slice(-20).map((q, i) => `- ${q.substring(0, 80)}`).join('\n')}` : ''}`;
+   - Example: PDF if has N=25 questions, and X=22 → pick Q23, Q24, Q25 (3) + Q1-Q7 (7) = 10 total`;
 
   const languageInstruction = medium === "Hindi" 
     ? `IMPORTANT: Generate ALL content (questions, options, explanations) in HINDI (Devanagari script). The entire quiz must be in Hindi language.`
@@ -540,9 +536,7 @@ Task: Select exactly ${numQuestions} questions from the provided PDF content bas
    2b. Sequential Count: Select the next ${numQuestions} questions in numerical order.
    
    The Loop Rule: If you reach the final question number in the PDF before hitting a count of ${numQuestions}, "cycle" back to Question #1 and continue until the total count of ${numQuestions} is reached.
-   - Example: PDF if has N=25 questions, and X=22 → pick Q23, Q24, Q25 (3) + Q1-Q7 (7) = 10 total
-
-${previousQuestions.length > 0 ? `SKIP THESE (already asked):\n${previousQuestions.slice(-20).map((q, i) => `- ${q.substring(0, 80)}`).join('\n')}` : ''}`;
+   - Example: PDF if has N=25 questions, and X=22 → pick Q23, Q24, Q25 (3) + Q1-Q7 (7) = 10 total`;
 
   const gradeInfo = examGrade === "6th" 
     ? "Class 6 entry level (students appearing from Class 5)" 
