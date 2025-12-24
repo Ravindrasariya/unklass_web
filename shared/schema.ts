@@ -41,6 +41,8 @@ export const pdfs = pgTable("pdfs", {
   board: varchar("board", { length: 10 }).notNull(),
   subject: text("subject").notNull(),
   content: text("content").notNull(), // Extracted text from PDF
+  parsedQuestions: jsonb("parsed_questions"), // Array of pre-parsed question objects from PDF
+  totalQuestions: integer("total_questions").default(0), // Count of parsed questions
   uploadedAt: timestamp("uploaded_at").defaultNow(),
 });
 
@@ -205,6 +207,16 @@ export const contactSubmissions = pgTable("contact_submissions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Question pointers table - tracks last question index per student + PDF for sequential picking
+export const questionPointers = pgTable("question_pointers", {
+  id: serial("id").primaryKey(),
+  studentId: integer("student_id").notNull(),
+  studentType: varchar("student_type", { length: 20 }).notNull(), // 'board', 'cpct', 'navodaya'
+  pdfId: integer("pdf_id").notNull().references(() => pdfs.id),
+  lastQuestionIndex: integer("last_question_index").notNull().default(0), // 0-based index of last question asked
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Visitor stats table - stores daily visitor counts
 export const visitorStats = pgTable("visitor_stats", {
   id: serial("id").primaryKey(),
@@ -237,6 +249,18 @@ export type ContactSubmission = typeof contactSubmissions.$inferSelect;
 
 export type InsertVisitorStats = z.infer<typeof insertVisitorStatsSchema>;
 export type VisitorStats = typeof visitorStats.$inferSelect;
+
+export type QuestionPointer = typeof questionPointers.$inferSelect;
+
+// Parsed question structure (stored in PDF)
+export const parsedQuestionSchema = z.object({
+  index: z.number(),
+  rawText: z.string(), // Original text from PDF
+  questionText: z.string().optional(), // Cleaned question text if extracted
+  answer: z.string().optional(), // Answer if found in PDF
+});
+
+export type ParsedQuestion = z.infer<typeof parsedQuestionSchema>;
 
 // Question type for the quiz
 export const questionSchema = z.object({
