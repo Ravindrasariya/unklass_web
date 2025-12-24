@@ -1,11 +1,46 @@
 import type { ParsedQuestion } from "@shared/schema";
 
+function isTableLine(line: string): boolean {
+  // Detect table-like lines: pipes, multiple consecutive spaces (3+), tab-separated content
+  if (line.includes('|')) return true;
+  if (/\t/.test(line)) return true;
+  // Check for column-like structure: multiple groups of text separated by 3+ spaces
+  if (/\S\s{3,}\S/.test(line)) return true;
+  // Table header/separator lines
+  if (/^[\s\-|+]+$/.test(line) && line.length > 10) return true;
+  return false;
+}
+
+function preserveTableStructure(content: string): string {
+  // Convert tables to a more parseable format while preserving structure
+  const lines = content.split('\n');
+  const result: string[] = [];
+  
+  for (const line of lines) {
+    if (isTableLine(line)) {
+      // Replace tabs with " | " to preserve column separation
+      let tableLine = line.replace(/\t+/g, ' | ');
+      // Preserve multiple spaces as column separators but mark them
+      tableLine = tableLine.replace(/(\S)\s{3,}(\S)/g, '$1 | $2');
+      result.push(tableLine);
+    } else {
+      result.push(line);
+    }
+  }
+  
+  return result.join('\n');
+}
+
 function normalizeContent(content: string): string {
-  let normalized = content
+  // First preserve table structure before other normalization
+  let normalized = preserveTableStructure(content);
+  
+  normalized = normalized
     .replace(/[\u200B-\u200D\uFEFF]/g, '')
     .replace(/\r\n/g, '\n')
     .replace(/\r/g, '\n')
     .replace(/\t/g, ' ')
+    // Only collapse spaces that are NOT part of table structure (already converted to |)
     .replace(/[ ]{3,}/g, '  ')
     .replace(/^\s*Page\s*\d+.*$/gim, '')
     .replace(/^\s*\d+\s*$/gm, '')
@@ -69,9 +104,26 @@ function extractQuestionsLineByLine(content: string): { num: number; text: strin
   
   const questionStartPattern = /^\s*(?:Que?s?(?:tion)?|Q|प्रश्न|Qn)?[\s.\-:]*(\d{1,3})[\s.\-:)\]]+(.+)/i;
   const simpleNumberPattern = /^\s*(\d{1,3})\s*[.\):\-\]]\s*(.+)/;
+  
+  // Track preceding table context
+  let precedingTableLines: string[] = [];
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
+    const trimmedLine = line.trim();
+    
+    // Accumulate table lines that might belong to the next question
+    if (isTableLine(line) || (trimmedLine.includes('|') && trimmedLine.length > 5)) {
+      precedingTableLines.push(trimmedLine);
+      continue;
+    }
+    
+    // Clear table context if we hit an empty line (table block ended)
+    if (!trimmedLine) {
+      // Keep the table context for now - it might precede a question
+      continue;
+    }
+    
     let match = line.match(questionStartPattern) || line.match(simpleNumberPattern);
     
     if (match) {
@@ -79,6 +131,12 @@ function extractQuestionsLineByLine(content: string): { num: number; text: strin
       let text = match[2]?.trim() || '';
       
       if (num > 0 && num <= 500 && text.length > 5) {
+        // Prepend any preceding table context
+        if (precedingTableLines.length > 0) {
+          const tableContext = precedingTableLines.join('\n');
+          text = '[Table Context]\n' + tableContext + '\n[Question]\n' + text;
+        }
+        
         let j = i + 1;
         while (j < lines.length) {
           const nextLine = lines[j].trim();
@@ -88,9 +146,17 @@ function extractQuestionsLineByLine(content: string): { num: number; text: strin
           const isOption = /^[\(\[]?\s*[a-dA-D1-4]\s*[\)\]\.:]/.test(nextLine);
           const isAnswer = /^(?:Answer|Ans|उत्तर|Correct)/i.test(nextLine);
           const isMarks = /^\s*\[?\s*\d+\s*(?:marks?|अंक)\s*\]?\s*$/i.test(nextLine);
+          const isTableContent = isTableLine(lines[j]) || nextLine.includes('|');
           
           if (isNewQuestion) break;
           if (isMarks) { j++; continue; }
+          
+          // Include table content that follows the question
+          if (isTableContent) {
+            text += '\n' + nextLine;
+            j++;
+            continue;
+          }
           
           if (isOption || isAnswer) {
             text += '\n' + nextLine;
@@ -115,7 +181,13 @@ function extractQuestionsLineByLine(content: string): { num: number; text: strin
         if (text.length > 15 && text.length < 8000) {
           questions.push({ num, text: text.trim(), lineIndex: i });
         }
+        
+        // Clear table context after using it
+        precedingTableLines = [];
       }
+    } else {
+      // Non-question, non-table line - clear table context
+      precedingTableLines = [];
     }
   }
 
