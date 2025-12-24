@@ -44,6 +44,7 @@ export const pdfs = pgTable("pdfs", {
   parsedQuestions: jsonb("parsed_questions"), // Array of pre-parsed question objects from PDF
   totalQuestions: integer("total_questions").default(0), // Count of parsed questions
   isArchived: boolean("is_archived").default(false), // Soft delete - archived PDFs are hidden but quiz history preserved
+  archivedAt: timestamp("archived_at"), // When the PDF was archived (for auto-cleanup after 3 months)
   uploadedAt: timestamp("uploaded_at").defaultNow(),
 });
 
