@@ -160,7 +160,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPdfByFilename(filename: string): Promise<Pdf | undefined> {
-    const [pdf] = await db.select().from(pdfs).where(eq(pdfs.filename, filename));
+    // Only check active (non-archived) PDFs to allow re-uploading after archive
+    const [pdf] = await db.select().from(pdfs).where(
+      and(
+        eq(pdfs.filename, filename),
+        eq(pdfs.isArchived, false)
+      )
+    );
     return pdf || undefined;
   }
 
