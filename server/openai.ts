@@ -54,22 +54,25 @@ export async function generateQuizQuestions(
   previousQuestions: string[] = [],
   medium: string = "English"
 ): Promise<Question[]> {
-  // Calculate quiz number based on previous questions (10 questions per quiz)
-  const quizNumber = Math.floor(previousQuestions.length / numQuestions) + 1;
-  const startQuestion = ((quizNumber - 1) * numQuestions) + 1;
-  const endQuestion = quizNumber * numQuestions;
+  // Calculate starting position based on total previous questions asked
+  const startPosition = previousQuestions.length + 1;
+  const endPosition = previousQuestions.length + numQuestions;
   
   const sequentialInstruction = `
-SEQUENTIAL QUESTION PICKING (IMPORTANT):
-This is Quiz #${quizNumber} for this student.
-Pick questions ${startQuestion} to ${endQuestion} from the PDF content in ORDER.
+SEQUENTIAL QUESTION PICKING WITH CYCLING:
 
-- Go through the PDF sequentially from start to end
-- Number all extractable/convertible questions mentally as Q1, Q2, Q3, etc.
-- For this quiz, return questions #${startQuestion} through #${endQuestion}
-- If the PDF has fewer than ${endQuestion} questions, cycle back to the beginning
-  (Example: If PDF has 25 questions and you need Q21-Q30, return Q21-Q25 then Q1-Q5)
-- This ensures every student sees ALL questions before any repeat`;
+Task: Select exactly ${numQuestions} questions from the provided PDF content based on a Sequential Cycling Logic.
+
+1. Reference Data:
+   1a. Find Total number of Questions from the given subject's PDF: [Count all questions in PDF]
+   1b. Last Question Position (X) from the latest quiz history for the subject: ${previousQuestions.length}
+
+2. Selection Logic (The "Cycling" Rule): Follow these steps strictly to determine which question numbers to pick:
+   2a. Identify Start Point: Begin at Question #(X + 1) = #${startPosition}.
+   2b. Sequential Count: Select the next ${numQuestions} questions in numerical order.
+   
+   The Loop Rule: If you reach the final question number in the PDF before hitting a count of ${numQuestions}, "cycle" back to Question #1 and continue until the total count of ${numQuestions} is reached.
+   - Example: PDF if has N=25 questions, and X=22 → pick Q23, Q24, Q25 (3) + Q1-Q7 (7) = 10 total`;
 
   const languageInstruction = medium === "Hindi" 
     ? `IMPORTANT LANGUAGE INSTRUCTION: Generate ALL content in Hindi (Devanagari script). The questions, all 4 options, and explanations MUST be written in Hindi. Use proper Hindi language and Devanagari script throughout.`
@@ -80,11 +83,6 @@ Pick questions ${startQuestion} to ${endQuestion} from the PDF content in ORDER.
 ${languageInstruction}
 
 Your PRIMARY task is to EXTRACT ${numQuestions} multiple-choice questions DIRECTLY from the provided PDF content.
-
-EXTRACTION PRIORITY (FOLLOW THIS ORDER):
-1. EXTRACT questions exactly as they appear in the PDF (textbook exercises, past year papers, model papers)
-2. Use the EXACT correct answers provided in the PDF - the PDF answer is authoritative
-3. Only if the PDF has no extractable questions, generate new ones based on the content/concepts
 
 You MUST return a JSON object with exactly this structure:
 {
@@ -111,11 +109,12 @@ RULES:
 - Return exactly ${numQuestions} questions based on the study material
 - Each question must be UNIQUE and cover different concepts
 
-QUESTION TYPES TO INCLUDE (when generating new questions):
-1. DIAGRAM-BASED: If the material mentions diagrams, ask about specific PARTS and their FUNCTIONS
-2. NUMERICAL/FORMULA-BASED: Include calculation questions using formulas from the material
-3. CONCEPTUAL: Ask why/how questions that test understanding
-4. APPLICATION: Real-world problem-solving using concepts from the material
+MATH FORMATTING (IMPORTANT):
+- For exponents/powers, use caret notation: a^2 for a squared, x^3 for x cubed
+- For complex expressions: (a^0 + b^0) means a to the power 0 plus b to the power 0
+- Examples: "2^3 = 8", "x^2 + y^2", "(a+b)^2", "10^-3"
+- For subscripts: Use underscore notation like H_2O, CO_2
+- For fractions: Use a/b format or "a divided by b"
 
 CRITICAL EXPERT TEACHER VERIFICATION (MANDATORY FOR EVERY QUESTION):
 As an expert teacher, you MUST critically verify EACH question before including it:
@@ -140,38 +139,24 @@ ${sequentialInstruction}`;
 
   const userPrompt = `EXTRACT ${numQuestions} questions from the ENTIRE PDF content below for ${subject}.
 
-STRICT RULE: Go through the ENTIRE PDF from start to end. Convert ALL types of questions to MCQ format.
+MCQ CONVERSION RULES:
 
-MANDATORY EXTRACTION - CONVERT EVERYTHING TO MCQ:
 1. **EXISTING MCQs**: Extract exactly as they appear in the PDF
-2. **SHORT ANSWER QUESTIONS**: Convert to MCQ format
-   - Use the answer provided in PDF as the CORRECT option
-   - Generate 3 plausible but INCORRECT options that are related but wrong
-3. **LONG ANSWER QUESTIONS**: Convert to MCQ format
-   - Extract the key fact/concept being tested
-   - The PDF's answer becomes one of the 4 options (the correct one)
-   - Create 3 similar but incorrect alternatives
-4. **FILL-IN-THE-BLANK**: Convert to MCQ using the PDF's answer as correct option
-5. **TRUE/FALSE**: Keep as MCQ with 4 options including True, False, and 2 related statements
-6. **DEFINITIONS/CONCEPTS**: Create "What is..." or "Define..." MCQs from text content
-7. **DIAGRAMS/FIGURES**: Create questions about parts, labels, or functions shown
-
-CONVERSION EXAMPLE:
-PDF has: "Q: What is photosynthesis? A: Photosynthesis is the process by which plants convert sunlight into food using carbon dioxide and water."
-Convert to MCQ:
-- Question: "What is photosynthesis?"
-- Options: ["Process by which plants convert sunlight into food using CO2 and water", "Process by which animals digest food", "Process of cell division in plants", "Process of water absorption by roots"]
-- correctAnswer: 0 (first option from PDF answer)
-
-IMPORTANT RULES:
-- EXHAUST ALL CONTENT from the PDF before repeating
-- Go through EVERY page, EVERY question, EVERY concept
-- Convert subjective questions - don't skip them just because they're not MCQ
-- The correct answer MUST come from what the PDF states
-- Wrong options must be plausible but clearly incorrect to someone who studied
+2. **SHORT ANSWER (1-2 words/numbers)**: PDF answer = correct option, generate 3 plausible wrong alternatives
+3. **SENTENCE-LENGTH (1-2 sentences)**: Full sentence = correct option, create 3 wrong options with factual errors
+4. **PARAGRAPH/ESSAY (3+ sentences)**: Break into MULTIPLE sub-questions, each testing ONE fact
+5. **FILL-IN-THE-BLANK**: Convert using PDF's answer as correct option
+6. **TRUE/FALSE**: Create 4 options: ["True", "False", "Partially true", "None of the above"]
+7. **DEFINITIONS**: Create "What is..." or "Define..." MCQs
+8. **DIAGRAM-BASED**: Generate questions about parts, labels, functions - use your understanding for correct answers
+9. Do not skip any type of question. Follow rules 1-8 depending on question type.
+10. No question shall be skipped from PDF unless there is a parsing issue.
+11. If answer is available in PDF, give it top priority. If not available, AI provides best possible option.
+12. Wrong options must be plausible but clearly incorrect.
+13. NEVER create questions from topics not in PDF.
 
 PDF Content for ${subject}:
-${pdfContent.substring(0, 50000)}`;
+${pdfContent.substring(0, 150000)}`;
 
   try {
     const response = await openai.chat.completions.create({
@@ -295,21 +280,25 @@ export async function generateCpctQuizQuestions(
   numQuestions: number = 10,
   previousQuestions: string[] = []
 ): Promise<Question[]> {
-  // Calculate quiz number based on previous questions (10 questions per quiz)
-  const quizNumber = Math.floor(previousQuestions.length / numQuestions) + 1;
-  const startQuestion = ((quizNumber - 1) * numQuestions) + 1;
-  const endQuestion = quizNumber * numQuestions;
+  // Calculate starting position based on total previous questions asked
+  const startPosition = previousQuestions.length + 1;
+  const endPosition = previousQuestions.length + numQuestions;
   
   const sequentialInstruction = `
-SEQUENTIAL QUESTION PICKING (IMPORTANT):
-This is Quiz #${quizNumber} for this student.
-Pick questions ${startQuestion} to ${endQuestion} from the PDF content in ORDER.
+SEQUENTIAL QUESTION PICKING WITH CYCLING:
 
-- Go through the PDF sequentially from start to end
-- Number all extractable/convertible questions mentally as Q1, Q2, Q3, etc.
-- For this quiz, return questions #${startQuestion} through #${endQuestion}
-- If the PDF has fewer than ${endQuestion} questions, cycle back to the beginning
-- This ensures every student sees ALL questions before any repeat`;
+Task: Select exactly ${numQuestions} questions from the provided PDF content based on a Sequential Cycling Logic.
+
+1. Reference Data:
+   1a. Find Total number of Questions from the given PDF: [Count all questions in PDF]
+   1b. Last Question Position (X) from the latest quiz history: ${previousQuestions.length}
+
+2. Selection Logic (The "Cycling" Rule): Follow these steps strictly to determine which question numbers to pick:
+   2a. Identify Start Point: Begin at Question #(X + 1) = #${startPosition}.
+   2b. Sequential Count: Select the next ${numQuestions} questions in numerical order.
+   
+   The Loop Rule: If you reach the final question number in the PDF before hitting a count of ${numQuestions}, "cycle" back to Question #1 and continue until the total count of ${numQuestions} is reached.
+   - Example: PDF if has N=25 questions, and X=22 → pick Q23, Q24, Q25 (3) + Q1-Q7 (7) = 10 total`;
 
   const languageInstruction = medium === "Hindi" 
     ? `IMPORTANT: Generate ALL content (questions, options, explanations) in HINDI (Devanagari script). The entire quiz must be in Hindi language.`
@@ -319,11 +308,6 @@ Pick questions ${startQuestion} to ${endQuestion} from the PDF content in ORDER.
 ${languageInstruction}
 
 Your PRIMARY task is to EXTRACT ${numQuestions} multiple-choice questions DIRECTLY from the provided PDF content for CPCT exam preparation.
-
-EXTRACTION PRIORITY (FOLLOW THIS ORDER):
-1. EXTRACT questions exactly as they appear in the PDF (past year papers, model papers)
-2. Use the EXACT correct answers provided in the PDF - the PDF answer is authoritative
-3. Only if the PDF has no extractable questions, generate new ones based on the content
 
 You MUST return a JSON object with exactly this structure:
 {
@@ -348,7 +332,11 @@ RULES:
 - "explanation" must explain why the answer is correct in ${medium} AND MUST match the correctAnswer index
 - If extracting from PDF, use the PDF's answer as the correct answer
 - Return exactly ${numQuestions} questions based on CPCT syllabus concepts
-- Include questions on: Computer basics, MS Office, Internet, Operating Systems, Typing
+
+MATH FORMATTING (IMPORTANT):
+- For exponents/powers, use caret notation: a^2 for a squared, x^3 for x cubed
+- Examples: "2^3 = 8", "10^6 bytes = 1 MB"
+- For subscripts: Use underscore notation like H_2O, CO_2
 
 CRITICAL EXPERT TEACHER VERIFICATION (MANDATORY FOR EVERY QUESTION):
 As an expert teacher, you MUST critically verify EACH question before including it:
@@ -373,40 +361,26 @@ ${sequentialInstruction}`;
 
   const userPrompt = `EXTRACT ${numQuestions} questions from the ENTIRE PDF content below for CPCT exam preparation.
 
-STRICT RULE: Go through the ENTIRE PDF from start to end. Convert ALL types of questions to MCQ format.
+MCQ CONVERSION RULES:
 
-MANDATORY EXTRACTION - CONVERT EVERYTHING TO MCQ:
 1. **EXISTING MCQs**: Extract exactly as they appear in the PDF
-2. **SHORT ANSWER QUESTIONS**: Convert to MCQ format
-   - Use the answer provided in PDF as the CORRECT option
-   - Generate 3 plausible but INCORRECT options that are related but wrong
-3. **LONG ANSWER QUESTIONS**: Convert to MCQ format
-   - Extract the key fact/concept being tested
-   - The PDF's answer becomes one of the 4 options (the correct one)
-   - Create 3 similar but incorrect alternatives
-4. **FILL-IN-THE-BLANK**: Convert to MCQ using the PDF's answer as correct option
-5. **TRUE/FALSE**: Keep as MCQ with 4 options including True, False, and 2 related statements
-6. **DEFINITIONS/CONCEPTS**: Create "What is..." or "Define..." MCQs from text content
-7. **COMPUTER CONCEPTS**: Create questions from any explanatory text about hardware, software, internet, etc.
-
-CONVERSION EXAMPLE:
-PDF has: "Q: What is CPU? A: CPU (Central Processing Unit) is the brain of the computer that processes instructions."
-Convert to MCQ:
-- Question: "What is CPU?"
-- Options: ["The brain of computer that processes instructions", "A storage device for data", "A display unit for output", "A device for printing documents"]
-- correctAnswer: 0 (first option from PDF answer)
-
-IMPORTANT RULES:
-- EXHAUST ALL CONTENT from the PDF before repeating
-- Go through EVERY page, EVERY question, EVERY concept in the PDF
-- Convert subjective questions - don't skip them just because they're not MCQ
-- The correct answer MUST come from what the PDF states
-- Wrong options must be plausible but clearly incorrect
+2. **SHORT ANSWER (1-2 words/numbers)**: PDF answer = correct option, generate 3 plausible wrong alternatives
+3. **SENTENCE-LENGTH (1-2 sentences)**: Full sentence = correct option, create 3 wrong options with factual errors
+4. **PARAGRAPH/ESSAY (3+ sentences)**: Break into MULTIPLE sub-questions, each testing ONE fact
+5. **FILL-IN-THE-BLANK**: Convert using PDF's answer as correct option
+6. **TRUE/FALSE**: Create 4 options: ["True", "False", "Partially true", "None of the above"]
+7. **DEFINITIONS**: Create "What is..." MCQs from explanatory text
+8. **DIAGRAM-BASED**: Generate questions about parts, labels, functions - use your understanding for correct answers
+9. Do not skip any type of question. Follow rules 1-8 depending on question type.
+10. No question shall be skipped from PDF unless there is a parsing issue.
+11. If answer is available in PDF, give it top priority. If not available, AI provides best possible option.
+12. Wrong options must be plausible but clearly incorrect.
+13. NEVER create questions from topics not in PDF.
 
 LANGUAGE: Generate all content in ${medium === "Hindi" ? "Hindi (Devanagari script देवनागरी)" : "English"}
 
 PDF Content from CPCT ${year}:
-${pdfContent.substring(0, 50000)}`;
+${pdfContent.substring(0, 150000)}`;
 
   try {
     const response = await openai.chat.completions.create({
@@ -544,21 +518,25 @@ export async function generateNavodayaQuizQuestions(
   numQuestions: number = 10,
   previousQuestions: string[] = []
 ): Promise<Question[]> {
-  // Calculate quiz number based on previous questions (10 questions per quiz)
-  const quizNumber = Math.floor(previousQuestions.length / numQuestions) + 1;
-  const startQuestion = ((quizNumber - 1) * numQuestions) + 1;
-  const endQuestion = quizNumber * numQuestions;
+  // Calculate starting position based on total previous questions asked
+  const startPosition = previousQuestions.length + 1;
+  const endPosition = previousQuestions.length + numQuestions;
   
   const sequentialInstruction = `
-SEQUENTIAL QUESTION PICKING (IMPORTANT):
-This is Quiz #${quizNumber} for this student.
-Pick questions ${startQuestion} to ${endQuestion} from the PDF content in ORDER.
+SEQUENTIAL QUESTION PICKING WITH CYCLING:
 
-- Go through the PDF sequentially from start to end
-- Number all extractable/convertible questions mentally as Q1, Q2, Q3, etc.
-- For this quiz, return questions #${startQuestion} through #${endQuestion}
-- If the PDF has fewer than ${endQuestion} questions, cycle back to the beginning
-- This ensures every student sees ALL questions before any repeat`;
+Task: Select exactly ${numQuestions} questions from the provided PDF content based on a Sequential Cycling Logic.
+
+1. Reference Data:
+   1a. Find Total number of Questions from the given PDF: [Count all questions in PDF]
+   1b. Last Question Position (X) from the latest quiz history: ${previousQuestions.length}
+
+2. Selection Logic (The "Cycling" Rule): Follow these steps strictly to determine which question numbers to pick:
+   2a. Identify Start Point: Begin at Question #(X + 1) = #${startPosition}.
+   2b. Sequential Count: Select the next ${numQuestions} questions in numerical order.
+   
+   The Loop Rule: If you reach the final question number in the PDF before hitting a count of ${numQuestions}, "cycle" back to Question #1 and continue until the total count of ${numQuestions} is reached.
+   - Example: PDF if has N=25 questions, and X=22 → pick Q23, Q24, Q25 (3) + Q1-Q7 (7) = 10 total`;
 
   const gradeInfo = examGrade === "6th" 
     ? "Class 6 entry level (students appearing from Class 5)" 
@@ -572,11 +550,6 @@ Pick questions ${startQuestion} to ${endQuestion} from the PDF content in ORDER.
 ${languageInstruction}
 
 Your PRIMARY task is to EXTRACT ${numQuestions} multiple-choice questions DIRECTLY from the provided PDF content for Navodaya entrance exam preparation - ${gradeInfo}.
-
-EXTRACTION PRIORITY (FOLLOW THIS ORDER):
-1. EXTRACT questions exactly as they appear in the PDF (past year papers, model papers)
-2. Use the EXACT correct answers provided in the PDF - the PDF answer is authoritative
-3. Only if the PDF has no extractable questions, generate new ones based on the content
 
 You MUST return a JSON object with exactly this structure:
 {
@@ -597,7 +570,12 @@ RULES:
 - "explanation" must explain why the answer is correct in ${medium} AND MUST match the correctAnswer index
 - If extracting from PDF, use the PDF's answer as the correct answer
 - Return exactly ${numQuestions} questions appropriate for ${gradeInfo}
-- Include questions on: Mental Ability, Arithmetic, Language (${medium}), General Knowledge
+
+MATH FORMATTING (IMPORTANT):
+- For exponents/powers, use caret notation: a^2 for a squared, x^3 for x cubed
+- Examples: "2^3 = 8", "x^2 + y^2", "(a+b)^2", "10^-3"
+- For subscripts: Use underscore notation like H_2O, CO_2
+- For fractions: Use a/b format or "a divided by b"
 
 CRITICAL EXPERT TEACHER VERIFICATION (MANDATORY FOR EVERY QUESTION):
 As an expert teacher, you MUST critically verify EACH question before including it:
@@ -622,44 +600,26 @@ ${sequentialInstruction}`;
 
   const userPrompt = `EXTRACT ${numQuestions} questions from the ENTIRE PDF content below for ${gradeInfo}.
 
-STRICT RULE: Go through the ENTIRE PDF from start to end. Convert ALL types of questions to MCQ format.
+MCQ CONVERSION RULES:
 
-MANDATORY EXTRACTION - CONVERT EVERYTHING TO MCQ:
 1. **EXISTING MCQs**: Extract exactly as they appear in the PDF
-2. **SHORT ANSWER QUESTIONS**: Convert to MCQ format
-   - Use the answer provided in PDF as the CORRECT option
-   - Generate 3 plausible but INCORRECT options that are related but wrong
-3. **LONG ANSWER QUESTIONS**: Convert to MCQ format
-   - Extract the key fact/concept being tested
-   - The PDF's answer becomes one of the 4 options (the correct one)
-   - Create 3 similar but incorrect alternatives
-4. **FILL-IN-THE-BLANK**: Convert to MCQ using the PDF's answer as correct option
-5. **TRUE/FALSE**: Keep as MCQ with 4 options
-6. **MENTAL ABILITY/REASONING**: Convert pattern/series questions to MCQ format
-7. **ARITHMETIC PROBLEMS**: Convert calculation problems to MCQ with the correct answer as one option
-8. **LANGUAGE QUESTIONS**: Convert grammar/comprehension questions to MCQ format
-
-CONVERSION EXAMPLE:
-PDF has: "Q: What is the capital of India? A: New Delhi is the capital of India."
-Convert to MCQ:
-- Question: "What is the capital of India?"
-- Options: ["New Delhi", "Mumbai", "Kolkata", "Chennai"]
-- correctAnswer: 0 (first option from PDF answer)
-
-IMPORTANT RULES:
-- EXHAUST ALL CONTENT from the PDF before repeating
-- Go through EVERY page, EVERY question, EVERY concept in the PDF
-- Convert subjective questions - don't skip them just because they're not MCQ
-- The correct answer MUST come from what the PDF states
-- Wrong options must be plausible but clearly incorrect
+2. **SHORT ANSWER (1-2 words/numbers)**: PDF answer = correct option, generate 3 plausible wrong alternatives
+3. **SENTENCE-LENGTH (1-2 sentences)**: Full sentence = correct option, create 3 wrong options with factual errors
+4. **PARAGRAPH/ESSAY (3+ sentences)**: Break into MULTIPLE sub-questions, each testing ONE fact
+5. **FILL-IN-THE-BLANK**: Convert using PDF's answer as correct option
+6. **TRUE/FALSE**: Create 4 options: ["True", "False", "Partially true", "None of the above"]
+7. **DEFINITIONS**: Create "What is..." MCQs
+8. **DIAGRAM-BASED**: Generate questions about parts, labels, functions - use your understanding for correct answers
+9. Do not skip any type of question. Follow rules 1-8 depending on question type.
+10. No question shall be skipped from PDF unless there is a parsing issue.
+11. If answer is available in PDF, give it top priority. If not available, AI provides best possible option.
+12. Wrong options must be plausible but clearly incorrect.
+13. NEVER create questions from topics not in PDF.
 
 LANGUAGE: Generate all content in ${medium === "Hindi" ? "Hindi (Devanagari script देवनागरी)" : "English"}
-- Mathematical/logical structure should stay consistent
-
-CRITICAL: NEVER create questions from topics not covered in the PDF. Every question must trace back to specific content in the PDF.
 
 PDF Content for ${examGrade} Navodaya exam:
-${pdfContent.substring(0, 50000)}`;
+${pdfContent.substring(0, 150000)}`;
 
   try {
     const response = await openai.chat.completions.create({
