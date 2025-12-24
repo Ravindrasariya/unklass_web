@@ -1,9 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertStudentSchema, insertCpctStudentSchema, insertNavodayaStudentSchema, insertContactSubmissionSchema, type Question, type ParsedQuestion } from "@shared/schema";
+import { insertStudentSchema, insertCpctStudentSchema, insertNavodayaStudentSchema, insertContactSubmissionSchema, type Question } from "@shared/schema";
 import { generateQuizQuestions, generateAnswerFeedback, generateCpctQuizQuestions, generateNavodayaQuizQuestions } from "./openai";
-import { parseQuestionsFromPdfContent, getSequentialQuestions } from "./questionParser";
 import multer from "multer";
 
 async function parsePdf(buffer: Buffer): Promise<string> {
@@ -207,15 +206,6 @@ export async function registerRoutes(
 
       const pdf = await storage.createPdf(pdfData);
 
-      // Parse questions from PDF content for sequential picking
-      const parsedQuestions = parseQuestionsFromPdfContent(content);
-      console.log(`Parsed ${parsedQuestions.length} questions from ${filename}`);
-      
-      // Store parsed questions in the PDF record
-      if (parsedQuestions.length > 0) {
-        await storage.updatePdfParsedQuestions(pdf.id, parsedQuestions, parsedQuestions.length);
-      }
-
       res.json({ 
         message: "PDF uploaded successfully",
         pdf: {
@@ -225,7 +215,6 @@ export async function registerRoutes(
           board: pdf.board,
           subject: pdf.subject,
           contentLength: content.length,
-          totalQuestions: parsedQuestions.length,
         }
       });
     } catch (error: unknown) {
@@ -298,47 +287,6 @@ export async function registerRoutes(
     }
   });
 
-  // Re-parse all PDFs to extract questions (admin - for existing PDFs uploaded before parsing feature)
-  app.post("/api/admin/pdfs/reparse-all", async (req, res) => {
-    try {
-      const allPdfs = await storage.getAllPdfs();
-      const results: { id: number; filename: string; questionsFound: number; error?: string }[] = [];
-      
-      for (const pdf of allPdfs) {
-        try {
-          // Get the full PDF with content
-          const fullPdf = await storage.getPdf(pdf.id);
-          if (!fullPdf || !fullPdf.content) {
-            results.push({ id: pdf.id, filename: pdf.filename, questionsFound: 0, error: "No content" });
-            continue;
-          }
-          
-          const parsedQuestions = parseQuestionsFromPdfContent(fullPdf.content);
-          console.log(`Re-parsed ${parsedQuestions.length} questions from ${pdf.filename}`);
-          
-          if (parsedQuestions.length > 0) {
-            await storage.updatePdfParsedQuestions(pdf.id, parsedQuestions, parsedQuestions.length);
-          }
-          
-          results.push({ id: pdf.id, filename: pdf.filename, questionsFound: parsedQuestions.length });
-        } catch (err) {
-          const errorMsg = err instanceof Error ? err.message : "Unknown error";
-          results.push({ id: pdf.id, filename: pdf.filename, questionsFound: 0, error: errorMsg });
-        }
-      }
-      
-      res.json({ 
-        message: "PDFs re-parsed successfully", 
-        results,
-        totalPdfs: allPdfs.length,
-        successCount: results.filter(r => !r.error).length
-      });
-    } catch (error) {
-      console.error("Error re-parsing PDFs:", error);
-      res.status(500).json({ error: "Failed to re-parse PDFs" });
-    }
-  });
-
   // Generate quiz questions
   app.post("/api/quiz/generate", async (req, res) => {
     try {
@@ -360,51 +308,14 @@ export async function registerRoutes(
       // Find the PDF for this grade/board/subject
       const pdf = await storage.getPdfByGradeBoardSubject(grade, board.toUpperCase(), subject);
       
+      // Get previous questions to avoid duplicates
+      const previousQuestions = await storage.getStudentPreviousQuestions(studentId, subject);
+      console.log(`Student ${studentId} has ${previousQuestions.length} previous questions for ${subject} in ${studentMedium} medium`);
+      
       let questions: Question[];
       
-      if (pdf && pdf.parsedQuestions && Array.isArray(pdf.parsedQuestions) && pdf.parsedQuestions.length > 0) {
-        // SERVER-SIDE SEQUENTIAL QUESTION PICKING
-        const parsedQuestions = pdf.parsedQuestions as ParsedQuestion[];
-        
-        // Get current question pointer for this student + PDF
-        const pointer = await storage.getQuestionPointer(studentId, 'board', pdf.id);
-        const startIndex = pointer ? (pointer.lastQuestionIndex + 1) % parsedQuestions.length : 0;
-        
-        console.log(`Student ${studentId} - PDF ${pdf.id}: Starting from index ${startIndex} of ${parsedQuestions.length} questions`);
-        
-        // Get sequential questions with cycling
-        const { questions: selectedQuestions, newLastIndex } = getSequentialQuestions(
-          parsedQuestions,
-          startIndex,
-          10
-        );
-        
-        // Build subset content from selected questions
-        const subsetContent = selectedQuestions.map((q, i) => 
-          `Question ${i + 1}:\n${q.rawText}${q.answer ? `\nAnswer: ${q.answer}` : ''}`
-        ).join('\n\n---\n\n');
-        
-        console.log(`Sending ${selectedQuestions.length} sequential questions to LLM for conversion`);
-        
-        // Generate MCQs from the subset
-        questions = await generateQuizQuestions(
-          subsetContent,
-          subject,
-          grade,
-          board,
-          10,
-          [], // No previous questions needed - we handle sequencing server-side
-          studentMedium
-        );
-        
-        // Update question pointer for next quiz
-        await storage.updateQuestionPointer(studentId, 'board', pdf.id, newLastIndex);
-        console.log(`Updated pointer to index ${newLastIndex} for next quiz`);
-        
-      } else if (pdf) {
-        // Fallback: PDF exists but no parsed questions - use full content
-        console.log(`PDF ${pdf.id} has no parsed questions, using full content`);
-        const previousQuestions = await storage.getStudentPreviousQuestions(studentId, subject);
+      if (pdf) {
+        // Generate questions from PDF content
         questions = await generateQuizQuestions(
           pdf.content,
           subject,
@@ -445,16 +356,13 @@ ${subjectTopics}
 
 IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT use concepts from lower grades like 8th or 10th for 12th grade questions.`;
         
-        // Get previous questions for fallback case (no PDF)
-        const fallbackPreviousQuestions = await storage.getStudentPreviousQuestions(studentId, subject);
-        
         questions = await generateQuizQuestions(
           fallbackContent,
           subject,
           grade,
           board,
           10,
-          fallbackPreviousQuestions,
+          previousQuestions,
           studentMedium
         );
       }
@@ -957,16 +865,16 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         return res.status(404).json({ error: "Student not found" });
       }
 
-      // Get all available CPCT PDFs
+      // Get all available CPCT PDFs and combine content
       const allPdfs = await storage.getAllPdfs();
       const cpctPdfs = allPdfs.filter(pdf => 
         pdf.filename.startsWith("CPCT_") && pdf.filename.endsWith(".pdf")
       );
       
+      // Combine content from all CPCT PDFs or use fallback
+      let combinedContent = "";
       let usedYear = "2024"; // Default year for reference
       let usedPdfId: number | null = null;
-      let questions: Question[];
-      const medium = student.medium as "Hindi" | "English";
       
       if (cpctPdfs.length > 0) {
         // Sort by year descending to prioritize latest content
@@ -976,63 +884,33 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
           return yearB.localeCompare(yearA);
         });
         
-        const latestPdf = cpctPdfs[0];
-        const latestMatch = latestPdf.filename.match(/CPCT_(\d+)\.pdf/);
+        // Use the latest PDF's year
+        const latestMatch = cpctPdfs[0].filename.match(/CPCT_(\d+)\.pdf/);
         usedYear = latestMatch ? latestMatch[1] : "2024";
-        usedPdfId = latestPdf.id;
+        usedPdfId = cpctPdfs[0].id;
         
-        // Check if PDF has parsed questions for sequential picking
-        if (latestPdf.parsedQuestions && Array.isArray(latestPdf.parsedQuestions) && latestPdf.parsedQuestions.length > 0) {
-          // SERVER-SIDE SEQUENTIAL QUESTION PICKING
-          const parsedQuestions = latestPdf.parsedQuestions as ParsedQuestion[];
-          
-          // Get current question pointer for this student + PDF
-          const pointer = await storage.getQuestionPointer(studentId, 'cpct', latestPdf.id);
-          const startIndex = pointer ? (pointer.lastQuestionIndex + 1) % parsedQuestions.length : 0;
-          
-          console.log(`CPCT Student ${studentId} - PDF ${latestPdf.id}: Starting from index ${startIndex} of ${parsedQuestions.length} questions`);
-          
-          // Get sequential questions with cycling
-          const { questions: selectedQuestions, newLastIndex } = getSequentialQuestions(
-            parsedQuestions,
-            startIndex,
-            10
-          );
-          
-          // Build subset content from selected questions
-          const subsetContent = selectedQuestions.map((q, i) => 
-            `Question ${i + 1}:\n${q.rawText}${q.answer ? `\nAnswer: ${q.answer}` : ''}`
-          ).join('\n\n---\n\n');
-          
-          console.log(`Sending ${selectedQuestions.length} sequential CPCT questions to LLM for conversion`);
-          
-          // Generate MCQs from the subset
-          questions = await generateCpctQuizQuestions(
-            subsetContent,
-            usedYear,
-            medium,
-            10,
-            [] // No previous questions needed - we handle sequencing server-side
-          );
-          
-          // Update question pointer for next quiz
-          await storage.updateQuestionPointer(studentId, 'cpct', latestPdf.id, newLastIndex);
-          console.log(`Updated CPCT pointer to index ${newLastIndex} for next quiz`);
-        } else {
-          // Fallback: PDF exists but no parsed questions - use full content
-          console.log(`CPCT PDF ${latestPdf.id} has no parsed questions, using full content`);
-          const previousQuestions = await storage.getCpctStudentPreviousQuestions(studentId);
-          questions = await generateCpctQuizQuestions(
-            latestPdf.content,
-            usedYear,
-            medium,
-            10,
-            previousQuestions
-          );
-        }
+        // Combine content from all PDFs
+        combinedContent = cpctPdfs.map(pdf => pdf.content).join("\n\n");
+      }
+      
+      // Get previous questions to avoid duplicates
+      const previousQuestions = await storage.getCpctStudentPreviousQuestions(studentId);
+      console.log(`CPCT Student ${studentId} has ${previousQuestions.length} previous questions`);
+      
+      let questions: Question[];
+      const medium = student.medium as "Hindi" | "English";
+      
+      if (combinedContent) {
+        // Generate questions from combined PDF content in student's selected medium
+        questions = await generateCpctQuizQuestions(
+          combinedContent,
+          usedYear,
+          medium,
+          10,
+          previousQuestions
+        );
       } else {
         // Generate general CPCT questions (fallback when no PDF uploaded)
-        const previousQuestions = await storage.getCpctStudentPreviousQuestions(studentId);
         questions = await generateCpctQuizQuestions(
           `General CPCT exam curriculum for computer proficiency certification in Madhya Pradesh, India. Topics include: Computer Fundamentals, Operating Systems (Windows), MS Office (Word, Excel, PowerPoint), Internet and Email, Basic Networking, Computer Security, Hindi Typing, English Typing.`,
           usedYear,
@@ -1318,51 +1196,16 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         console.log(`PDF content length: ${pdf.content.length}, First 200 chars: ${pdf.content.substring(0, 200)}`);
       }
       
+      // Get previous questions to avoid duplicates
+      const previousQuestions = await storage.getNavodayaStudentPreviousQuestions(studentId);
+      console.log(`Navodaya Student ${studentId} has ${previousQuestions.length} previous questions`);
+      
       let questions: Question[];
       const medium = student.medium as "Hindi" | "English";
       const examGrade = student.examGrade as "6th" | "9th";
       
-      if (pdf && pdf.parsedQuestions && Array.isArray(pdf.parsedQuestions) && pdf.parsedQuestions.length > 0) {
-        // SERVER-SIDE SEQUENTIAL QUESTION PICKING
-        const parsedQuestions = pdf.parsedQuestions as ParsedQuestion[];
-        
-        // Get current question pointer for this student + PDF
-        const pointer = await storage.getQuestionPointer(studentId, 'navodaya', pdf.id);
-        const startIndex = pointer ? (pointer.lastQuestionIndex + 1) % parsedQuestions.length : 0;
-        
-        console.log(`Navodaya Student ${studentId} - PDF ${pdf.id}: Starting from index ${startIndex} of ${parsedQuestions.length} questions`);
-        
-        // Get sequential questions with cycling
-        const { questions: selectedQuestions, newLastIndex } = getSequentialQuestions(
-          parsedQuestions,
-          startIndex,
-          10
-        );
-        
-        // Build subset content from selected questions
-        const subsetContent = selectedQuestions.map((q, i) => 
-          `Question ${i + 1}:\n${q.rawText}${q.answer ? `\nAnswer: ${q.answer}` : ''}`
-        ).join('\n\n---\n\n');
-        
-        console.log(`Sending ${selectedQuestions.length} sequential Navodaya questions to LLM for conversion`);
-        
-        // Generate MCQs from the subset
-        questions = await generateNavodayaQuizQuestions(
-          subsetContent,
-          examGrade,
-          medium,
-          10,
-          [] // No previous questions needed - we handle sequencing server-side
-        );
-        
-        // Update question pointer for next quiz
-        await storage.updateQuestionPointer(studentId, 'navodaya', pdf.id, newLastIndex);
-        console.log(`Updated Navodaya pointer to index ${newLastIndex} for next quiz`);
-        
-      } else if (pdf) {
-        // Fallback: PDF exists but no parsed questions - use full content
-        console.log(`Navodaya PDF ${pdf.id} has no parsed questions, using full content`);
-        const previousQuestions = await storage.getNavodayaStudentPreviousQuestions(studentId);
+      if (pdf) {
+        // Generate questions from PDF content in student's selected medium
         questions = await generateNavodayaQuizQuestions(
           pdf.content,
           examGrade,
@@ -1376,7 +1219,6 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
           ? `Navodaya Class 6 entrance exam curriculum. Topics: Mental Ability (patterns, sequences, coding-decoding, analogies, mirror images, classifications), Arithmetic (basic operations, fractions, decimals, percentages, time and distance, profit and loss), Language comprehension (reading passages, grammar basics, vocabulary), General Knowledge (current affairs, science facts, geography basics, Indian history).`
           : `Navodaya Class 9 entrance exam curriculum. Topics: Mental Ability (advanced patterns, series completion, coding-decoding, blood relations, direction sense, ranking tests), Mathematics (algebra basics, geometry, mensuration, statistics, number system), Science (physics fundamentals, chemistry basics, biology concepts), Social Studies (history, geography, civics), Language (English and Hindi comprehension, grammar).`;
         
-        const previousQuestions = await storage.getNavodayaStudentPreviousQuestions(studentId);
         questions = await generateNavodayaQuizQuestions(
           fallbackContent,
           examGrade,

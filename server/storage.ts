@@ -1,7 +1,7 @@
 import { 
   students, pdfs, quizSessions, cpctStudents, cpctQuizSessions,
   navodayaStudents, navodayaQuizSessions,
-  contactSubmissions, visitorStats, uniqueVisitors, questionPointers,
+  contactSubmissions, visitorStats, uniqueVisitors,
   type Student, type InsertStudent,
   type Pdf, type InsertPdf,
   type QuizSession, type InsertQuizSession,
@@ -10,8 +10,7 @@ import {
   type NavodayaStudent, type InsertNavodayaStudent,
   type NavodayaQuizSession, type InsertNavodayaQuizSession,
   type ContactSubmission, type InsertContactSubmission,
-  type VisitorStats,
-  type QuestionPointer, type ParsedQuestion
+  type VisitorStats
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, like, sql, desc, gte, lte, isNotNull, or } from "drizzle-orm";
@@ -95,13 +94,6 @@ export interface IStorage {
     boardExam: LeaderboardEntry[];
     cpct: LeaderboardEntry[];
   }>;
-
-  // Question Pointers (for sequential question picking)
-  getQuestionPointer(studentId: number, studentType: string, pdfId: number): Promise<QuestionPointer | undefined>;
-  updateQuestionPointer(studentId: number, studentType: string, pdfId: number, lastQuestionIndex: number): Promise<QuestionPointer>;
-  
-  // PDF parsed questions
-  updatePdfParsedQuestions(pdfId: number, parsedQuestions: ParsedQuestion[], totalQuestions: number): Promise<Pdf | undefined>;
 }
 
 export interface LeaderboardEntry {
@@ -586,50 +578,6 @@ export class DatabaseStorage implements IStorage {
     }));
 
     return { boardExam, cpct, navodaya };
-  }
-
-  // Question Pointers (for sequential question picking)
-  async getQuestionPointer(studentId: number, studentType: string, pdfId: number): Promise<QuestionPointer | undefined> {
-    const [pointer] = await db.select().from(questionPointers).where(
-      and(
-        eq(questionPointers.studentId, studentId),
-        eq(questionPointers.studentType, studentType),
-        eq(questionPointers.pdfId, pdfId)
-      )
-    );
-    return pointer || undefined;
-  }
-
-  async updateQuestionPointer(studentId: number, studentType: string, pdfId: number, lastQuestionIndex: number): Promise<QuestionPointer> {
-    // Try to find existing pointer
-    const existing = await this.getQuestionPointer(studentId, studentType, pdfId);
-    
-    if (existing) {
-      // Update existing pointer
-      const [updated] = await db
-        .update(questionPointers)
-        .set({ lastQuestionIndex, updatedAt: new Date() })
-        .where(eq(questionPointers.id, existing.id))
-        .returning();
-      return updated;
-    } else {
-      // Create new pointer
-      const [created] = await db
-        .insert(questionPointers)
-        .values({ studentId, studentType, pdfId, lastQuestionIndex })
-        .returning();
-      return created;
-    }
-  }
-
-  // PDF parsed questions
-  async updatePdfParsedQuestions(pdfId: number, parsedQuestions: ParsedQuestion[], totalQuestions: number): Promise<Pdf | undefined> {
-    const [updated] = await db
-      .update(pdfs)
-      .set({ parsedQuestions, totalQuestions })
-      .where(eq(pdfs.id, pdfId))
-      .returning();
-    return updated || undefined;
   }
 }
 
