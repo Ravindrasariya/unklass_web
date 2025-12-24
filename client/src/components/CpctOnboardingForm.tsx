@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowRight, UserPlus } from "lucide-react";
-import logoImage from "@assets/Unklass_-_1_1765392666171.png";
+import logoImage from "@assets/Screenshot_2025-12-11_at_12.16.26_AM_1765392397522.png";
 
 const loginSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),

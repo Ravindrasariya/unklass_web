@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, BookOpen, Monitor, GraduationCap, Shield, School } from "lucide-react";
 import { Link } from "wouter";
 import WeeklyLeaderboard from "./WeeklyLeaderboard";
-import logoImage from "@assets/Unklass_-_1_1765392666171.png";
+import logoImage from "@assets/Screenshot_2025-12-11_at_12.16.26_AM_1765392397522.png";
 import studentImage from "@assets/Screenshot_2025-12-17_at_6.41.41_AM_1765934337756.png";
 import classroom1 from "@assets/Screenshot_2025-12-17_at_2.54.23_PM_1765963603824.png";
 import classroom2 from "@assets/Screenshot_2025-12-17_at_2.55.03_PM_1765963603824.png";
