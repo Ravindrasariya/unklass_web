@@ -94,11 +94,6 @@ ${languageInstruction}
 
 Your PRIMARY task is to EXTRACT ${numQuestions} multiple-choice questions DIRECTLY from the provided PDF content.
 
-EXTRACTION PRIORITY (FOLLOW THIS ORDER):
-1. EXTRACT questions exactly as they appear in the PDF (textbook exercises, past year papers, model papers)
-2. Use the EXACT correct answers provided in the PDF - the PDF answer is authoritative
-3. Only if the PDF has no extractable questions, generate new ones based on the content/concepts
-
 You MUST return a JSON object with exactly this structure:
 {
   "questions": [
@@ -131,12 +126,6 @@ MATH FORMATTING (IMPORTANT):
 - For subscripts: Use underscore notation like H_2O, CO_2
 - For fractions: Use a/b format or "a divided by b"
 
-QUESTION TYPES TO INCLUDE (when generating new questions):
-1. DIAGRAM-BASED: If the material mentions diagrams, ask about specific PARTS and their FUNCTIONS
-2. NUMERICAL/FORMULA-BASED: Include calculation questions using formulas from the material
-3. CONCEPTUAL: Ask why/how questions that test understanding
-4. APPLICATION: Real-world problem-solving using concepts from the material
-
 CRITICAL EXPERT TEACHER VERIFICATION (MANDATORY FOR EVERY QUESTION):
 As an expert teacher, you MUST critically verify EACH question before including it:
 1. SOLVE the problem yourself step-by-step and note the calculated answer
@@ -160,51 +149,21 @@ ${sequentialInstruction}`;
 
   const userPrompt = `EXTRACT ${numQuestions} questions from the ENTIRE PDF content below for ${subject}.
 
-STRICT RULE: Go through the ENTIRE PDF from start to end. Convert ALL types of questions to MCQ format.
-
-MANDATORY EXTRACTION - CONVERT ALL QUESTION TYPES TO MCQ:
+MCQ CONVERSION RULES:
 
 1. **EXISTING MCQs**: Extract exactly as they appear in the PDF
-
-2. **SHORT ANSWER (1-2 words/numbers)**: 
-   - Use the PDF answer as the CORRECT option
-   - Generate 3 plausible but wrong alternatives
-
-3. **SENTENCE-LENGTH SUBJECTIVE ANSWERS** (1-2 sentences):
-   - The PDF's complete answer sentence becomes the CORRECT option
-   - Create 3 wrong options that sound similar but contain factual errors
-   - Example: "Q: Define evaporation. A: Evaporation is the process where liquid changes to vapor at any temperature below boiling point."
-   - MCQ: Question: "What is evaporation?" 
-   - Options: ["Process where liquid changes to vapor below boiling point", "Process where solid changes directly to gas", "Process where gas changes to liquid", "Process where liquid boils at 100°C"]
-   - correctAnswer: 0
-
-4. **PARAGRAPH/ESSAY QUESTIONS** (3+ sentences or multi-point answers):
-   - DO NOT SKIP these - break them into MULTIPLE sub-questions!
-   - Extract 2-3 separate MCQs from one long answer, each testing ONE fact:
-   - Example: "Q: Explain the water cycle. A: Water evaporates from oceans. It forms clouds through condensation. Rain falls as precipitation. Water flows back to oceans through rivers."
-   - Create separate MCQs:
-     * "What happens to water in oceans first in the water cycle?" → evaporation
-     * "How do clouds form in the water cycle?" → through condensation
-     * "What is it called when rain falls from clouds?" → precipitation
-
-5. **FILL-IN-THE-BLANK**: Convert to MCQ using the PDF's answer as correct option
-
-6. **TRUE/FALSE**: Create 4 options with True, False, and 2 related conceptual options
-
-7. **DEFINITIONS/CONCEPTS from text**: Create "What is..." or "Define..." MCQs
-
-8. **DIAGRAMS/FIGURES**: Create questions about parts, labels, or functions
-
-CRITICAL: DO NOT SKIP SUBJECTIVE QUESTIONS!
-- If PDF has "Explain...", "Describe...", "Write about...", "Discuss..." questions - CONVERT THEM
-- Use the PDF's answer text as your source for the correct MCQ option
-- Break long answers into multiple smaller MCQs
-
-IMPORTANT RULES:
-- EXHAUST ALL CONTENT from the PDF before repeating
-- Go through EVERY page, EVERY question, EVERY concept
-- The correct answer MUST come from what the PDF states
-- Wrong options must be plausible but clearly incorrect to someone who studied
+2. **SHORT ANSWER (1-2 words/numbers)**: PDF answer = correct option, generate 3 plausible wrong alternatives
+3. **SENTENCE-LENGTH (1-2 sentences)**: Full sentence = correct option, create 3 wrong options with factual errors
+4. **PARAGRAPH/ESSAY (3+ sentences)**: Break into MULTIPLE sub-questions, each testing ONE fact
+5. **FILL-IN-THE-BLANK**: Convert using PDF's answer as correct option
+6. **TRUE/FALSE**: Create 4 options: ["True", "False", "Partially true", "None of the above"]
+7. **DEFINITIONS**: Create "What is..." or "Define..." MCQs
+8. **DIAGRAM-BASED**: Generate questions about parts, labels, functions - use your understanding for correct answers
+9. Do not skip any type of question. Follow rules 1-8 depending on question type.
+10. No question shall be skipped from PDF unless there is a parsing issue.
+11. If answer is available in PDF, give it top priority. If not available, AI provides best possible option.
+12. Wrong options must be plausible but clearly incorrect.
+13. NEVER create questions from topics not in PDF.
 
 PDF Content for ${subject}:
 ${pdfContent.substring(0, 50000)}`;
@@ -370,11 +329,6 @@ ${languageInstruction}
 
 Your PRIMARY task is to EXTRACT ${numQuestions} multiple-choice questions DIRECTLY from the provided PDF content for CPCT exam preparation.
 
-EXTRACTION PRIORITY (FOLLOW THIS ORDER):
-1. EXTRACT questions exactly as they appear in the PDF (past year papers, model papers)
-2. Use the EXACT correct answers provided in the PDF - the PDF answer is authoritative
-3. Only if the PDF has no extractable questions, generate new ones based on the content
-
 You MUST return a JSON object with exactly this structure:
 {
   "questions": [
@@ -398,7 +352,6 @@ RULES:
 - "explanation" must explain why the answer is correct in ${medium} AND MUST match the correctAnswer index
 - If extracting from PDF, use the PDF's answer as the correct answer
 - Return exactly ${numQuestions} questions based on CPCT syllabus concepts
-- Include questions on: Computer basics, MS Office, Internet, Operating Systems, Typing
 
 MATH FORMATTING (IMPORTANT):
 - For exponents/powers, use caret notation: a^2 for a squared, x^3 for x cubed
@@ -428,49 +381,21 @@ ${sequentialInstruction}`;
 
   const userPrompt = `EXTRACT ${numQuestions} questions from the ENTIRE PDF content below for CPCT exam preparation.
 
-STRICT RULE: Go through the ENTIRE PDF from start to end. Convert ALL types of questions to MCQ format.
-
-MANDATORY EXTRACTION - CONVERT ALL QUESTION TYPES TO MCQ:
+MCQ CONVERSION RULES:
 
 1. **EXISTING MCQs**: Extract exactly as they appear in the PDF
-
-2. **SHORT ANSWER (1-2 words/numbers)**: 
-   - Use the PDF answer as the CORRECT option
-   - Generate 3 plausible but wrong alternatives
-
-3. **SENTENCE-LENGTH SUBJECTIVE ANSWERS** (1-2 sentences):
-   - The PDF's complete answer sentence becomes the CORRECT option
-   - Create 3 wrong options that sound similar but contain factual errors
-   - Example: "Q: What is RAM? A: RAM is temporary memory that stores data while computer is running."
-   - MCQ Options: ["Temporary memory that stores data while computer runs", "Permanent storage for files", "Device for printing", "Monitor display unit"]
-   - correctAnswer: 0
-
-4. **PARAGRAPH/ESSAY QUESTIONS** (3+ sentences):
-   - DO NOT SKIP - break into MULTIPLE sub-questions!
-   - Extract 2-3 separate MCQs from one long answer, each testing ONE fact
-   - Example: "Q: Explain types of software. A: System software manages hardware. Application software helps users do tasks. Utility software maintains the system."
-   - Create separate MCQs:
-     * "What does system software do?" → manages hardware
-     * "What is the purpose of application software?" → helps users do tasks
-
-5. **FILL-IN-THE-BLANK**: Convert to MCQ using PDF's answer as correct option
-
-6. **TRUE/FALSE**: Create 4 options with True, False, and 2 related statements
-
-7. **DEFINITIONS/CONCEPTS**: Create "What is..." MCQs from explanatory text
-
-8. **COMPUTER CONCEPTS**: Create questions from hardware, software, internet explanations
-
-CRITICAL: DO NOT SKIP SUBJECTIVE QUESTIONS!
-- If PDF has "Explain...", "Describe...", "Write about..." questions - CONVERT THEM
-- Use the PDF's answer text as your source for the correct MCQ option
-- Break long answers into multiple smaller MCQs
-
-IMPORTANT RULES:
-- EXHAUST ALL CONTENT from the PDF before repeating
-- Go through EVERY page, EVERY question, EVERY concept
-- The correct answer MUST come from what the PDF states
-- Wrong options must be plausible but clearly incorrect
+2. **SHORT ANSWER (1-2 words/numbers)**: PDF answer = correct option, generate 3 plausible wrong alternatives
+3. **SENTENCE-LENGTH (1-2 sentences)**: Full sentence = correct option, create 3 wrong options with factual errors
+4. **PARAGRAPH/ESSAY (3+ sentences)**: Break into MULTIPLE sub-questions, each testing ONE fact
+5. **FILL-IN-THE-BLANK**: Convert using PDF's answer as correct option
+6. **TRUE/FALSE**: Create 4 options: ["True", "False", "Partially true", "None of the above"]
+7. **DEFINITIONS**: Create "What is..." MCQs from explanatory text
+8. **DIAGRAM-BASED**: Generate questions about parts, labels, functions - use your understanding for correct answers
+9. Do not skip any type of question. Follow rules 1-8 depending on question type.
+10. No question shall be skipped from PDF unless there is a parsing issue.
+11. If answer is available in PDF, give it top priority. If not available, AI provides best possible option.
+12. Wrong options must be plausible but clearly incorrect.
+13. NEVER create questions from topics not in PDF.
 
 LANGUAGE: Generate all content in ${medium === "Hindi" ? "Hindi (Devanagari script देवनागरी)" : "English"}
 
@@ -656,11 +581,6 @@ ${languageInstruction}
 
 Your PRIMARY task is to EXTRACT ${numQuestions} multiple-choice questions DIRECTLY from the provided PDF content for Navodaya entrance exam preparation - ${gradeInfo}.
 
-EXTRACTION PRIORITY (FOLLOW THIS ORDER):
-1. EXTRACT questions exactly as they appear in the PDF (past year papers, model papers)
-2. Use the EXACT correct answers provided in the PDF - the PDF answer is authoritative
-3. Only if the PDF has no extractable questions, generate new ones based on the content
-
 You MUST return a JSON object with exactly this structure:
 {
   "questions": [
@@ -680,7 +600,6 @@ RULES:
 - "explanation" must explain why the answer is correct in ${medium} AND MUST match the correctAnswer index
 - If extracting from PDF, use the PDF's answer as the correct answer
 - Return exactly ${numQuestions} questions appropriate for ${gradeInfo}
-- Include questions on: Mental Ability, Arithmetic, Language (${medium}), General Knowledge
 
 MATH FORMATTING (IMPORTANT):
 - For exponents/powers, use caret notation: a^2 for a squared, x^3 for x cubed
@@ -711,57 +630,23 @@ ${sequentialInstruction}`;
 
   const userPrompt = `EXTRACT ${numQuestions} questions from the ENTIRE PDF content below for ${gradeInfo}.
 
-STRICT RULE: Go through the ENTIRE PDF from start to end. Convert ALL types of questions to MCQ format.
-
-MANDATORY EXTRACTION - CONVERT ALL QUESTION TYPES TO MCQ:
+MCQ CONVERSION RULES:
 
 1. **EXISTING MCQs**: Extract exactly as they appear in the PDF
-
-2. **SHORT ANSWER (1-2 words/numbers)**: 
-   - Use the PDF answer as the CORRECT option
-   - Generate 3 plausible but wrong alternatives
-
-3. **SENTENCE-LENGTH SUBJECTIVE ANSWERS** (1-2 sentences):
-   - The PDF's complete answer sentence becomes the CORRECT option
-   - Create 3 wrong options that sound similar but contain factual errors
-   - Example: "Q: Define fraction. A: A fraction represents a part of a whole."
-   - MCQ Options: ["A part of a whole", "A complete number", "A decimal point", "A mathematical symbol"]
-   - correctAnswer: 0
-
-4. **PARAGRAPH/ESSAY QUESTIONS** (3+ sentences):
-   - DO NOT SKIP - break into MULTIPLE sub-questions!
-   - Extract 2-3 separate MCQs from one long answer, each testing ONE fact
-   - Example: "Q: Describe the solar system. A: The Sun is at the center. Eight planets orbit the Sun. Earth is the third planet."
-   - Create separate MCQs:
-     * "What is at the center of the solar system?" → The Sun
-     * "How many planets orbit the Sun?" → Eight
-     * "Which position is Earth from the Sun?" → Third
-
-5. **FILL-IN-THE-BLANK**: Convert to MCQ using PDF's answer as correct option
-
-6. **TRUE/FALSE**: Create 4 options with True, False, and 2 related statements
-
-7. **MENTAL ABILITY/REASONING**: Convert pattern/series questions to MCQ format
-
-8. **ARITHMETIC PROBLEMS**: Convert calculation problems to MCQ with correct answer as one option
-
-9. **LANGUAGE QUESTIONS**: Convert grammar/comprehension questions to MCQ format
-
-CRITICAL: DO NOT SKIP SUBJECTIVE QUESTIONS!
-- If PDF has "Explain...", "Describe...", "Write about..." questions - CONVERT THEM
-- Use the PDF's answer text as your source for the correct MCQ option
-- Break long answers into multiple smaller MCQs
-
-IMPORTANT RULES:
-- EXHAUST ALL CONTENT from the PDF before repeating
-- Go through EVERY page, EVERY question, EVERY concept
-- The correct answer MUST come from what the PDF states
-- Wrong options must be plausible but clearly incorrect
+2. **SHORT ANSWER (1-2 words/numbers)**: PDF answer = correct option, generate 3 plausible wrong alternatives
+3. **SENTENCE-LENGTH (1-2 sentences)**: Full sentence = correct option, create 3 wrong options with factual errors
+4. **PARAGRAPH/ESSAY (3+ sentences)**: Break into MULTIPLE sub-questions, each testing ONE fact
+5. **FILL-IN-THE-BLANK**: Convert using PDF's answer as correct option
+6. **TRUE/FALSE**: Create 4 options: ["True", "False", "Partially true", "None of the above"]
+7. **DEFINITIONS**: Create "What is..." MCQs
+8. **DIAGRAM-BASED**: Generate questions about parts, labels, functions - use your understanding for correct answers
+9. Do not skip any type of question. Follow rules 1-8 depending on question type.
+10. No question shall be skipped from PDF unless there is a parsing issue.
+11. If answer is available in PDF, give it top priority. If not available, AI provides best possible option.
+12. Wrong options must be plausible but clearly incorrect.
+13. NEVER create questions from topics not in PDF.
 
 LANGUAGE: Generate all content in ${medium === "Hindi" ? "Hindi (Devanagari script देवनागरी)" : "English"}
-- Mathematical/logical structure should stay consistent
-
-CRITICAL: NEVER create questions from topics not covered in the PDF.
 
 PDF Content for ${examGrade} Navodaya exam:
 ${pdfContent.substring(0, 50000)}`;
