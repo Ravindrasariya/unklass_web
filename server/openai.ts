@@ -54,22 +54,24 @@ export async function generateQuizQuestions(
   previousQuestions: string[] = [],
   medium: string = "English"
 ): Promise<Question[]> {
-  // Calculate quiz number based on previous questions (10 questions per quiz)
-  const quizNumber = Math.floor(previousQuestions.length / numQuestions) + 1;
-  const startQuestion = ((quizNumber - 1) * numQuestions) + 1;
-  const endQuestion = quizNumber * numQuestions;
+  // Calculate starting position based on total previous questions asked
+  const startPosition = previousQuestions.length + 1;
+  const endPosition = previousQuestions.length + numQuestions;
   
   const sequentialInstruction = `
 SEQUENTIAL QUESTION PICKING (IMPORTANT):
-This is Quiz #${quizNumber} for this student.
-Pick questions ${startQuestion} to ${endQuestion} from the PDF content in ORDER.
+This student has already been asked ${previousQuestions.length} questions on this subject.
+Start from question #${startPosition} and pick the next ${numQuestions} questions in ORDER.
 
 - Go through the PDF sequentially from start to end
 - Number all extractable/convertible questions mentally as Q1, Q2, Q3, etc.
-- For this quiz, return questions #${startQuestion} through #${endQuestion}
-- If the PDF has fewer than ${endQuestion} questions, cycle back to the beginning
-  (Example: If PDF has 25 questions and you need Q21-Q30, return Q21-Q25 then Q1-Q5)
-- This ensures every student sees ALL questions before any repeat`;
+- For this quiz, return questions #${startPosition} through #${endPosition}
+- If the PDF has fewer questions than needed, cycle back to the beginning
+  (Example: If PDF has 25 total questions and you need Q26-35, return Q1-Q10 from the start)
+- SKIP any question that matches one already asked (listed below if any)
+- This ensures every student sees ALL unique questions before any repeat
+
+${previousQuestions.length > 0 ? `Previously asked questions to SKIP:\n${previousQuestions.slice(-20).map((q, i) => `${i + 1}. ${q.substring(0, 80)}...`).join('\n')}` : ''}`;
 
   const languageInstruction = medium === "Hindi" 
     ? `IMPORTANT LANGUAGE INSTRUCTION: Generate ALL content in Hindi (Devanagari script). The questions, all 4 options, and explanations MUST be written in Hindi. Use proper Hindi language and Devanagari script throughout.`
@@ -311,21 +313,24 @@ export async function generateCpctQuizQuestions(
   numQuestions: number = 10,
   previousQuestions: string[] = []
 ): Promise<Question[]> {
-  // Calculate quiz number based on previous questions (10 questions per quiz)
-  const quizNumber = Math.floor(previousQuestions.length / numQuestions) + 1;
-  const startQuestion = ((quizNumber - 1) * numQuestions) + 1;
-  const endQuestion = quizNumber * numQuestions;
+  // Calculate starting position based on total previous questions asked
+  const startPosition = previousQuestions.length + 1;
+  const endPosition = previousQuestions.length + numQuestions;
   
   const sequentialInstruction = `
 SEQUENTIAL QUESTION PICKING (IMPORTANT):
-This is Quiz #${quizNumber} for this student.
-Pick questions ${startQuestion} to ${endQuestion} from the PDF content in ORDER.
+This student has already been asked ${previousQuestions.length} questions on this subject.
+Start from question #${startPosition} and pick the next ${numQuestions} questions in ORDER.
 
 - Go through the PDF sequentially from start to end
 - Number all extractable/convertible questions mentally as Q1, Q2, Q3, etc.
-- For this quiz, return questions #${startQuestion} through #${endQuestion}
-- If the PDF has fewer than ${endQuestion} questions, cycle back to the beginning
-- This ensures every student sees ALL questions before any repeat`;
+- For this quiz, return questions #${startPosition} through #${endPosition}
+- If the PDF has fewer questions than needed, cycle back to the beginning
+  (Example: If PDF has 25 total questions and you need Q26-35, return Q1-Q10 from the start)
+- SKIP any question that matches one already asked (listed below if any)
+- This ensures every student sees ALL unique questions before any repeat
+
+${previousQuestions.length > 0 ? `Previously asked questions to SKIP:\n${previousQuestions.slice(-20).map((q, i) => `${i + 1}. ${q.substring(0, 80)}...`).join('\n')}` : ''}`;
 
   const languageInstruction = medium === "Hindi" 
     ? `IMPORTANT: Generate ALL content (questions, options, explanations) in HINDI (Devanagari script). The entire quiz must be in Hindi language.`
@@ -574,21 +579,24 @@ export async function generateNavodayaQuizQuestions(
   numQuestions: number = 10,
   previousQuestions: string[] = []
 ): Promise<Question[]> {
-  // Calculate quiz number based on previous questions (10 questions per quiz)
-  const quizNumber = Math.floor(previousQuestions.length / numQuestions) + 1;
-  const startQuestion = ((quizNumber - 1) * numQuestions) + 1;
-  const endQuestion = quizNumber * numQuestions;
+  // Calculate starting position based on total previous questions asked
+  const startPosition = previousQuestions.length + 1;
+  const endPosition = previousQuestions.length + numQuestions;
   
   const sequentialInstruction = `
 SEQUENTIAL QUESTION PICKING (IMPORTANT):
-This is Quiz #${quizNumber} for this student.
-Pick questions ${startQuestion} to ${endQuestion} from the PDF content in ORDER.
+This student has already been asked ${previousQuestions.length} questions.
+Start from question #${startPosition} and pick the next ${numQuestions} questions in ORDER.
 
 - Go through the PDF sequentially from start to end
 - Number all extractable/convertible questions mentally as Q1, Q2, Q3, etc.
-- For this quiz, return questions #${startQuestion} through #${endQuestion}
-- If the PDF has fewer than ${endQuestion} questions, cycle back to the beginning
-- This ensures every student sees ALL questions before any repeat`;
+- For this quiz, return questions #${startPosition} through #${endPosition}
+- If the PDF has fewer questions than needed, cycle back to the beginning
+  (Example: If PDF has 25 total questions and you need Q26-35, return Q1-Q10 from the start)
+- SKIP any question that matches one already asked (listed below if any)
+- This ensures every student sees ALL unique questions before any repeat
+
+${previousQuestions.length > 0 ? `Previously asked questions to SKIP:\n${previousQuestions.slice(-20).map((q, i) => `${i + 1}. ${q.substring(0, 80)}...`).join('\n')}` : ''}`;
 
   const gradeInfo = examGrade === "6th" 
     ? "Class 6 entry level (students appearing from Class 5)" 

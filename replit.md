@@ -60,14 +60,16 @@ Preferred communication style: Simple, everyday language.
    - Otherwise: "Keep Learning!"
 
 ### Sequential Question Picking (IMPORTANT)
-- **Questions served in order**: Each quiz picks questions sequentially from the PDF (Q1-10, then Q11-20, etc.)
+- **Questions served in order**: Each quiz picks questions sequentially from the PDF, continuing from where the previous quiz ended
+- **Flexible positioning**: Based on actual questions asked, not fixed blocks (if student has 11 questions, next quiz starts from Q12)
 - **Equal distribution**: Every question gets equal opportunity before any repeats
 - **Automatic cycling**: Once all questions are exhausted, the system cycles back to the beginning
+- **Skip duplicates**: Last 20 previously asked questions are passed to AI to skip if encountered
 - **Implementation**: 
-  - Quiz number calculated: `quizNumber = floor(previousQuestions.length / 10) + 1`
-  - Questions picked from range: `[(quizNumber-1)*10 + 1]` to `[quizNumber * 10]`
-  - If PDF has fewer questions than needed, cycles back to start (e.g., if 25 questions exist and quiz needs Q21-30, returns Q21-25 then Q1-5)
-- **Benefits**: Deterministic, faster rendering (no random selection), ensures complete coverage before repeats
+  - Start position calculated: `startPosition = previousQuestions.length + 1`
+  - End position: `endPosition = previousQuestions.length + 10`
+  - If PDF has fewer questions than needed, cycles back to start
+- **Benefits**: Deterministic, faster rendering, ensures complete coverage, handles edge cases
 
 ### CPCT Exam Prep
 - **Separate student table**: `cpctStudents` with fields (name, medium, location, mobileNumber)
