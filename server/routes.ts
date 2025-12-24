@@ -160,9 +160,9 @@ export async function registerRoutes(
         });
       }
 
-      // Check if PDF already exists
-      const existingPdf = await storage.getPdfByFilename(filename);
-      if (existingPdf) {
+      // Check if active PDF already exists
+      const existingActivePdf = await storage.getPdfByFilename(filename);
+      if (existingActivePdf) {
         return res.status(409).json({ error: "PDF with this name already exists" });
       }
 
@@ -173,39 +173,42 @@ export async function registerRoutes(
         return res.status(400).json({ error: "PDF appears to be empty or contains too little text" });
       }
 
-      let pdfData: { filename: string; grade: string; board: string; subject: string; content: string };
+      let grade: string, board: string, subject: string;
       
       if (cpctMatch) {
         // CPCT format - use special values
-        pdfData = {
-          filename,
-          grade: "CPCT",
-          board: "CPCT",
-          subject: `CPCT ${cpctMatch[1]}`,
-          content,
-        };
+        grade = "CPCT";
+        board = "CPCT";
+        subject = `CPCT ${cpctMatch[1]}`;
       } else if (navodayaMatch) {
         // Navodaya format - use special values
-        pdfData = {
-          filename,
-          grade: navodayaMatch[1],
-          board: "Navodaya",
-          subject: "Navodaya Entrance",
-          content,
-        };
+        grade = navodayaMatch[1];
+        board = "Navodaya";
+        subject = "Navodaya Entrance";
       } else {
         // Board Exam format
-        const [, grade, board, subject] = boardMatch!;
-        pdfData = {
-          filename,
-          grade,
-          board: board.toUpperCase(),
-          subject,
-          content,
-        };
+        const [, g, b, s] = boardMatch!;
+        grade = g;
+        board = b.toUpperCase();
+        subject = s;
       }
 
-      const pdf = await storage.createPdf(pdfData);
+      // Check if there's an archived PDF with this filename - replace it instead of creating new
+      const archivedPdf = await storage.getAnyPdfByFilename(filename);
+      let pdf;
+      
+      if (archivedPdf && archivedPdf.isArchived) {
+        // Replace the archived PDF with new content
+        pdf = await storage.replacePdf(archivedPdf.id, content, grade, board, subject);
+        console.log(`Replaced archived PDF ${filename} with new content`);
+      } else {
+        // Create new PDF
+        pdf = await storage.createPdf({ filename, grade, board, subject, content });
+      }
+      
+      if (!pdf) {
+        return res.status(500).json({ error: "Failed to save PDF" });
+      }
 
       // Parse questions from PDF content for sequential picking
       const parsedQuestions = parseQuestionsFromPdfContent(content);

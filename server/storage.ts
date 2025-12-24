@@ -36,8 +36,10 @@ export interface IStorage {
   // PDFs
   getPdf(id: number): Promise<Pdf | undefined>;
   getPdfByFilename(filename: string): Promise<Pdf | undefined>;
+  getAnyPdfByFilename(filename: string): Promise<Pdf | undefined>;
   getPdfByGradeBoardSubject(grade: string, board: string, subject: string): Promise<Pdf | undefined>;
   createPdf(pdf: InsertPdf): Promise<Pdf>;
+  replacePdf(id: number, content: string, grade: string, board: string, subject: string): Promise<Pdf | undefined>;
   getAllPdfs(): Promise<Pdf[]>;
   getActivePdfs(): Promise<Pdf[]>;
   deletePdf(id: number): Promise<boolean>;
@@ -167,6 +169,30 @@ export class DatabaseStorage implements IStorage {
         eq(pdfs.isArchived, false)
       )
     );
+    return pdf || undefined;
+  }
+
+  async getAnyPdfByFilename(filename: string): Promise<Pdf | undefined> {
+    // Get any PDF by filename, including archived ones (for replacement logic)
+    const [pdf] = await db.select().from(pdfs).where(eq(pdfs.filename, filename));
+    return pdf || undefined;
+  }
+
+  async replacePdf(id: number, content: string, grade: string, board: string, subject: string): Promise<Pdf | undefined> {
+    // Replace an archived PDF with new content and restore it
+    const [pdf] = await db.update(pdfs)
+      .set({ 
+        content, 
+        grade, 
+        board, 
+        subject, 
+        isArchived: false, 
+        uploadedAt: new Date(),
+        parsedQuestions: null,
+        totalQuestions: 0
+      })
+      .where(eq(pdfs.id, id))
+      .returning();
     return pdf || undefined;
   }
 
