@@ -142,31 +142,47 @@ ${sequentialInstruction}`;
 
 STRICT RULE: Go through the ENTIRE PDF from start to end. Convert ALL types of questions to MCQ format.
 
-MANDATORY EXTRACTION - CONVERT EVERYTHING TO MCQ:
-1. **EXISTING MCQs**: Extract exactly as they appear in the PDF
-2. **SHORT ANSWER QUESTIONS**: Convert to MCQ format
-   - Use the answer provided in PDF as the CORRECT option
-   - Generate 3 plausible but INCORRECT options that are related but wrong
-3. **LONG ANSWER QUESTIONS**: Convert to MCQ format
-   - Extract the key fact/concept being tested
-   - The PDF's answer becomes one of the 4 options (the correct one)
-   - Create 3 similar but incorrect alternatives
-4. **FILL-IN-THE-BLANK**: Convert to MCQ using the PDF's answer as correct option
-5. **TRUE/FALSE**: Keep as MCQ with 4 options including True, False, and 2 related statements
-6. **DEFINITIONS/CONCEPTS**: Create "What is..." or "Define..." MCQs from text content
-7. **DIAGRAMS/FIGURES**: Create questions about parts, labels, or functions shown
+MANDATORY EXTRACTION - CONVERT ALL QUESTION TYPES TO MCQ:
 
-CONVERSION EXAMPLE:
-PDF has: "Q: What is photosynthesis? A: Photosynthesis is the process by which plants convert sunlight into food using carbon dioxide and water."
-Convert to MCQ:
-- Question: "What is photosynthesis?"
-- Options: ["Process by which plants convert sunlight into food using CO2 and water", "Process by which animals digest food", "Process of cell division in plants", "Process of water absorption by roots"]
-- correctAnswer: 0 (first option from PDF answer)
+1. **EXISTING MCQs**: Extract exactly as they appear in the PDF
+
+2. **SHORT ANSWER (1-2 words/numbers)**: 
+   - Use the PDF answer as the CORRECT option
+   - Generate 3 plausible but wrong alternatives
+
+3. **SENTENCE-LENGTH SUBJECTIVE ANSWERS** (1-2 sentences):
+   - The PDF's complete answer sentence becomes the CORRECT option
+   - Create 3 wrong options that sound similar but contain factual errors
+   - Example: "Q: Define evaporation. A: Evaporation is the process where liquid changes to vapor at any temperature below boiling point."
+   - MCQ: Question: "What is evaporation?" 
+   - Options: ["Process where liquid changes to vapor below boiling point", "Process where solid changes directly to gas", "Process where gas changes to liquid", "Process where liquid boils at 100°C"]
+   - correctAnswer: 0
+
+4. **PARAGRAPH/ESSAY QUESTIONS** (3+ sentences or multi-point answers):
+   - DO NOT SKIP these - break them into MULTIPLE sub-questions!
+   - Extract 2-3 separate MCQs from one long answer, each testing ONE fact:
+   - Example: "Q: Explain the water cycle. A: Water evaporates from oceans. It forms clouds through condensation. Rain falls as precipitation. Water flows back to oceans through rivers."
+   - Create separate MCQs:
+     * "What happens to water in oceans first in the water cycle?" → evaporation
+     * "How do clouds form in the water cycle?" → through condensation
+     * "What is it called when rain falls from clouds?" → precipitation
+
+5. **FILL-IN-THE-BLANK**: Convert to MCQ using the PDF's answer as correct option
+
+6. **TRUE/FALSE**: Create 4 options with True, False, and 2 related conceptual options
+
+7. **DEFINITIONS/CONCEPTS from text**: Create "What is..." or "Define..." MCQs
+
+8. **DIAGRAMS/FIGURES**: Create questions about parts, labels, or functions
+
+CRITICAL: DO NOT SKIP SUBJECTIVE QUESTIONS!
+- If PDF has "Explain...", "Describe...", "Write about...", "Discuss..." questions - CONVERT THEM
+- Use the PDF's answer text as your source for the correct MCQ option
+- Break long answers into multiple smaller MCQs
 
 IMPORTANT RULES:
 - EXHAUST ALL CONTENT from the PDF before repeating
 - Go through EVERY page, EVERY question, EVERY concept
-- Convert subjective questions - don't skip them just because they're not MCQ
 - The correct answer MUST come from what the PDF states
 - Wrong options must be plausible but clearly incorrect to someone who studied
 
@@ -375,31 +391,45 @@ ${sequentialInstruction}`;
 
 STRICT RULE: Go through the ENTIRE PDF from start to end. Convert ALL types of questions to MCQ format.
 
-MANDATORY EXTRACTION - CONVERT EVERYTHING TO MCQ:
-1. **EXISTING MCQs**: Extract exactly as they appear in the PDF
-2. **SHORT ANSWER QUESTIONS**: Convert to MCQ format
-   - Use the answer provided in PDF as the CORRECT option
-   - Generate 3 plausible but INCORRECT options that are related but wrong
-3. **LONG ANSWER QUESTIONS**: Convert to MCQ format
-   - Extract the key fact/concept being tested
-   - The PDF's answer becomes one of the 4 options (the correct one)
-   - Create 3 similar but incorrect alternatives
-4. **FILL-IN-THE-BLANK**: Convert to MCQ using the PDF's answer as correct option
-5. **TRUE/FALSE**: Keep as MCQ with 4 options including True, False, and 2 related statements
-6. **DEFINITIONS/CONCEPTS**: Create "What is..." or "Define..." MCQs from text content
-7. **COMPUTER CONCEPTS**: Create questions from any explanatory text about hardware, software, internet, etc.
+MANDATORY EXTRACTION - CONVERT ALL QUESTION TYPES TO MCQ:
 
-CONVERSION EXAMPLE:
-PDF has: "Q: What is CPU? A: CPU (Central Processing Unit) is the brain of the computer that processes instructions."
-Convert to MCQ:
-- Question: "What is CPU?"
-- Options: ["The brain of computer that processes instructions", "A storage device for data", "A display unit for output", "A device for printing documents"]
-- correctAnswer: 0 (first option from PDF answer)
+1. **EXISTING MCQs**: Extract exactly as they appear in the PDF
+
+2. **SHORT ANSWER (1-2 words/numbers)**: 
+   - Use the PDF answer as the CORRECT option
+   - Generate 3 plausible but wrong alternatives
+
+3. **SENTENCE-LENGTH SUBJECTIVE ANSWERS** (1-2 sentences):
+   - The PDF's complete answer sentence becomes the CORRECT option
+   - Create 3 wrong options that sound similar but contain factual errors
+   - Example: "Q: What is RAM? A: RAM is temporary memory that stores data while computer is running."
+   - MCQ Options: ["Temporary memory that stores data while computer runs", "Permanent storage for files", "Device for printing", "Monitor display unit"]
+   - correctAnswer: 0
+
+4. **PARAGRAPH/ESSAY QUESTIONS** (3+ sentences):
+   - DO NOT SKIP - break into MULTIPLE sub-questions!
+   - Extract 2-3 separate MCQs from one long answer, each testing ONE fact
+   - Example: "Q: Explain types of software. A: System software manages hardware. Application software helps users do tasks. Utility software maintains the system."
+   - Create separate MCQs:
+     * "What does system software do?" → manages hardware
+     * "What is the purpose of application software?" → helps users do tasks
+
+5. **FILL-IN-THE-BLANK**: Convert to MCQ using PDF's answer as correct option
+
+6. **TRUE/FALSE**: Create 4 options with True, False, and 2 related statements
+
+7. **DEFINITIONS/CONCEPTS**: Create "What is..." MCQs from explanatory text
+
+8. **COMPUTER CONCEPTS**: Create questions from hardware, software, internet explanations
+
+CRITICAL: DO NOT SKIP SUBJECTIVE QUESTIONS!
+- If PDF has "Explain...", "Describe...", "Write about..." questions - CONVERT THEM
+- Use the PDF's answer text as your source for the correct MCQ option
+- Break long answers into multiple smaller MCQs
 
 IMPORTANT RULES:
 - EXHAUST ALL CONTENT from the PDF before repeating
-- Go through EVERY page, EVERY question, EVERY concept in the PDF
-- Convert subjective questions - don't skip them just because they're not MCQ
+- Go through EVERY page, EVERY question, EVERY concept
 - The correct answer MUST come from what the PDF states
 - Wrong options must be plausible but clearly incorrect
 
@@ -624,39 +654,55 @@ ${sequentialInstruction}`;
 
 STRICT RULE: Go through the ENTIRE PDF from start to end. Convert ALL types of questions to MCQ format.
 
-MANDATORY EXTRACTION - CONVERT EVERYTHING TO MCQ:
-1. **EXISTING MCQs**: Extract exactly as they appear in the PDF
-2. **SHORT ANSWER QUESTIONS**: Convert to MCQ format
-   - Use the answer provided in PDF as the CORRECT option
-   - Generate 3 plausible but INCORRECT options that are related but wrong
-3. **LONG ANSWER QUESTIONS**: Convert to MCQ format
-   - Extract the key fact/concept being tested
-   - The PDF's answer becomes one of the 4 options (the correct one)
-   - Create 3 similar but incorrect alternatives
-4. **FILL-IN-THE-BLANK**: Convert to MCQ using the PDF's answer as correct option
-5. **TRUE/FALSE**: Keep as MCQ with 4 options
-6. **MENTAL ABILITY/REASONING**: Convert pattern/series questions to MCQ format
-7. **ARITHMETIC PROBLEMS**: Convert calculation problems to MCQ with the correct answer as one option
-8. **LANGUAGE QUESTIONS**: Convert grammar/comprehension questions to MCQ format
+MANDATORY EXTRACTION - CONVERT ALL QUESTION TYPES TO MCQ:
 
-CONVERSION EXAMPLE:
-PDF has: "Q: What is the capital of India? A: New Delhi is the capital of India."
-Convert to MCQ:
-- Question: "What is the capital of India?"
-- Options: ["New Delhi", "Mumbai", "Kolkata", "Chennai"]
-- correctAnswer: 0 (first option from PDF answer)
+1. **EXISTING MCQs**: Extract exactly as they appear in the PDF
+
+2. **SHORT ANSWER (1-2 words/numbers)**: 
+   - Use the PDF answer as the CORRECT option
+   - Generate 3 plausible but wrong alternatives
+
+3. **SENTENCE-LENGTH SUBJECTIVE ANSWERS** (1-2 sentences):
+   - The PDF's complete answer sentence becomes the CORRECT option
+   - Create 3 wrong options that sound similar but contain factual errors
+   - Example: "Q: Define fraction. A: A fraction represents a part of a whole."
+   - MCQ Options: ["A part of a whole", "A complete number", "A decimal point", "A mathematical symbol"]
+   - correctAnswer: 0
+
+4. **PARAGRAPH/ESSAY QUESTIONS** (3+ sentences):
+   - DO NOT SKIP - break into MULTIPLE sub-questions!
+   - Extract 2-3 separate MCQs from one long answer, each testing ONE fact
+   - Example: "Q: Describe the solar system. A: The Sun is at the center. Eight planets orbit the Sun. Earth is the third planet."
+   - Create separate MCQs:
+     * "What is at the center of the solar system?" → The Sun
+     * "How many planets orbit the Sun?" → Eight
+     * "Which position is Earth from the Sun?" → Third
+
+5. **FILL-IN-THE-BLANK**: Convert to MCQ using PDF's answer as correct option
+
+6. **TRUE/FALSE**: Create 4 options with True, False, and 2 related statements
+
+7. **MENTAL ABILITY/REASONING**: Convert pattern/series questions to MCQ format
+
+8. **ARITHMETIC PROBLEMS**: Convert calculation problems to MCQ with correct answer as one option
+
+9. **LANGUAGE QUESTIONS**: Convert grammar/comprehension questions to MCQ format
+
+CRITICAL: DO NOT SKIP SUBJECTIVE QUESTIONS!
+- If PDF has "Explain...", "Describe...", "Write about..." questions - CONVERT THEM
+- Use the PDF's answer text as your source for the correct MCQ option
+- Break long answers into multiple smaller MCQs
 
 IMPORTANT RULES:
 - EXHAUST ALL CONTENT from the PDF before repeating
-- Go through EVERY page, EVERY question, EVERY concept in the PDF
-- Convert subjective questions - don't skip them just because they're not MCQ
+- Go through EVERY page, EVERY question, EVERY concept
 - The correct answer MUST come from what the PDF states
 - Wrong options must be plausible but clearly incorrect
 
 LANGUAGE: Generate all content in ${medium === "Hindi" ? "Hindi (Devanagari script देवनागरी)" : "English"}
 - Mathematical/logical structure should stay consistent
 
-CRITICAL: NEVER create questions from topics not covered in the PDF. Every question must trace back to specific content in the PDF.
+CRITICAL: NEVER create questions from topics not covered in the PDF.
 
 PDF Content for ${examGrade} Navodaya exam:
 ${pdfContent.substring(0, 50000)}`;
