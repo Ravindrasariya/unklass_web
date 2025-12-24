@@ -59,18 +59,20 @@ export async function generateQuizQuestions(
   const endPosition = previousQuestions.length + numQuestions;
   
   const sequentialInstruction = `
-QUESTION SELECTION (VERY IMPORTANT - FOLLOW EXACTLY):
+SEQUENTIAL QUESTION PICKING WITH CYCLING:
 
-Student has completed ${previousQuestions.length} questions from this PDF.
-YOUR TASK: Pick questions #${startPosition} to #${startPosition + numQuestions - 1} from the PDF.
+Task: Select exactly ${numQuestions} questions from the provided PDF content based on a Sequential Cycling Logic.
 
-SIMPLE STEPS:
-1. Number all questions in the PDF from 1 to N (where N = total questions in PDF)
-2. Start at question #${startPosition}
-3. Pick the next ${numQuestions} questions in order
-4. If you reach the end of PDF, wrap around to question #1 and continue
+1. Reference Data:
+   1a. Find Total number of Questions from the given subject's PDF: [Count all questions in PDF]
+   1b. Last Question Position (X) from the latest quiz history for the subject: ${previousQuestions.length}
 
-DO NOT pick random questions. DO NOT skip questions. Follow the PDF order exactly.
+2. Selection Logic (The "Cycling" Rule): Follow these steps strictly to determine which question numbers to pick:
+   2a. Identify Start Point: Begin at Question #(X + 1) = #${startPosition}.
+   2b. Sequential Count: Select the next ${numQuestions} questions in numerical order.
+   
+   The Loop Rule: If you reach the final question number in the PDF before hitting a count of ${numQuestions}, "cycle" back to Question #1 and continue until the total count of ${numQuestions} is reached.
+   - Example: PDF if has N=25 questions, and X=22 → pick Q23, Q24, Q25 (3) + Q1-Q7 (7) = 10 total
 
 ${previousQuestions.length > 0 ? `SKIP THESE (already asked):\n${previousQuestions.slice(-20).map((q, i) => `- ${q.substring(0, 80)}`).join('\n')}` : ''}`;
 
@@ -285,18 +287,20 @@ export async function generateCpctQuizQuestions(
   const endPosition = previousQuestions.length + numQuestions;
   
   const sequentialInstruction = `
-QUESTION SELECTION (VERY IMPORTANT - FOLLOW EXACTLY):
+SEQUENTIAL QUESTION PICKING WITH CYCLING:
 
-Student has completed ${previousQuestions.length} questions from this PDF.
-YOUR TASK: Pick questions #${startPosition} to #${startPosition + numQuestions - 1} from the PDF.
+Task: Select exactly ${numQuestions} questions from the provided PDF content based on a Sequential Cycling Logic.
 
-SIMPLE STEPS:
-1. Number all questions in the PDF from 1 to N (where N = total questions in PDF)
-2. Start at question #${startPosition}
-3. Pick the next ${numQuestions} questions in order
-4. If you reach the end of PDF, wrap around to question #1 and continue
+1. Reference Data:
+   1a. Find Total number of Questions from the given PDF: [Count all questions in PDF]
+   1b. Last Question Position (X) from the latest quiz history: ${previousQuestions.length}
 
-DO NOT pick random questions. DO NOT skip questions. Follow the PDF order exactly.
+2. Selection Logic (The "Cycling" Rule): Follow these steps strictly to determine which question numbers to pick:
+   2a. Identify Start Point: Begin at Question #(X + 1) = #${startPosition}.
+   2b. Sequential Count: Select the next ${numQuestions} questions in numerical order.
+   
+   The Loop Rule: If you reach the final question number in the PDF before hitting a count of ${numQuestions}, "cycle" back to Question #1 and continue until the total count of ${numQuestions} is reached.
+   - Example: PDF if has N=25 questions, and X=22 → pick Q23, Q24, Q25 (3) + Q1-Q7 (7) = 10 total
 
 ${previousQuestions.length > 0 ? `SKIP THESE (already asked):\n${previousQuestions.slice(-20).map((q, i) => `- ${q.substring(0, 80)}`).join('\n')}` : ''}`;
 
@@ -523,18 +527,20 @@ export async function generateNavodayaQuizQuestions(
   const endPosition = previousQuestions.length + numQuestions;
   
   const sequentialInstruction = `
-QUESTION SELECTION (VERY IMPORTANT - FOLLOW EXACTLY):
+SEQUENTIAL QUESTION PICKING WITH CYCLING:
 
-Student has completed ${previousQuestions.length} questions from this PDF.
-YOUR TASK: Pick questions #${startPosition} to #${startPosition + numQuestions - 1} from the PDF.
+Task: Select exactly ${numQuestions} questions from the provided PDF content based on a Sequential Cycling Logic.
 
-SIMPLE STEPS:
-1. Number all questions in the PDF from 1 to N (where N = total questions in PDF)
-2. Start at question #${startPosition}
-3. Pick the next ${numQuestions} questions in order
-4. If you reach the end of PDF, wrap around to question #1 and continue
+1. Reference Data:
+   1a. Find Total number of Questions from the given PDF: [Count all questions in PDF]
+   1b. Last Question Position (X) from the latest quiz history: ${previousQuestions.length}
 
-DO NOT pick random questions. DO NOT skip questions. Follow the PDF order exactly.
+2. Selection Logic (The "Cycling" Rule): Follow these steps strictly to determine which question numbers to pick:
+   2a. Identify Start Point: Begin at Question #(X + 1) = #${startPosition}.
+   2b. Sequential Count: Select the next ${numQuestions} questions in numerical order.
+   
+   The Loop Rule: If you reach the final question number in the PDF before hitting a count of ${numQuestions}, "cycle" back to Question #1 and continue until the total count of ${numQuestions} is reached.
+   - Example: PDF if has N=25 questions, and X=22 → pick Q23, Q24, Q25 (3) + Q1-Q7 (7) = 10 total
 
 ${previousQuestions.length > 0 ? `SKIP THESE (already asked):\n${previousQuestions.slice(-20).map((q, i) => `- ${q.substring(0, 80)}`).join('\n')}` : ''}`;
 
