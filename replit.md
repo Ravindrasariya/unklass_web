@@ -33,12 +33,13 @@ Preferred communication style: Simple, everyday language.
 - **Migrations**: Drizzle Kit with `migrations/` output directory
 - **Tables**:
   - `students`: Board exam student registration (name, grade, board, location, mobile_number)
-  - `pdfs`: Uploaded PDF metadata and extracted content (admin functionality)
+  - `pdfs`: Uploaded PDF metadata, extracted content, and parsed questions (parsedQuestions JSONB, totalQuestions integer)
   - `quiz_sessions`: Board exam quiz attempts, generated questions, answers, and scores
   - `cpct_students`: CPCT student registration (name, medium, location, mobile_number)
   - `cpct_quiz_sessions`: CPCT quiz attempts
   - `navodaya_students`: Navodaya student registration (name, exam_grade, medium, location, mobile_number)
   - `navodaya_quiz_sessions`: Navodaya quiz attempts
+  - `question_pointers`: Tracks sequential question progress (studentId, studentType, pdfId, lastQuestionIndex)
 
 ### API Endpoints
 - `POST /api/students/register` - Register new student
@@ -59,17 +60,21 @@ Preferred communication style: Simple, everyday language.
    - Score > 6: "Good Job!"
    - Otherwise: "Keep Learning!"
 
-### Sequential Question Picking (IMPORTANT)
+### Sequential Question Picking (SERVER-SIDE IMPLEMENTATION)
 - **Questions served in order**: Each quiz picks questions sequentially from the PDF, continuing from where the previous quiz ended
-- **Flexible positioning**: Based on actual questions asked, not fixed blocks (if student has 11 questions, next quiz starts from Q12)
-- **Equal distribution**: Every question gets equal opportunity before any repeats
-- **Automatic cycling**: Once all questions are exhausted, the system cycles back to the beginning
-- **Skip duplicates**: Last 20 previously asked questions are passed to AI to skip if encountered
-- **Implementation**: 
-  - Start position calculated: `startPosition = previousQuestions.length + 1`
-  - End position: `endPosition = previousQuestions.length + 10`
-  - If PDF has fewer questions than needed, cycles back to start
-- **Benefits**: Deterministic, faster rendering, ensures complete coverage, handles edge cases
+- **Server-side slicing**: Questions are pre-parsed on PDF upload and stored in `parsedQuestions` JSONB column
+- **Question Pointer Tracking**: `questionPointers` table tracks (studentId, studentType, pdfId, lastQuestionIndex) for each student
+- **Zero-based indexing**: All indices are zero-based throughout the system
+- **Automatic cycling**: When reaching the end of available questions, wraps back to the beginning
+- **Implementation Flow**:
+  1. On PDF upload: `parseQuestionsFromPdfContent()` extracts numbered questions using regex patterns
+  2. Parsed questions stored in `pdfs.parsedQuestions` JSONB column
+  3. On quiz generation: `getSequentialQuestions()` picks next 10 questions starting from stored pointer
+  4. Only the selected subset is sent to LLM for MCQ conversion (faster, more accurate)
+  5. Pointer updated: `newLastIndex = (startIndex + count - 1) % totalQuestions`
+- **Fallback**: If no parsed questions exist, falls back to full PDF content with previous question deduplication
+- **Key Files**: `server/questionParser.ts`, `server/routes.ts`, `server/storage.ts`
+- **Benefits**: Deterministic, faster LLM calls, ensures complete question coverage, handles edge cases with cycling
 
 ### CPCT Exam Prep
 - **Separate student table**: `cpctStudents` with fields (name, medium, location, mobileNumber)
