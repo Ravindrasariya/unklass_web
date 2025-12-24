@@ -59,11 +59,15 @@ Preferred communication style: Simple, everyday language.
    - Score > 6: "Good Job!"
    - Otherwise: "Keep Learning!"
 
-### Question Rotation Rules (IMPORTANT)
-- **All questions must be covered at least once before repeating**: The system tracks all previously asked questions per student. New questions are generated until all topics/concepts from the PDF are covered.
-- **Questions CAN repeat, but only after all topics are covered**: Once all possible topics from the study material have been tested at least once, questions may repeat with rephrased wording.
-- **Equal distribution**: Each question/topic should come an equal number of times across all quiz attempts.
-- **Implementation**: The backend stores all previous questions in quiz_sessions and passes them to the OpenAI prompt. The AI is instructed to first cover new topics, then allow repetition with varied question formats once all topics are exhausted.
+### Sequential Question Picking (IMPORTANT)
+- **Questions served in order**: Each quiz picks questions sequentially from the PDF (Q1-10, then Q11-20, etc.)
+- **Equal distribution**: Every question gets equal opportunity before any repeats
+- **Automatic cycling**: Once all questions are exhausted, the system cycles back to the beginning
+- **Implementation**: 
+  - Quiz number calculated: `quizNumber = floor(previousQuestions.length / 10) + 1`
+  - Questions picked from range: `[(quizNumber-1)*10 + 1]` to `[quizNumber * 10]`
+  - If PDF has fewer questions than needed, cycles back to start (e.g., if 25 questions exist and quiz needs Q21-30, returns Q21-25 then Q1-5)
+- **Benefits**: Deterministic, faster rendering (no random selection), ensures complete coverage before repeats
 
 ### CPCT Exam Prep
 - **Separate student table**: `cpctStudents` with fields (name, medium, location, mobileNumber)

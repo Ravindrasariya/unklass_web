@@ -54,25 +54,22 @@ export async function generateQuizQuestions(
   previousQuestions: string[] = [],
   medium: string = "English"
 ): Promise<Question[]> {
-  let excludeSection = '';
-  if (previousQuestions.length > 0) {
-    excludeSection = `
+  // Calculate quiz number based on previous questions (10 questions per quiz)
+  const quizNumber = Math.floor(previousQuestions.length / numQuestions) + 1;
+  const startQuestion = ((quizNumber - 1) * numQuestions) + 1;
+  const endQuestion = quizNumber * numQuestions;
+  
+  const sequentialInstruction = `
+SEQUENTIAL QUESTION PICKING (IMPORTANT):
+This is Quiz #${quizNumber} for this student.
+Pick questions ${startQuestion} to ${endQuestion} from the PDF content in ORDER.
 
-CRITICAL INSTRUCTION - QUESTION ROTATION:
-The student has already been asked ${previousQuestions.length} questions on this subject.
-
-Previously asked questions:
-${previousQuestions.map((q, i) => `${i + 1}. ${q}`).join('\n')}
-
-QUESTION ROTATION RULES:
-1. First priority: Generate NEW questions on topics/concepts NOT yet covered from the study material
-2. Cover ALL possible topics from the material before repeating any question
-3. If ALL topics from the material have been covered at least once, you MAY repeat questions but:
-   - Rephrase questions differently while testing the same concept
-   - Ensure equal distribution - repeat questions that have been asked fewer times first
-4. Track coverage: Aim to test every concept, formula, diagram, and fact from the material at least once before cycling back
-5. When repeating, vary the question format (numerical vs conceptual vs application-based)`;
-  }
+- Go through the PDF sequentially from start to end
+- Number all extractable/convertible questions mentally as Q1, Q2, Q3, etc.
+- For this quiz, return questions #${startQuestion} through #${endQuestion}
+- If the PDF has fewer than ${endQuestion} questions, cycle back to the beginning
+  (Example: If PDF has 25 questions and you need Q21-Q30, return Q21-Q25 then Q1-Q5)
+- This ensures every student sees ALL questions before any repeat`;
 
   const languageInstruction = medium === "Hindi" 
     ? `IMPORTANT LANGUAGE INSTRUCTION: Generate ALL content in Hindi (Devanagari script). The questions, all 4 options, and explanations MUST be written in Hindi. Use proper Hindi language and Devanagari script throughout.`
@@ -137,7 +134,9 @@ Step 3: "20" is at index 1
 Step 4: correctAnswer MUST be 1
 Step 5: Explanation must say "25% of 80 = 20"
 
-REJECT any question where the correctAnswer index does not match the calculated/verified answer.${excludeSection}`;
+REJECT any question where the correctAnswer index does not match the calculated/verified answer.
+
+${sequentialInstruction}`;
 
   const userPrompt = `EXTRACT ${numQuestions} questions from the ENTIRE PDF content below for ${subject}.
 
@@ -296,25 +295,21 @@ export async function generateCpctQuizQuestions(
   numQuestions: number = 10,
   previousQuestions: string[] = []
 ): Promise<Question[]> {
-  let excludeSection = '';
-  if (previousQuestions.length > 0) {
-    excludeSection = `
+  // Calculate quiz number based on previous questions (10 questions per quiz)
+  const quizNumber = Math.floor(previousQuestions.length / numQuestions) + 1;
+  const startQuestion = ((quizNumber - 1) * numQuestions) + 1;
+  const endQuestion = quizNumber * numQuestions;
+  
+  const sequentialInstruction = `
+SEQUENTIAL QUESTION PICKING (IMPORTANT):
+This is Quiz #${quizNumber} for this student.
+Pick questions ${startQuestion} to ${endQuestion} from the PDF content in ORDER.
 
-CRITICAL INSTRUCTION - QUESTION ROTATION:
-The student has already been asked ${previousQuestions.length} questions.
-
-Previously asked questions:
-${previousQuestions.map((q, i) => `${i + 1}. ${q}`).join('\n')}
-
-QUESTION ROTATION RULES:
-1. First priority: Generate NEW questions on topics/concepts NOT yet covered from the study material
-2. Cover ALL possible topics from the material before repeating any question
-3. If ALL topics from the material have been covered at least once, you MAY repeat questions but:
-   - Rephrase questions differently while testing the same concept
-   - Ensure equal distribution - repeat questions that have been asked fewer times first
-4. Track coverage: Aim to test every concept from the CPCT syllabus at least once before cycling back
-5. When repeating, vary the question format to test the same concept differently`;
-  }
+- Go through the PDF sequentially from start to end
+- Number all extractable/convertible questions mentally as Q1, Q2, Q3, etc.
+- For this quiz, return questions #${startQuestion} through #${endQuestion}
+- If the PDF has fewer than ${endQuestion} questions, cycle back to the beginning
+- This ensures every student sees ALL questions before any repeat`;
 
   const languageInstruction = medium === "Hindi" 
     ? `IMPORTANT: Generate ALL content (questions, options, explanations) in HINDI (Devanagari script). The entire quiz must be in Hindi language.`
@@ -372,7 +367,9 @@ Step 3: "1024 बाइट्स" is at index 1
 Step 4: correctAnswer MUST be 1
 Step 5: Explanation must say "1 KB = 1024 bytes"
 
-REJECT any question where the correctAnswer index does not match the verified answer.${excludeSection}`;
+REJECT any question where the correctAnswer index does not match the verified answer.
+
+${sequentialInstruction}`;
 
   const userPrompt = `EXTRACT ${numQuestions} questions from the ENTIRE PDF content below for CPCT exam preparation.
 
@@ -547,25 +544,21 @@ export async function generateNavodayaQuizQuestions(
   numQuestions: number = 10,
   previousQuestions: string[] = []
 ): Promise<Question[]> {
-  let excludeSection = '';
-  if (previousQuestions.length > 0) {
-    excludeSection = `
+  // Calculate quiz number based on previous questions (10 questions per quiz)
+  const quizNumber = Math.floor(previousQuestions.length / numQuestions) + 1;
+  const startQuestion = ((quizNumber - 1) * numQuestions) + 1;
+  const endQuestion = quizNumber * numQuestions;
+  
+  const sequentialInstruction = `
+SEQUENTIAL QUESTION PICKING (IMPORTANT):
+This is Quiz #${quizNumber} for this student.
+Pick questions ${startQuestion} to ${endQuestion} from the PDF content in ORDER.
 
-CRITICAL INSTRUCTION - QUESTION ROTATION:
-The student has already been asked ${previousQuestions.length} questions.
-
-Previously asked questions:
-${previousQuestions.map((q, i) => `${i + 1}. ${q}`).join('\n')}
-
-QUESTION ROTATION RULES:
-1. First priority: Generate NEW questions on topics/concepts NOT yet covered from the study material
-2. Cover ALL possible topics from the material before repeating any question
-3. If ALL topics from the material have been covered at least once, you MAY repeat questions but:
-   - Rephrase questions differently while testing the same concept
-   - Ensure equal distribution - repeat questions that have been asked fewer times first
-4. Track coverage: Aim to test every concept from the Navodaya syllabus at least once before cycling back
-5. When repeating, vary the question format to test the same concept differently`;
-  }
+- Go through the PDF sequentially from start to end
+- Number all extractable/convertible questions mentally as Q1, Q2, Q3, etc.
+- For this quiz, return questions #${startQuestion} through #${endQuestion}
+- If the PDF has fewer than ${endQuestion} questions, cycle back to the beginning
+- This ensures every student sees ALL questions before any repeat`;
 
   const gradeInfo = examGrade === "6th" 
     ? "Class 6 entry level (students appearing from Class 5)" 
@@ -623,7 +616,9 @@ Step 3: "22" is at index 1
 Step 4: correctAnswer MUST be 1
 Step 5: Explanation must say "40 - 18 = 22"
 
-REJECT any question where the correctAnswer index does not match the calculated/verified answer.${excludeSection}`;
+REJECT any question where the correctAnswer index does not match the calculated/verified answer.
+
+${sequentialInstruction}`;
 
   const userPrompt = `EXTRACT ${numQuestions} questions from the ENTIRE PDF content below for ${gradeInfo}.
 
