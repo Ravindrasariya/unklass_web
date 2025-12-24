@@ -59,30 +59,17 @@ export async function generateQuizQuestions(
   const endPosition = previousQuestions.length + numQuestions;
   
   const sequentialInstruction = `
-SEQUENTIAL QUESTION PICKING WITH CYCLING (CRITICAL):
-This student has already been asked ${previousQuestions.length} questions on this subject.
-You need to return exactly ${numQuestions} questions starting from position #${startPosition}.
+SEQUENTIAL QUESTION PICKING WITH CYCLING:
 
-STEP-BY-STEP PROCESS:
-1. First, count ALL extractable/convertible questions in the PDF (call this TOTAL)
-2. Calculate starting position: ${startPosition} (based on ${previousQuestions.length} previous questions)
-3. If ${startPosition} > TOTAL, use position: (${startPosition - 1} % TOTAL) + 1
+- Below rules are applied for this subject separately for this student since registration.
+- This student's quiz history shows ${previousQuestions.length} questions asked for this subject.
+- X (last question number position in PDF) = ${previousQuestions.length}
+- Start from question #(X+1) = #${startPosition} and pick next ${numQuestions} questions from the PDF
+- Pick sequentially until you have ${numQuestions} OR reach end of PDF
+- If end reached before ${numQuestions}: CYCLE BACK to question #1 and continue
+- Example: PDF has 25 questions, last question in the latest quiz for the subject is 22 → pick Q23, Q24, Q25 (3) + Q1-Q7 (7) = 10 total
 
-PICKING LOGIC:
-- Start picking from question #${startPosition}
-- Pick questions sequentially until you have ${numQuestions} OR reach the end of PDF
-- If you reach the end of PDF before getting ${numQuestions} questions:
-  * CYCLE BACK to question #1 and continue picking
-  * Continue until you have exactly ${numQuestions} questions total
-
-EXAMPLE: If PDF has 25 questions, student asked 22 questions, need 10:
-- Start from Q23, pick Q23, Q24, Q25 (3 questions from end)
-- CYCLE to start: pick Q1, Q2, Q3, Q4, Q5, Q6, Q7 (7 more questions)
-- Total: 10 questions (3 remaining + 7 from cycle)
-
-CRITICAL: DO NOT SKIP the remaining questions at the end! Always pick them first, then cycle.
-
-${previousQuestions.length > 0 ? `Previously asked questions (for reference, may overlap in cycling):\n${previousQuestions.slice(-10).map((q, i) => `${i + 1}. ${q.substring(0, 60)}...`).join('\n')}` : ''}`;
+${previousQuestions.length > 0 ? `Previously asked questions (for reference, may overlap in cycling):\n${previousQuestions.slice(-20).map((q, i) => `${i + 1}. ${q.substring(0, 60)}...`).join('\n')}` : ''}`;
 
   const languageInstruction = medium === "Hindi" 
     ? `IMPORTANT LANGUAGE INSTRUCTION: Generate ALL content in Hindi (Devanagari script). The questions, all 4 options, and explanations MUST be written in Hindi. Use proper Hindi language and Devanagari script throughout.`
@@ -295,30 +282,17 @@ export async function generateCpctQuizQuestions(
   const endPosition = previousQuestions.length + numQuestions;
   
   const sequentialInstruction = `
-SEQUENTIAL QUESTION PICKING WITH CYCLING (CRITICAL):
-This student has already been asked ${previousQuestions.length} questions.
-You need to return exactly ${numQuestions} questions starting from position #${startPosition}.
+SEQUENTIAL QUESTION PICKING WITH CYCLING:
 
-STEP-BY-STEP PROCESS:
-1. First, count ALL extractable/convertible questions in the PDF (call this TOTAL)
-2. Calculate starting position: ${startPosition} (based on ${previousQuestions.length} previous questions)
-3. If ${startPosition} > TOTAL, use position: (${startPosition - 1} % TOTAL) + 1
+- Below rules are applied for this student since registration.
+- This student's quiz history shows ${previousQuestions.length} questions asked.
+- X (last question number position in PDF) = ${previousQuestions.length}
+- Start from question #(X+1) = #${startPosition} and pick next ${numQuestions} questions from the PDF
+- Pick sequentially until you have ${numQuestions} OR reach end of PDF
+- If end reached before ${numQuestions}: CYCLE BACK to question #1 and continue
+- Example: PDF has 25 questions, last question in the latest quiz is 22 → pick Q23, Q24, Q25 (3) + Q1-Q7 (7) = 10 total
 
-PICKING LOGIC:
-- Start picking from question #${startPosition}
-- Pick questions sequentially until you have ${numQuestions} OR reach the end of PDF
-- If you reach the end of PDF before getting ${numQuestions} questions:
-  * CYCLE BACK to question #1 and continue picking
-  * Continue until you have exactly ${numQuestions} questions total
-
-EXAMPLE: If PDF has 25 questions, student asked 22 questions, need 10:
-- Start from Q23, pick Q23, Q24, Q25 (3 questions from end)
-- CYCLE to start: pick Q1, Q2, Q3, Q4, Q5, Q6, Q7 (7 more questions)
-- Total: 10 questions (3 remaining + 7 from cycle)
-
-CRITICAL: DO NOT SKIP the remaining questions at the end! Always pick them first, then cycle.
-
-${previousQuestions.length > 0 ? `Previously asked questions (for reference, may overlap in cycling):\n${previousQuestions.slice(-10).map((q, i) => `${i + 1}. ${q.substring(0, 60)}...`).join('\n')}` : ''}`;
+${previousQuestions.length > 0 ? `Previously asked questions (for reference, may overlap in cycling):\n${previousQuestions.slice(-20).map((q, i) => `${i + 1}. ${q.substring(0, 60)}...`).join('\n')}` : ''}`;
 
   const languageInstruction = medium === "Hindi" 
     ? `IMPORTANT: Generate ALL content (questions, options, explanations) in HINDI (Devanagari script). The entire quiz must be in Hindi language.`
@@ -543,30 +517,17 @@ export async function generateNavodayaQuizQuestions(
   const endPosition = previousQuestions.length + numQuestions;
   
   const sequentialInstruction = `
-SEQUENTIAL QUESTION PICKING WITH CYCLING (CRITICAL):
-This student has already been asked ${previousQuestions.length} questions.
-You need to return exactly ${numQuestions} questions starting from position #${startPosition}.
+SEQUENTIAL QUESTION PICKING WITH CYCLING:
 
-STEP-BY-STEP PROCESS:
-1. First, count ALL extractable/convertible questions in the PDF (call this TOTAL)
-2. Calculate starting position: ${startPosition} (based on ${previousQuestions.length} previous questions)
-3. If ${startPosition} > TOTAL, use position: (${startPosition - 1} % TOTAL) + 1
+- Below rules are applied for this student since registration.
+- This student's quiz history shows ${previousQuestions.length} questions asked.
+- X (last question number position in PDF) = ${previousQuestions.length}
+- Start from question #(X+1) = #${startPosition} and pick next ${numQuestions} questions from the PDF
+- Pick sequentially until you have ${numQuestions} OR reach end of PDF
+- If end reached before ${numQuestions}: CYCLE BACK to question #1 and continue
+- Example: PDF has 25 questions, last question in the latest quiz is 22 → pick Q23, Q24, Q25 (3) + Q1-Q7 (7) = 10 total
 
-PICKING LOGIC:
-- Start picking from question #${startPosition}
-- Pick questions sequentially until you have ${numQuestions} OR reach the end of PDF
-- If you reach the end of PDF before getting ${numQuestions} questions:
-  * CYCLE BACK to question #1 and continue picking
-  * Continue until you have exactly ${numQuestions} questions total
-
-EXAMPLE: If PDF has 25 questions, student asked 22 questions, need 10:
-- Start from Q23, pick Q23, Q24, Q25 (3 questions from end)
-- CYCLE to start: pick Q1, Q2, Q3, Q4, Q5, Q6, Q7 (7 more questions)
-- Total: 10 questions (3 remaining + 7 from cycle)
-
-CRITICAL: DO NOT SKIP the remaining questions at the end! Always pick them first, then cycle.
-
-${previousQuestions.length > 0 ? `Previously asked questions (for reference, may overlap in cycling):\n${previousQuestions.slice(-10).map((q, i) => `${i + 1}. ${q.substring(0, 60)}...`).join('\n')}` : ''}`;
+${previousQuestions.length > 0 ? `Previously asked questions (for reference, may overlap in cycling):\n${previousQuestions.slice(-20).map((q, i) => `${i + 1}. ${q.substring(0, 60)}...`).join('\n')}` : ''}`;
 
   const gradeInfo = examGrade === "6th" 
     ? "Class 6 entry level (students appearing from Class 5)" 
