@@ -298,6 +298,47 @@ export async function registerRoutes(
     }
   });
 
+  // Re-parse all PDFs to extract questions (admin - for existing PDFs uploaded before parsing feature)
+  app.post("/api/admin/pdfs/reparse-all", async (req, res) => {
+    try {
+      const allPdfs = await storage.getAllPdfs();
+      const results: { id: number; filename: string; questionsFound: number; error?: string }[] = [];
+      
+      for (const pdf of allPdfs) {
+        try {
+          // Get the full PDF with content
+          const fullPdf = await storage.getPdf(pdf.id);
+          if (!fullPdf || !fullPdf.content) {
+            results.push({ id: pdf.id, filename: pdf.filename, questionsFound: 0, error: "No content" });
+            continue;
+          }
+          
+          const parsedQuestions = parseQuestionsFromPdfContent(fullPdf.content);
+          console.log(`Re-parsed ${parsedQuestions.length} questions from ${pdf.filename}`);
+          
+          if (parsedQuestions.length > 0) {
+            await storage.updatePdfParsedQuestions(pdf.id, parsedQuestions, parsedQuestions.length);
+          }
+          
+          results.push({ id: pdf.id, filename: pdf.filename, questionsFound: parsedQuestions.length });
+        } catch (err) {
+          const errorMsg = err instanceof Error ? err.message : "Unknown error";
+          results.push({ id: pdf.id, filename: pdf.filename, questionsFound: 0, error: errorMsg });
+        }
+      }
+      
+      res.json({ 
+        message: "PDFs re-parsed successfully", 
+        results,
+        totalPdfs: allPdfs.length,
+        successCount: results.filter(r => !r.error).length
+      });
+    } catch (error) {
+      console.error("Error re-parsing PDFs:", error);
+      res.status(500).json({ error: "Failed to re-parse PDFs" });
+    }
+  });
+
   // Generate quiz questions
   app.post("/api/quiz/generate", async (req, res) => {
     try {
