@@ -139,28 +139,40 @@ Step 5: Explanation must say "25% of 80 = 20"
 
 REJECT any question where the correctAnswer index does not match the calculated/verified answer.${excludeSection}`;
 
-  const userPrompt = `EXTRACT ${numQuestions} questions DIRECTLY from the PDF content below for ${subject}.
+  const userPrompt = `EXTRACT ${numQuestions} questions from the ENTIRE PDF content below for ${subject}.
 
-STRICT RULE: ALL questions MUST come from the PDF content. Do NOT create questions from outside knowledge.
+STRICT RULE: Go through the ENTIRE PDF from start to end. Convert ALL types of questions to MCQ format.
 
-EXTRACTION METHODS (in priority order):
-1. MCQ EXTRACTION: If the PDF has MCQ questions with options, extract them exactly as-is
-2. LONG ANSWER TO MCQ CONVERSION: If the PDF has long-answer/short-answer questions with answers:
-   - Convert the question to MCQ format
-   - Use the answer from the PDF to create the correct option
-   - Generate 3 plausible wrong options based on the topic
-   - The correct answer MUST come from the PDF's provided answer
-3. FILL-IN-THE-BLANK CONVERSION: Convert fill-in-the-blank questions to MCQ using the PDF's answer
+MANDATORY EXTRACTION - CONVERT EVERYTHING TO MCQ:
+1. **EXISTING MCQs**: Extract exactly as they appear in the PDF
+2. **SHORT ANSWER QUESTIONS**: Convert to MCQ format
+   - Use the answer provided in PDF as the CORRECT option
+   - Generate 3 plausible but INCORRECT options that are related but wrong
+3. **LONG ANSWER QUESTIONS**: Convert to MCQ format
+   - Extract the key fact/concept being tested
+   - The PDF's answer becomes one of the 4 options (the correct one)
+   - Create 3 similar but incorrect alternatives
+4. **FILL-IN-THE-BLANK**: Convert to MCQ using the PDF's answer as correct option
+5. **TRUE/FALSE**: Keep as MCQ with 4 options including True, False, and 2 related statements
+6. **DEFINITIONS/CONCEPTS**: Create "What is..." or "Define..." MCQs from text content
+7. **DIAGRAMS/FIGURES**: Create questions about parts, labels, or functions shown
 
-LANGUAGE FLEXIBILITY:
-- You may translate or rephrase questions to match the student's language preference
-- The core meaning/gist of the question MUST remain identical to the PDF
-- Mathematical/scientific notation should stay consistent
+CONVERSION EXAMPLE:
+PDF has: "Q: What is photosynthesis? A: Photosynthesis is the process by which plants convert sunlight into food using carbon dioxide and water."
+Convert to MCQ:
+- Question: "What is photosynthesis?"
+- Options: ["Process by which plants convert sunlight into food using CO2 and water", "Process by which animals digest food", "Process of cell division in plants", "Process of water absorption by roots"]
+- correctAnswer: 0 (first option from PDF answer)
 
-CRITICAL: NEVER create questions from topics not covered in the PDF. Every question must trace back to specific content in the PDF.
+IMPORTANT RULES:
+- EXHAUST ALL CONTENT from the PDF before repeating
+- Go through EVERY page, EVERY question, EVERY concept
+- Convert subjective questions - don't skip them just because they're not MCQ
+- The correct answer MUST come from what the PDF states
+- Wrong options must be plausible but clearly incorrect to someone who studied
 
 PDF Content for ${subject}:
-${pdfContent.substring(0, 15000)}`;
+${pdfContent.substring(0, 50000)}`;
 
   try {
     const response = await openai.chat.completions.create({
@@ -362,28 +374,42 @@ Step 5: Explanation must say "1 KB = 1024 bytes"
 
 REJECT any question where the correctAnswer index does not match the verified answer.${excludeSection}`;
 
-  const userPrompt = `EXTRACT ${numQuestions} questions DIRECTLY from the PDF content below for CPCT exam preparation.
+  const userPrompt = `EXTRACT ${numQuestions} questions from the ENTIRE PDF content below for CPCT exam preparation.
 
-STRICT RULE: ALL questions MUST come from the PDF content. Do NOT create questions from outside knowledge.
+STRICT RULE: Go through the ENTIRE PDF from start to end. Convert ALL types of questions to MCQ format.
 
-EXTRACTION METHODS (in priority order):
-1. MCQ EXTRACTION: If the PDF has MCQ questions with options, extract them exactly as-is
-2. LONG ANSWER TO MCQ CONVERSION: If the PDF has long-answer/short-answer questions with answers:
-   - Convert the question to MCQ format
-   - Use the answer from the PDF to create the correct option
-   - Generate 3 plausible wrong options based on the topic
-   - The correct answer MUST come from the PDF's provided answer
-3. FILL-IN-THE-BLANK CONVERSION: Convert fill-in-the-blank questions to MCQ using the PDF's answer
+MANDATORY EXTRACTION - CONVERT EVERYTHING TO MCQ:
+1. **EXISTING MCQs**: Extract exactly as they appear in the PDF
+2. **SHORT ANSWER QUESTIONS**: Convert to MCQ format
+   - Use the answer provided in PDF as the CORRECT option
+   - Generate 3 plausible but INCORRECT options that are related but wrong
+3. **LONG ANSWER QUESTIONS**: Convert to MCQ format
+   - Extract the key fact/concept being tested
+   - The PDF's answer becomes one of the 4 options (the correct one)
+   - Create 3 similar but incorrect alternatives
+4. **FILL-IN-THE-BLANK**: Convert to MCQ using the PDF's answer as correct option
+5. **TRUE/FALSE**: Keep as MCQ with 4 options including True, False, and 2 related statements
+6. **DEFINITIONS/CONCEPTS**: Create "What is..." or "Define..." MCQs from text content
+7. **COMPUTER CONCEPTS**: Create questions from any explanatory text about hardware, software, internet, etc.
 
-LANGUAGE FLEXIBILITY:
-- You may translate or rephrase questions to match ${medium === "Hindi" ? "Hindi (Devanagari script देवनागरी)" : "English"}
-- The core meaning/gist of the question MUST remain identical to the PDF
-- Technical terms should stay consistent
+CONVERSION EXAMPLE:
+PDF has: "Q: What is CPU? A: CPU (Central Processing Unit) is the brain of the computer that processes instructions."
+Convert to MCQ:
+- Question: "What is CPU?"
+- Options: ["The brain of computer that processes instructions", "A storage device for data", "A display unit for output", "A device for printing documents"]
+- correctAnswer: 0 (first option from PDF answer)
 
-CRITICAL: NEVER create questions from topics not covered in the PDF. Every question must trace back to specific content in the PDF.
+IMPORTANT RULES:
+- EXHAUST ALL CONTENT from the PDF before repeating
+- Go through EVERY page, EVERY question, EVERY concept in the PDF
+- Convert subjective questions - don't skip them just because they're not MCQ
+- The correct answer MUST come from what the PDF states
+- Wrong options must be plausible but clearly incorrect
+
+LANGUAGE: Generate all content in ${medium === "Hindi" ? "Hindi (Devanagari script देवनागरी)" : "English"}
 
 PDF Content from CPCT ${year}:
-${pdfContent.substring(0, 15000)}`;
+${pdfContent.substring(0, 50000)}`;
 
   try {
     const response = await openai.chat.completions.create({
@@ -599,28 +625,46 @@ Step 5: Explanation must say "40 - 18 = 22"
 
 REJECT any question where the correctAnswer index does not match the calculated/verified answer.${excludeSection}`;
 
-  const userPrompt = `EXTRACT ${numQuestions} questions DIRECTLY from the PDF content below for ${gradeInfo}.
+  const userPrompt = `EXTRACT ${numQuestions} questions from the ENTIRE PDF content below for ${gradeInfo}.
 
-STRICT RULE: ALL questions MUST come from the PDF content. Do NOT create questions from outside knowledge.
+STRICT RULE: Go through the ENTIRE PDF from start to end. Convert ALL types of questions to MCQ format.
 
-EXTRACTION METHODS (in priority order):
-1. MCQ EXTRACTION: If the PDF has MCQ questions with options, extract them exactly as-is
-2. LONG ANSWER TO MCQ CONVERSION: If the PDF has long-answer/short-answer questions with answers:
-   - Convert the question to MCQ format
-   - Use the answer from the PDF to create the correct option
-   - Generate 3 plausible wrong options based on the topic
-   - The correct answer MUST come from the PDF's provided answer
-3. FILL-IN-THE-BLANK CONVERSION: Convert fill-in-the-blank questions to MCQ using the PDF's answer
+MANDATORY EXTRACTION - CONVERT EVERYTHING TO MCQ:
+1. **EXISTING MCQs**: Extract exactly as they appear in the PDF
+2. **SHORT ANSWER QUESTIONS**: Convert to MCQ format
+   - Use the answer provided in PDF as the CORRECT option
+   - Generate 3 plausible but INCORRECT options that are related but wrong
+3. **LONG ANSWER QUESTIONS**: Convert to MCQ format
+   - Extract the key fact/concept being tested
+   - The PDF's answer becomes one of the 4 options (the correct one)
+   - Create 3 similar but incorrect alternatives
+4. **FILL-IN-THE-BLANK**: Convert to MCQ using the PDF's answer as correct option
+5. **TRUE/FALSE**: Keep as MCQ with 4 options
+6. **MENTAL ABILITY/REASONING**: Convert pattern/series questions to MCQ format
+7. **ARITHMETIC PROBLEMS**: Convert calculation problems to MCQ with the correct answer as one option
+8. **LANGUAGE QUESTIONS**: Convert grammar/comprehension questions to MCQ format
 
-LANGUAGE FLEXIBILITY:
-- You may translate or rephrase questions to match ${medium === "Hindi" ? "Hindi (Devanagari script देवनागरी)" : "English"}
-- The core meaning/gist of the question MUST remain identical to the PDF
+CONVERSION EXAMPLE:
+PDF has: "Q: What is the capital of India? A: New Delhi is the capital of India."
+Convert to MCQ:
+- Question: "What is the capital of India?"
+- Options: ["New Delhi", "Mumbai", "Kolkata", "Chennai"]
+- correctAnswer: 0 (first option from PDF answer)
+
+IMPORTANT RULES:
+- EXHAUST ALL CONTENT from the PDF before repeating
+- Go through EVERY page, EVERY question, EVERY concept in the PDF
+- Convert subjective questions - don't skip them just because they're not MCQ
+- The correct answer MUST come from what the PDF states
+- Wrong options must be plausible but clearly incorrect
+
+LANGUAGE: Generate all content in ${medium === "Hindi" ? "Hindi (Devanagari script देवनागरी)" : "English"}
 - Mathematical/logical structure should stay consistent
 
 CRITICAL: NEVER create questions from topics not covered in the PDF. Every question must trace back to specific content in the PDF.
 
 PDF Content for ${examGrade} Navodaya exam:
-${pdfContent.substring(0, 15000)}`;
+${pdfContent.substring(0, 50000)}`;
 
   try {
     const response = await openai.chat.completions.create({
