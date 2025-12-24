@@ -59,17 +59,20 @@ export async function generateQuizQuestions(
   const endPosition = previousQuestions.length + numQuestions;
   
   const sequentialInstruction = `
-SEQUENTIAL QUESTION PICKING WITH CYCLING:
+QUESTION SELECTION (VERY IMPORTANT - FOLLOW EXACTLY):
 
-- Below rules are applied for this subject separately for this student since registration.
-- This student's quiz history shows ${previousQuestions.length} questions asked for this subject.
-- X (last question number position in PDF) = ${previousQuestions.length}
-- Start from question #(X+1) = #${startPosition} and pick next ${numQuestions} questions from the PDF
-- Pick sequentially until you have ${numQuestions} OR reach end of PDF
-- If end reached before ${numQuestions}: CYCLE BACK to question #1 and continue
-- Example: PDF has 25 questions, last question in the latest quiz for the subject is 22 → pick Q23, Q24, Q25 (3) + Q1-Q7 (7) = 10 total
+Student has completed ${previousQuestions.length} questions from this PDF.
+YOUR TASK: Pick questions #${startPosition} to #${startPosition + numQuestions - 1} from the PDF.
 
-${previousQuestions.length > 0 ? `Previously asked questions (for reference, may overlap in cycling):\n${previousQuestions.slice(-20).map((q, i) => `${i + 1}. ${q.substring(0, 60)}...`).join('\n')}` : ''}`;
+SIMPLE STEPS:
+1. Number all questions in the PDF from 1 to N (where N = total questions in PDF)
+2. Start at question #${startPosition}
+3. Pick the next ${numQuestions} questions in order
+4. If you reach the end of PDF, wrap around to question #1 and continue
+
+DO NOT pick random questions. DO NOT skip questions. Follow the PDF order exactly.
+
+${previousQuestions.length > 0 ? `SKIP THESE (already asked):\n${previousQuestions.slice(-20).map((q, i) => `- ${q.substring(0, 80)}`).join('\n')}` : ''}`;
 
   const languageInstruction = medium === "Hindi" 
     ? `IMPORTANT LANGUAGE INSTRUCTION: Generate ALL content in Hindi (Devanagari script). The questions, all 4 options, and explanations MUST be written in Hindi. Use proper Hindi language and Devanagari script throughout.`
@@ -282,17 +285,20 @@ export async function generateCpctQuizQuestions(
   const endPosition = previousQuestions.length + numQuestions;
   
   const sequentialInstruction = `
-SEQUENTIAL QUESTION PICKING WITH CYCLING:
+QUESTION SELECTION (VERY IMPORTANT - FOLLOW EXACTLY):
 
-- Below rules are applied for this student since registration.
-- This student's quiz history shows ${previousQuestions.length} questions asked.
-- X (last question number position in PDF) = ${previousQuestions.length}
-- Start from question #(X+1) = #${startPosition} and pick next ${numQuestions} questions from the PDF
-- Pick sequentially until you have ${numQuestions} OR reach end of PDF
-- If end reached before ${numQuestions}: CYCLE BACK to question #1 and continue
-- Example: PDF has 25 questions, last question in the latest quiz is 22 → pick Q23, Q24, Q25 (3) + Q1-Q7 (7) = 10 total
+Student has completed ${previousQuestions.length} questions from this PDF.
+YOUR TASK: Pick questions #${startPosition} to #${startPosition + numQuestions - 1} from the PDF.
 
-${previousQuestions.length > 0 ? `Previously asked questions (for reference, may overlap in cycling):\n${previousQuestions.slice(-20).map((q, i) => `${i + 1}. ${q.substring(0, 60)}...`).join('\n')}` : ''}`;
+SIMPLE STEPS:
+1. Number all questions in the PDF from 1 to N (where N = total questions in PDF)
+2. Start at question #${startPosition}
+3. Pick the next ${numQuestions} questions in order
+4. If you reach the end of PDF, wrap around to question #1 and continue
+
+DO NOT pick random questions. DO NOT skip questions. Follow the PDF order exactly.
+
+${previousQuestions.length > 0 ? `SKIP THESE (already asked):\n${previousQuestions.slice(-20).map((q, i) => `- ${q.substring(0, 80)}`).join('\n')}` : ''}`;
 
   const languageInstruction = medium === "Hindi" 
     ? `IMPORTANT: Generate ALL content (questions, options, explanations) in HINDI (Devanagari script). The entire quiz must be in Hindi language.`
@@ -517,17 +523,20 @@ export async function generateNavodayaQuizQuestions(
   const endPosition = previousQuestions.length + numQuestions;
   
   const sequentialInstruction = `
-SEQUENTIAL QUESTION PICKING WITH CYCLING:
+QUESTION SELECTION (VERY IMPORTANT - FOLLOW EXACTLY):
 
-- Below rules are applied for this student since registration.
-- This student's quiz history shows ${previousQuestions.length} questions asked.
-- X (last question number position in PDF) = ${previousQuestions.length}
-- Start from question #(X+1) = #${startPosition} and pick next ${numQuestions} questions from the PDF
-- Pick sequentially until you have ${numQuestions} OR reach end of PDF
-- If end reached before ${numQuestions}: CYCLE BACK to question #1 and continue
-- Example: PDF has 25 questions, last question in the latest quiz is 22 → pick Q23, Q24, Q25 (3) + Q1-Q7 (7) = 10 total
+Student has completed ${previousQuestions.length} questions from this PDF.
+YOUR TASK: Pick questions #${startPosition} to #${startPosition + numQuestions - 1} from the PDF.
 
-${previousQuestions.length > 0 ? `Previously asked questions (for reference, may overlap in cycling):\n${previousQuestions.slice(-20).map((q, i) => `${i + 1}. ${q.substring(0, 60)}...`).join('\n')}` : ''}`;
+SIMPLE STEPS:
+1. Number all questions in the PDF from 1 to N (where N = total questions in PDF)
+2. Start at question #${startPosition}
+3. Pick the next ${numQuestions} questions in order
+4. If you reach the end of PDF, wrap around to question #1 and continue
+
+DO NOT pick random questions. DO NOT skip questions. Follow the PDF order exactly.
+
+${previousQuestions.length > 0 ? `SKIP THESE (already asked):\n${previousQuestions.slice(-20).map((q, i) => `- ${q.substring(0, 80)}`).join('\n')}` : ''}`;
 
   const gradeInfo = examGrade === "6th" 
     ? "Class 6 entry level (students appearing from Class 5)" 
