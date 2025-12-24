@@ -404,13 +404,16 @@ ${subjectTopics}
 
 IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT use concepts from lower grades like 8th or 10th for 12th grade questions.`;
         
+        // Get previous questions for fallback case (no PDF)
+        const fallbackPreviousQuestions = await storage.getStudentPreviousQuestions(studentId, subject);
+        
         questions = await generateQuizQuestions(
           fallbackContent,
           subject,
           grade,
           board,
           10,
-          previousQuestions,
+          fallbackPreviousQuestions,
           studentMedium
         );
       }
