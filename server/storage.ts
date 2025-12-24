@@ -167,6 +167,7 @@ export class DatabaseStorage implements IStorage {
     // Get normalized grade variants (e.g., "12th" -> ["12", "12th"])
     const gradeVariants = normalizeGrade(grade);
     
+    // Only return active (non-archived) PDFs for quiz generation
     const [pdf] = await db.select().from(pdfs).where(
       and(
         or(
@@ -174,7 +175,8 @@ export class DatabaseStorage implements IStorage {
           eq(pdfs.grade, gradeVariants[1])
         ),
         eq(pdfs.board, board),
-        eq(pdfs.subject, subject)
+        eq(pdfs.subject, subject),
+        eq(pdfs.isArchived, false)
       )
     );
     return pdf || undefined;
