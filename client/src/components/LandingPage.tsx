@@ -73,6 +73,7 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick, onNavodayaC
   }, []);
 
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
+  const [currentNoticeSlide, setCurrentNoticeSlide] = useState(0);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -80,6 +81,27 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick, onNavodayaC
     }, 5000);
     return () => clearInterval(timer);
   }, []);
+
+  // Auto-rotate notices (show 2 at a time)
+  const noticesPerSlide = 2;
+  const totalNoticeSlides = notices ? Math.ceil(notices.length / noticesPerSlide) : 0;
+  
+  useEffect(() => {
+    if (totalNoticeSlides > 1) {
+      const timer = setInterval(() => {
+        setCurrentNoticeSlide((prev) => (prev + 1) % totalNoticeSlides);
+      }, 6000);
+      return () => clearInterval(timer);
+    }
+  }, [totalNoticeSlides]);
+
+  const nextNoticeSlide = () => {
+    setCurrentNoticeSlide((prev) => (prev + 1) % totalNoticeSlides);
+  };
+
+  const prevNoticeSlide = () => {
+    setCurrentNoticeSlide((prev) => (prev - 1 + totalNoticeSlides) % totalNoticeSlides);
+  };
 
   const nextClassroom = () => {
     setCurrentClassroom((prev) => (prev + 1) % classroomImages.length);
@@ -223,34 +245,90 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick, onNavodayaC
         {notices && notices.length > 0 && (
           <section className="bg-gradient-to-r from-amber-50 via-yellow-50 to-orange-50 py-6 md:py-8 border-y border-amber-200/50">
             <div className="max-w-4xl mx-auto px-4">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="p-2 bg-amber-100 rounded-lg">
-                  <Bell className="w-5 h-5 text-amber-600" />
+              <div className="flex items-center justify-between gap-2 mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-amber-100 rounded-lg">
+                    <Bell className="w-5 h-5 text-amber-600" />
+                  </div>
+                  <h3 className="text-lg md:text-xl font-bold text-gray-900">Notice Board</h3>
                 </div>
-                <h3 className="text-lg md:text-xl font-bold text-gray-900">Notice Board</h3>
+                {totalNoticeSlides > 1 && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={prevNoticeSlide}
+                      className="h-8 w-8 bg-amber-100 text-amber-700 rounded-full"
+                      data-testid="button-prev-notice"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm text-amber-700 font-medium">
+                      {currentNoticeSlide + 1}/{totalNoticeSlides}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={nextNoticeSlide}
+                      className="h-8 w-8 bg-amber-100 text-amber-700 rounded-full"
+                      data-testid="button-next-notice"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
-              <div className="grid gap-3 md:gap-4">
-                {notices.map((notice) => (
-                  <div
-                    key={notice.id}
-                    className="bg-white/80 backdrop-blur-sm rounded-xl p-4 md:p-5 shadow-sm border border-amber-100 transition-all hover:shadow-md hover:bg-white"
-                    data-testid={`notice-display-${notice.id}`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="w-1 h-full min-h-[40px] bg-gradient-to-b from-amber-400 to-orange-400 rounded-full flex-shrink-0"></div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-gray-900 text-base md:text-lg">{notice.title}</h4>
-                        {notice.subtitle && (
-                          <p className="text-sm text-amber-700 font-medium mt-0.5">{notice.subtitle}</p>
-                        )}
-                        {notice.description && (
-                          <p className="text-sm text-gray-600 mt-2 leading-relaxed">{notice.description}</p>
-                        )}
+              <div className="relative overflow-hidden">
+                <div 
+                  className="flex transition-transform duration-500 ease-in-out"
+                  style={{ transform: `translateX(-${currentNoticeSlide * 100}%)` }}
+                >
+                  {Array.from({ length: totalNoticeSlides }).map((_, slideIndex) => (
+                    <div key={slideIndex} className="w-full flex-shrink-0">
+                      <div className="grid gap-3 md:gap-4">
+                        {notices
+                          .slice(slideIndex * noticesPerSlide, (slideIndex + 1) * noticesPerSlide)
+                          .map((notice) => (
+                            <div
+                              key={notice.id}
+                              className="bg-white/80 backdrop-blur-sm rounded-xl p-4 md:p-5 shadow-sm border border-amber-100 transition-all hover:shadow-md hover:bg-white"
+                              data-testid={`notice-display-${notice.id}`}
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className="w-1 h-full min-h-[40px] bg-gradient-to-b from-amber-400 to-orange-400 rounded-full flex-shrink-0"></div>
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-semibold text-gray-900 text-base md:text-lg">{notice.title}</h4>
+                                  {notice.subtitle && (
+                                    <p className="text-sm text-amber-700 font-medium mt-0.5">{notice.subtitle}</p>
+                                  )}
+                                  {notice.description && (
+                                    <p className="text-sm text-gray-600 mt-2 leading-relaxed">{notice.description}</p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
+              {totalNoticeSlides > 1 && (
+                <div className="flex justify-center gap-2 mt-4">
+                  {Array.from({ length: totalNoticeSlides }).map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentNoticeSlide(index)}
+                      className={`transition-all duration-300 rounded-full ${
+                        currentNoticeSlide === index 
+                          ? "bg-amber-500 w-6 h-2" 
+                          : "bg-amber-300 w-2 h-2 hover:bg-amber-400"
+                      }`}
+                      data-testid={`notice-dot-${index}`}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           </section>
         )}
