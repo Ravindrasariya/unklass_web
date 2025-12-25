@@ -207,7 +207,7 @@ export async function registerRoutes(
         // Chapter Practice format - e.g., 8th_MP_Chapter_Plan_Mathematics.pdf
         const [, g, b, s] = chapterPracticeMatch!;
         grade = g;
-        board = `${b.toUpperCase()}_Chapter_Plan`; // Store as "MP_Chapter_Plan" to distinguish from regular Board PDFs
+        board = b.toUpperCase(); // Store as "MP" - filename pattern identifies it as Chapter Practice
         subject = s;
       } else {
         // Board Exam format
@@ -2057,27 +2057,14 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
       
       const subjects = new Set<string>();
       
-      // Check for new format: grade_board_Chapter_Plan_subject.pdf (board stored as "MP_Chapter_Plan")
-      const chapterPlanBoard = `${normalizedBoard}_Chapter_Plan`;
+      // Check for Chapter Practice PDFs by filename pattern: contains "chapter_plan"
       for (const pdf of allPdfs) {
-        if (pdf.grade.toLowerCase() === normalizedGrade && 
-            pdf.board === chapterPlanBoard && 
+        const lowerFilename = pdf.filename.toLowerCase();
+        if (lowerFilename.includes('chapter_plan') &&
+            pdf.grade.toLowerCase() === normalizedGrade && 
+            pdf.board.toUpperCase() === normalizedBoard && 
             !pdf.isArchived) {
           subjects.add(pdf.subject);
-        }
-      }
-      
-      // Fallback: check for old NCERT format
-      for (const pdf of allPdfs) {
-        const lowerName = pdf.filename.toLowerCase();
-        if (lowerName.startsWith('ncert_') && 
-            lowerName.includes(normalizedGrade) && 
-            lowerName.includes(normalizedBoard.toLowerCase())) {
-          const parts = pdf.filename.replace('.pdf', '').split('_');
-          if (parts.length >= 4) {
-            const subject = parts.slice(3).join(' ');
-            subjects.add(subject.charAt(0).toUpperCase() + subject.slice(1).toLowerCase());
-          }
         }
       }
       

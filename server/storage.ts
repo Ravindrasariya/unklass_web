@@ -857,42 +857,36 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(chapterPracticeQuizSessions.createdAt));
   }
 
-  // Chapter Practice PDFs - look for {grade}_{board}_Chapter_Plan_{subject}.pdf format
+  // Chapter Practice PDFs - look for {grade}_{board}_chapter_plan_{subject}.pdf format
   async getChapterPracticePdf(grade: string, board: string, subject: string): Promise<Pdf | undefined> {
     const gradeVariants = normalizeGrade(grade);
     
-    // Look for grade_board_Chapter_Plan_subject.pdf format (stored with board as "{board}_Chapter_Plan")
-    const chapterPlanBoard = `${board}_Chapter_Plan`;
-    const [pdf] = await db.select().from(pdfs).where(
+    // Look for PDFs with "chapter_plan" in filename that match grade, board, and subject
+    const allChapterPdfs = await db.select().from(pdfs).where(
       and(
-        or(
-          eq(pdfs.grade, gradeVariants[0]),
-          eq(pdfs.grade, gradeVariants[1])
-        ),
-        eq(pdfs.board, chapterPlanBoard),
-        eq(pdfs.subject, subject),
+        like(pdfs.filename, '%chapter_plan%'),
         eq(pdfs.isArchived, false)
       )
     );
-    if (pdf) return pdf;
     
-    // Fallback: try old NCERT_{grade}_{board}_{subject}.pdf format for backward compatibility
-    for (const g of gradeVariants) {
-      const filename = `NCERT_${g}_${board}_${subject}.pdf`;
-      const [oldFormatPdf] = await db.select().from(pdfs).where(
-        and(eq(pdfs.filename, filename), eq(pdfs.isArchived, false))
-      );
-      if (oldFormatPdf) return oldFormatPdf;
-    }
+    // Find matching PDF by grade, board, and subject
+    const pdf = allChapterPdfs.find(p => 
+      gradeVariants.includes(p.grade.toLowerCase()) &&
+      p.board.toLowerCase() === board.toLowerCase() &&
+      p.subject.toLowerCase() === subject.toLowerCase()
+    );
+    
+    if (pdf) return pdf;
     
     return undefined;
   }
 
   // Get all Chapter Practice PDFs (for admin section)
   async getChapterPracticePdfs(): Promise<Pdf[]> {
+    // Chapter Practice PDFs have "chapter_plan" in their filename
     return await db.select().from(pdfs).where(
       and(
-        like(pdfs.board, '%_Chapter_Plan'),
+        like(pdfs.filename, '%chapter_plan%'),
         eq(pdfs.isArchived, false)
       )
     );
@@ -902,7 +896,7 @@ export class DatabaseStorage implements IStorage {
     // Get all active Chapter Practice PDFs for a subject
     return await db.select().from(pdfs).where(
       and(
-        like(pdfs.board, '%_Chapter_Plan'),
+        like(pdfs.filename, '%chapter_plan%'),
         eq(pdfs.subject, subject),
         eq(pdfs.isArchived, false)
       )
