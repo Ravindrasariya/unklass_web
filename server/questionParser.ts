@@ -426,19 +426,15 @@ export function parseQuestionsWithChapters(content: string): {
   }
   
   // Handle multi-line chapter headings (common with large font PDFs)
-  // Pattern: "Chapter" on one line, number on next, title on following line(s)
   const lines = normalizedContent.split('\n');
   for (let i = 0; i < lines.length - 1; i++) {
     const line = lines[i].trim();
     
-    // Check if line is just "Chapter" or "अध्याय" (chapter heading split across lines)
     if (/^(?:Chapter|अध्याय|Ch\.?)$/i.test(line)) {
-      // Look at next few lines for number and title
       let chapterNumber: number | null = null;
       let chapterName: string | null = null;
       let lineOffset = 1;
       
-      // Find the chapter number in next 2 lines
       for (let j = i + 1; j <= Math.min(i + 2, lines.length - 1); j++) {
         const nextLine = lines[j].trim();
         const numMatch = nextLine.match(/^(\d+)$/);
@@ -447,7 +443,6 @@ export function parseQuestionsWithChapters(content: string): {
           lineOffset = j - i + 1;
           break;
         }
-        // Also check for "Chapter N" on a single line (number only)
         const numOnlyMatch = nextLine.match(/^(\d+)\s*[:\.\-–—]?\s*$/);
         if (numOnlyMatch) {
           chapterNumber = parseInt(numOnlyMatch[1], 10);
@@ -456,15 +451,11 @@ export function parseQuestionsWithChapters(content: string): {
         }
       }
       
-      // Find chapter name in the lines after the number
       if (chapterNumber && chapterNumber > 0 && chapterNumber <= 50) {
         for (let j = i + lineOffset; j <= Math.min(i + lineOffset + 2, lines.length - 1); j++) {
           const titleLine = lines[j].trim();
-          // Skip empty lines and lines that are just numbers
           if (!titleLine || /^\d+$/.test(titleLine)) continue;
-          // Skip if this looks like a question
           if (/^(?:Que?s?(?:tion)?|Q|प्रश्न)/i.test(titleLine)) break;
-          // This should be the chapter name
           if (titleLine.length >= 2 && titleLine.length <= 100) {
             chapterName = titleLine;
             break;
@@ -474,44 +465,9 @@ export function parseQuestionsWithChapters(content: string): {
         if (chapterName) {
           const exists = chapterPositions.some(c => c.chapterNumber === chapterNumber);
           if (!exists) {
-            // Find position in original content
             const linesBefore = lines.slice(0, i).join('\n');
             const position = linesBefore.length;
-            chapterPositions.push({
-              chapterNumber,
-              chapterName,
-              position,
-            });
-          }
-        }
-      }
-    }
-    
-    // Also check for pattern: just a number on its own line followed by chapter title
-    // This handles "1" followed by "Real Numbers" format
-    const justNumber = line.match(/^(\d+)$/);
-    if (justNumber) {
-      const num = parseInt(justNumber[1], 10);
-      // Only consider as chapter if between 1-20 (reasonable chapter numbers)
-      if (num >= 1 && num <= 20) {
-        // Check if previous line was "Chapter" or if next line looks like a title
-        const prevLine = i > 0 ? lines[i - 1].trim().toLowerCase() : '';
-        const nextLine = i + 1 < lines.length ? lines[i + 1].trim() : '';
-        
-        const isAfterChapter = /^(?:chapter|अध्याय|ch\.?)$/i.test(prevLine);
-        const nextIsTitle = nextLine.length >= 3 && nextLine.length <= 100 && 
-                           !/^(?:Que?s?(?:tion)?|Q|प्रश्न|\d+\.)/i.test(nextLine) &&
-                           !/^\d+$/.test(nextLine);
-        
-        if (isAfterChapter && nextIsTitle) {
-          const exists = chapterPositions.some(c => c.chapterNumber === num);
-          if (!exists) {
-            const linesBefore = lines.slice(0, i - 1).join('\n');
-            chapterPositions.push({
-              chapterNumber: num,
-              chapterName: nextLine,
-              position: linesBefore.length,
-            });
+            chapterPositions.push({ chapterNumber, chapterName, position });
           }
         }
       }
@@ -520,9 +476,9 @@ export function parseQuestionsWithChapters(content: string): {
   
   chapterPositions.sort((a, b) => a.position - b.position);
   
-  const parsedQuestions = parseQuestionsFromPdfContent(content);
-  
+  // If no chapters found, return all questions as a single chapter
   if (chapterPositions.length === 0) {
+    const parsedQuestions = parseQuestionsFromPdfContent(content);
     return {
       questions: parsedQuestions,
       chapters: [{
@@ -535,16 +491,9 @@ export function parseQuestionsWithChapters(content: string): {
     };
   }
   
-  const questionsWithPositions: { question: ParsedQuestion; position: number }[] = [];
-  
-  for (const q of parsedQuestions) {
-    const pos = normalizedContent.indexOf(q.rawText.substring(0, 50));
-    questionsWithPositions.push({
-      question: q,
-      position: pos >= 0 ? pos : 0,
-    });
-  }
-  
+  // Parse questions PER CHAPTER to avoid deduplication issues
+  // (Each chapter may restart numbering from 1)
+  const allQuestions: ParsedQuestion[] = [];
   const chapters: ChapterMetadata[] = [];
   
   for (let i = 0; i < chapterPositions.length; i++) {
@@ -553,14 +502,16 @@ export function parseQuestionsWithChapters(content: string): {
       ? chapterPositions[i + 1].position 
       : normalizedContent.length;
     
-    const chapterQuestions = questionsWithPositions.filter(
-      qp => qp.position >= current.position && qp.position < nextPosition
-    );
+    // Extract content for this chapter only
+    const chapterContent = normalizedContent.substring(current.position, nextPosition);
+    
+    // Parse questions from this chapter's content (no global deduplication)
+    const chapterQuestions = parseChapterQuestions(chapterContent, current.chapterNumber);
     
     if (chapterQuestions.length > 0) {
-      const indices = chapterQuestions.map(qp => parsedQuestions.indexOf(qp.question));
-      const startIndex = Math.min(...indices);
-      const endIndex = Math.max(...indices);
+      const startIndex = allQuestions.length;
+      allQuestions.push(...chapterQuestions);
+      const endIndex = allQuestions.length - 1;
       
       chapters.push({
         chapterNumber: current.chapterNumber,
@@ -580,7 +531,73 @@ export function parseQuestionsWithChapters(content: string): {
     }
   }
   
-  return { questions: parsedQuestions, chapters };
+  return { questions: allQuestions, chapters };
+}
+
+// Parse questions from a chapter's content without global deduplication
+function parseChapterQuestions(chapterContent: string, chapterNum: number): ParsedQuestion[] {
+  const questionPattern = /(?:^|\n)\s*(\d{1,3})\s*[.\):\-\]]\s+(.+?)(?=\n\s*\d{1,3}\s*[.\):\-\]]\s+|\n\s*(?:Chapter|अध्याय)\s*\d+|$)/gi;
+  
+  const questions: ParsedQuestion[] = [];
+  let match;
+  
+  // First try: regex-based extraction
+  while ((match = questionPattern.exec(chapterContent)) !== null) {
+    const questionNum = parseInt(match[1], 10);
+    let text = match[2]?.trim() || '';
+    
+    if (questionNum > 0 && questionNum <= 100 && text.length > 10) {
+      // Check if text has MCQ pattern
+      const hasOptions = /[(\[]?\s*[aA]\s*[)\]\.:]/.test(text);
+      
+      if (hasOptions) {
+        questions.push({
+          index: questions.length, // Sequential numbering across all chapters
+          rawText: text,
+        });
+      }
+    }
+  }
+  
+  // Fallback: line-by-line parsing if regex didn't find enough
+  if (questions.length === 0) {
+    const lines = chapterContent.split('\n');
+    const simplePattern = /^\s*(\d{1,3})\s*[.\):\-\]]\s*(.+)/;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const lineMatch = line.match(simplePattern);
+      
+      if (lineMatch) {
+        const qNum = parseInt(lineMatch[1], 10);
+        let text = lineMatch[2]?.trim() || '';
+        
+        // Collect continuation lines
+        let j = i + 1;
+        while (j < lines.length) {
+          const nextLine = lines[j].trim();
+          if (!nextLine) { j++; continue; }
+          if (simplePattern.test(lines[j])) break;
+          if (/^(?:Chapter|अध्याय)\s*\d+/i.test(nextLine)) break;
+          text += ' ' + nextLine;
+          j++;
+          if (text.length > 3000) break;
+        }
+        
+        if (qNum > 0 && qNum <= 100 && text.length > 15) {
+          const hasOptions = /[(\[]?\s*[aA]\s*[)\]\.:]/.test(text);
+          if (hasOptions) {
+            questions.push({
+              index: questions.length,
+              rawText: text,
+            });
+          }
+        }
+      }
+    }
+  }
+  
+  return questions;
 }
 
 export function getQuestionsForChapter(
@@ -602,7 +619,7 @@ export function getQuestionsForChapterByName(
   chapters: ChapterMetadata[],
   chapterName: string
 ): ParsedQuestion[] {
-  const chapter = chapters.find(c => c.name === chapterName || c.chapterName === chapterName);
+  const chapter = chapters.find(c => c.chapterName === chapterName);
   
   if (!chapter || chapter.questionCount === 0) {
     return [];
