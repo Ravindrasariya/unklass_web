@@ -363,6 +363,7 @@ export default function AdminPage() {
       });
       setSelectedFile(null);
       queryClient.invalidateQueries({ queryKey: ["/api/admin/pdfs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/chapter-practice-pdfs"] });
     },
     onError: (error: Error) => {
       toast({
@@ -383,6 +384,7 @@ export default function AdminPage() {
         description: "The PDF has been archived. Quiz history is preserved.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/pdfs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/chapter-practice-pdfs"] });
     },
     onError: (error: Error) => {
       toast({
@@ -403,6 +405,7 @@ export default function AdminPage() {
         description: "The PDF is now active and available for quizzes.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/pdfs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/chapter-practice-pdfs"] });
     },
     onError: (error: Error) => {
       toast({
