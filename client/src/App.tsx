@@ -68,6 +68,29 @@ const SUBJECTS = [
   "English",
 ] as const;
 
+// All CPCT sections
+const CPCT_SECTIONS = [
+  "MS Office",
+  "Software Operating System & IT Fundamentals",
+  "Internet, Networking & Security",
+  "Hardware Peripheral & Devices",
+  "Aptitude & Logical Reasoning",
+] as const;
+
+// Navodaya sections by grade
+const NAVODAYA_SECTIONS_6TH = [
+  "Mental Ability Test",
+  "Arithmetic Test",
+  "Language Test",
+] as const;
+
+const NAVODAYA_SECTIONS_9TH = [
+  "Mathematics",
+  "Science",
+  "English",
+  "Hindi",
+] as const;
+
 function App() {
   const [appState, setAppState] = useState<AppState>("landing");
   const [studentData, setStudentData] = useState<RegisteredStudent | null>(null);
@@ -738,60 +761,87 @@ function App() {
 
               {appState === "cpct-ready" && cpctStudentData && (
                 <div className="min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center p-4">
-                  <Card className="w-full max-w-lg">
-                    <CardContent className="p-6">
-                      <div className="flex items-center gap-3 mb-6">
-                        <img src={logoIcon} alt="UNKLASS" className="w-10 h-10" />
-                        <div>
-                          <h2 className="text-xl font-semibold">Welcome, {cpctStudentData.name}!</h2>
-                          <p className="text-sm text-muted-foreground">Select a section to start your CPCT quiz</p>
+                  <Card className="w-full max-w-md">
+                    <CardContent className="p-8">
+                      <div className="text-center mb-6">
+                        <div className="w-16 h-16 mx-auto rounded-lg overflow-hidden mb-4">
+                          <img 
+                            src={logoIcon} 
+                            alt="UNKLASS" 
+                            className="w-full h-full object-cover"
+                            data-testid="img-cpct-logo-icon"
+                          />
                         </div>
+                        <h1 className="text-2xl font-semibold mb-2">Select Your Section</h1>
+                        <p className="text-muted-foreground text-sm">
+                          Choose a section to start your CPCT quiz. You'll be presented with 10 multiple choice questions.
+                        </p>
                       </div>
                       
                       <div className="space-y-4">
                         <div className="space-y-2">
-                          <Label htmlFor="cpct-section">Select Section</Label>
+                          <Label htmlFor="cpct-section">Section</Label>
                           <Select value={selectedCpctSection} onValueChange={setSelectedCpctSection}>
                             <SelectTrigger id="cpct-section" data-testid="select-cpct-section">
-                              <SelectValue placeholder="Choose a section..." />
+                              <SelectValue placeholder="Select a section" />
                             </SelectTrigger>
                             <SelectContent>
-                              {availableCpctSections.length > 0 ? (
-                                availableCpctSections.map((section) => (
-                                  <SelectItem key={section} value={section} data-testid={`option-cpct-section-${section}`}>
-                                    {section}
+                              {CPCT_SECTIONS.map((section) => {
+                                const isAvailable = availableCpctSections.includes(section);
+                                return (
+                                  <SelectItem 
+                                    key={section} 
+                                    value={section}
+                                    disabled={!isAvailable}
+                                    className={!isAvailable ? "opacity-40" : ""}
+                                    data-testid={`option-cpct-section-${section}`}
+                                  >
+                                    {section} {!isAvailable && "(Not Available)"}
                                   </SelectItem>
-                                ))
-                              ) : (
-                                <>
-                                  <SelectItem value="MS Office">MS Office</SelectItem>
-                                  <SelectItem value="Software Operating System & IT Fundamentals">Software Operating System & IT Fundamentals</SelectItem>
-                                  <SelectItem value="Internet, Networking & Security">Internet, Networking & Security</SelectItem>
-                                  <SelectItem value="Hardware Peripheral & Devices">Hardware Peripheral & Devices</SelectItem>
-                                  <SelectItem value="Aptitude & Logical Reasoning">Aptitude & Logical Reasoning</SelectItem>
-                                </>
-                              )}
+                                );
+                              })}
                             </SelectContent>
                           </Select>
                         </div>
+
+                        {cpctStudentData && (
+                          <div className="p-3 bg-muted/50 rounded-lg text-sm">
+                            <p className="text-muted-foreground">
+                              <span className="font-medium text-foreground">Name:</span> {cpctStudentData.name} | 
+                              <span className="font-medium text-foreground ml-2">Medium:</span> {cpctStudentData.medium}
+                            </p>
+                          </div>
+                        )}
                         
-                        <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                          <Button 
-                            onClick={handleCpctStartQuiz}
-                            disabled={!selectedCpctSection}
-                            className="flex-1"
-                            data-testid="button-start-cpct-quiz"
-                          >
-                            Start Quiz
-                          </Button>
-                          <Button 
-                            variant="outline"
-                            onClick={handleCpctViewHistory}
-                            data-testid="button-cpct-history"
-                          >
-                            View History
-                          </Button>
-                        </div>
+                        <Button 
+                          className="w-full"
+                          onClick={handleCpctStartQuiz}
+                          disabled={!selectedCpctSection}
+                          data-testid="button-start-cpct-quiz"
+                        >
+                          Start Quiz
+                        </Button>
+
+                        <Button 
+                          variant="outline"
+                          className="w-full"
+                          onClick={handleCpctViewHistory}
+                          data-testid="button-cpct-history"
+                        >
+                          View Quiz History
+                        </Button>
+
+                        <Button 
+                          variant="ghost"
+                          className="w-full" 
+                          onClick={() => {
+                            setCpctStudentData(null);
+                            setAppState("landing");
+                          }}
+                          data-testid="button-cpct-back-landing"
+                        >
+                          Back to Home
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -852,67 +902,87 @@ function App() {
 
               {appState === "navodaya-ready" && navodayaStudentData && (
                 <div className="min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center p-4">
-                  <Card className="w-full max-w-lg">
-                    <CardContent className="p-6">
-                      <div className="flex items-center gap-3 mb-6">
-                        <img src={logoIcon} alt="UNKLASS" className="w-10 h-10" />
-                        <div>
-                          <h2 className="text-xl font-semibold">Welcome, {navodayaStudentData.name}!</h2>
-                          <p className="text-sm text-muted-foreground">
-                            Select a section to start your {navodayaStudentData.examGrade} Navodaya quiz
-                          </p>
+                  <Card className="w-full max-w-md">
+                    <CardContent className="p-8">
+                      <div className="text-center mb-6">
+                        <div className="w-16 h-16 mx-auto rounded-lg overflow-hidden mb-4">
+                          <img 
+                            src={logoIcon} 
+                            alt="UNKLASS" 
+                            className="w-full h-full object-cover"
+                            data-testid="img-navodaya-logo-icon"
+                          />
                         </div>
+                        <h1 className="text-2xl font-semibold mb-2">Select Your Section</h1>
+                        <p className="text-muted-foreground text-sm">
+                          Choose a section to start your Navodaya quiz. You'll be presented with 10 multiple choice questions.
+                        </p>
                       </div>
                       
                       <div className="space-y-4">
                         <div className="space-y-2">
-                          <Label htmlFor="navodaya-section">Select Section</Label>
+                          <Label htmlFor="navodaya-section">Section</Label>
                           <Select value={selectedNavodayaSection} onValueChange={setSelectedNavodayaSection}>
                             <SelectTrigger id="navodaya-section" data-testid="select-navodaya-section">
-                              <SelectValue placeholder="Choose a section..." />
+                              <SelectValue placeholder="Select a section" />
                             </SelectTrigger>
                             <SelectContent>
-                              {availableNavodayaSections.length > 0 ? (
-                                availableNavodayaSections.map((section) => (
-                                  <SelectItem key={section} value={section} data-testid={`option-navodaya-section-${section}`}>
-                                    {section}
+                              {(navodayaStudentData.examGrade === "6th" ? NAVODAYA_SECTIONS_6TH : NAVODAYA_SECTIONS_9TH).map((section) => {
+                                const isAvailable = availableNavodayaSections.includes(section);
+                                return (
+                                  <SelectItem 
+                                    key={section} 
+                                    value={section}
+                                    disabled={!isAvailable}
+                                    className={!isAvailable ? "opacity-40" : ""}
+                                    data-testid={`option-navodaya-section-${section}`}
+                                  >
+                                    {section} {!isAvailable && "(Not Available)"}
                                   </SelectItem>
-                                ))
-                              ) : navodayaStudentData.examGrade === "6th" ? (
-                                <>
-                                  <SelectItem value="Mental Ability Test">Mental Ability Test</SelectItem>
-                                  <SelectItem value="Arithmetic Test">Arithmetic Test</SelectItem>
-                                  <SelectItem value="Language Test">Language Test</SelectItem>
-                                </>
-                              ) : (
-                                <>
-                                  <SelectItem value="Mathematics">Mathematics</SelectItem>
-                                  <SelectItem value="Science">Science</SelectItem>
-                                  <SelectItem value="English">English</SelectItem>
-                                  <SelectItem value="Hindi">Hindi</SelectItem>
-                                </>
-                              )}
+                                );
+                              })}
                             </SelectContent>
                           </Select>
                         </div>
+
+                        {navodayaStudentData && (
+                          <div className="p-3 bg-muted/50 rounded-lg text-sm">
+                            <p className="text-muted-foreground">
+                              <span className="font-medium text-foreground">Grade:</span> {navodayaStudentData.examGrade} | 
+                              <span className="font-medium text-foreground ml-2">Medium:</span> {navodayaStudentData.medium}
+                            </p>
+                          </div>
+                        )}
                         
-                        <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                          <Button 
-                            onClick={handleNavodayaStartQuiz}
-                            disabled={!selectedNavodayaSection}
-                            className="flex-1"
-                            data-testid="button-start-navodaya-quiz"
-                          >
-                            Start Quiz
-                          </Button>
-                          <Button 
-                            variant="outline"
-                            onClick={handleNavodayaViewHistory}
-                            data-testid="button-navodaya-history"
-                          >
-                            View History
-                          </Button>
-                        </div>
+                        <Button 
+                          className="w-full"
+                          onClick={handleNavodayaStartQuiz}
+                          disabled={!selectedNavodayaSection}
+                          data-testid="button-start-navodaya-quiz"
+                        >
+                          Start Quiz
+                        </Button>
+
+                        <Button 
+                          variant="outline"
+                          className="w-full"
+                          onClick={handleNavodayaViewHistory}
+                          data-testid="button-navodaya-history"
+                        >
+                          View Quiz History
+                        </Button>
+
+                        <Button 
+                          variant="ghost"
+                          className="w-full" 
+                          onClick={() => {
+                            setNavodayaStudentData(null);
+                            setAppState("landing");
+                          }}
+                          data-testid="button-navodaya-back-landing"
+                        >
+                          Back to Home
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
