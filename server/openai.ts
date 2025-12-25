@@ -518,26 +518,6 @@ export async function generateNavodayaQuizQuestions(
   numQuestions: number = 10,
   previousQuestions: string[] = []
 ): Promise<Question[]> {
-  // Calculate starting position based on total previous questions asked
-  const startPosition = previousQuestions.length + 1;
-  const endPosition = previousQuestions.length + numQuestions;
-  
-  const sequentialInstruction = `
-SEQUENTIAL QUESTION PICKING WITH CYCLING:
-
-Task: Select exactly ${numQuestions} questions from the provided PDF content based on a Sequential Cycling Logic.
-
-1. Reference Data:
-   1a. Find Total number of Questions from the given PDF: [Count all questions in PDF]
-   1b. Last Question Position (X) from the latest quiz history: ${previousQuestions.length}
-
-2. Selection Logic (The "Cycling" Rule): Follow these steps strictly to determine which question numbers to pick:
-   2a. Identify Start Point: Begin at Question #(X + 1) = #${startPosition}.
-   2b. Sequential Count: Select the next ${numQuestions} questions in numerical order.
-   
-   The Loop Rule: If you reach the final question number in the PDF before hitting a count of ${numQuestions}, "cycle" back to Question #1 and continue until the total count of ${numQuestions} is reached.
-   - Example: PDF if has N=25 questions, and X=22 → pick Q23, Q24, Q25 (3) + Q1-Q7 (7) = 10 total`;
-
   const gradeInfo = examGrade === "6th" 
     ? "Class 6 entry level (students appearing from Class 5)" 
     : "Class 9 entry level (students appearing from Class 8)";
@@ -549,7 +529,15 @@ Task: Select exactly ${numQuestions} questions from the provided PDF content bas
   const systemPrompt = `You are an EXPERT TEACHER and Jawahar Navodaya Vidyalaya (JNV) entrance exam content creator for India.
 ${languageInstruction}
 
-Your PRIMARY task is to EXTRACT ${numQuestions} multiple-choice questions DIRECTLY from the provided PDF content for Navodaya entrance exam preparation - ${gradeInfo}.
+Your PRIMARY task is to CONVERT the provided questions into multiple-choice format for Navodaya entrance exam preparation - ${gradeInfo}.
+
+CRITICAL - ORDER PRESERVATION (MANDATORY):
+- The questions are provided in a SPECIFIC ORDER (Question 1, Question 2, etc.)
+- You MUST return the questions in the EXACT SAME ORDER as provided
+- Question 1 in input MUST be the first question in your output
+- Question 2 in input MUST be the second question in your output
+- And so on... DO NOT reorder, shuffle, or rearrange questions
+- This is CRITICAL for the sequential learning system
 
 You MUST return a JSON object with exactly this structure:
 {
@@ -570,6 +558,7 @@ RULES:
 - "explanation" must explain why the answer is correct in ${medium} AND MUST match the correctAnswer index
 - If extracting from PDF, use the PDF's answer as the correct answer
 - Return exactly ${numQuestions} questions appropriate for ${gradeInfo}
+- PRESERVE THE EXACT INPUT ORDER - do not skip, merge, or reorder questions
 
 MATH FORMATTING (IMPORTANT):
 - For exponents/powers, use caret notation: a^2 for a squared, x^3 for x cubed
@@ -586,19 +575,12 @@ As an expert teacher, you MUST critically verify EACH question before including 
 5. For arithmetic: If the question asks "Sum of two numbers is 40, one is 18, what is the other?" → Calculate: 40-18=22 → Find "22" in options → Set correctAnswer to that index
 6. DOUBLE-CHECK: Read options[correctAnswer] - is it truly the correct answer? If not, FIX the correctAnswer index
 
-EXAMPLE VERIFICATION:
-Question: "दो संख्याओं का योग 40 है। एक संख्या 18 है, दूसरी क्या होगी?"
-Step 1: Calculate → 40 - 18 = 22
-Step 2: options = ["20", "22", "24", "26"]
-Step 3: "22" is at index 1
-Step 4: correctAnswer MUST be 1
-Step 5: Explanation must say "40 - 18 = 22"
+REJECT any question where the correctAnswer index does not match the calculated/verified answer.`;
 
-REJECT any question where the correctAnswer index does not match the calculated/verified answer.
+  const userPrompt = `CONVERT the following ${numQuestions} questions into MCQ format for ${gradeInfo}.
 
-${sequentialInstruction}`;
-
-  const userPrompt = `EXTRACT ${numQuestions} questions from the ENTIRE PDF content below for ${gradeInfo}.
+CRITICAL: Process questions in the EXACT ORDER they appear below (Question 1 first, then Question 2, etc.)
+DO NOT reorder or shuffle - preserve sequential order exactly as numbered.
 
 MCQ CONVERSION RULES:
 
@@ -618,7 +600,7 @@ MCQ CONVERSION RULES:
 
 LANGUAGE: Generate all content in ${medium === "Hindi" ? "Hindi (Devanagari script देवनागरी)" : "English"}
 
-PDF Content for ${examGrade} Navodaya exam:
+Questions to convert (PRESERVE THIS ORDER in your response):
 ${pdfContent.substring(0, 150000)}`;
 
   try {
@@ -629,7 +611,7 @@ ${pdfContent.substring(0, 150000)}`;
         { role: "user", content: userPrompt },
       ],
       response_format: { type: "json_object" },
-      temperature: 0.7,
+      temperature: 0.2,
     });
 
     const content = response.choices[0]?.message?.content;
