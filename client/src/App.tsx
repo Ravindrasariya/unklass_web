@@ -878,7 +878,10 @@ function App() {
                   totalQuestions={cpctQuestions.length}
                   onRetakeQuiz={handleCpctRetakeQuiz}
                   onTryAnotherSubject={handleCpctTryAnotherSection}
-                  onBackToHome={() => setAppState("landing")}
+                  onBackToHome={() => {
+                    setSelectedCpctSection("");
+                    setAppState("cpct-ready");
+                  }}
                   subjectLabel="Try Another Section"
                 />
               )}
@@ -1019,7 +1022,10 @@ function App() {
                   totalQuestions={navodayaQuestions.length}
                   onRetakeQuiz={handleNavodayaRetakeQuiz}
                   onTryAnotherSubject={handleNavodayaViewHistory}
-                  onBackToHome={() => setAppState("landing")}
+                  onBackToHome={() => {
+                    setSelectedNavodayaSection("");
+                    setAppState("navodaya-ready");
+                  }}
                   subjectLabel="View Quiz History"
                 />
               )}
