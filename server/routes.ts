@@ -1559,7 +1559,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
              normalizedSection.includes(fileSection) ||
              // Specific mappings for 6th grade
              (section === "Mental Ability Test" && (fileSection.includes("mental") || fileSection.includes("ability"))) ||
-             (section === "Arithmetic Test" && (fileSection.includes("arithmetic") || fileSection.includes("math"))) ||
+             (section === "Arithmetic Test" && (fileSection.includes("arithmetic") || fileSection.includes("arithmatic") || fileSection.includes("math"))) ||
              (section === "Language Test" && (fileSection.includes("language") || fileSection.includes("lang"))) ||
              // Specific mappings for 9th grade
              (section === "Mathematics" && (fileSection.includes("math") || fileSection.includes("mathematics"))) ||
