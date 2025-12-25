@@ -18,6 +18,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 const VALID_GRADES = ["8th", "10th"];
 const VALID_BOARDS = ["MP", "CBSE"];
 const VALID_SUBJECTS = ["Mathematics", "Science", "SST", "Hindi", "English"];
+// Chapter Practice uses grades 6th-10th
+const CHAPTER_PRACTICE_GRADES = ["6th", "7th", "8th", "9th", "10th"];
 
 interface Pdf {
   id: number;
@@ -105,6 +107,29 @@ interface NavodayaStudentProgress {
   sessions: NavodayaStudentSession[];
 }
 
+interface ChapterPracticeStudentSession {
+  id: number;
+  subject: string;
+  chapterName: string;
+  score: number | null;
+  totalQuestions: number | null;
+  completedAt: string | null;
+}
+
+interface ChapterPracticeStudentProgress {
+  id: number;
+  name: string;
+  schoolName: string | null;
+  grade: string;
+  board: string;
+  medium: string;
+  location: string;
+  mobileNumber: string;
+  totalQuizzes: number;
+  averageScore: number;
+  sessions: ChapterPracticeStudentSession[];
+}
+
 interface VisitorStats {
   totalVisitors: number;
   totalUniqueVisitors: number;
@@ -144,18 +169,21 @@ export default function AdminPage() {
     location: string;
     mobileNumber: string;
   }>({ name: "", grade: "", board: "", location: "", mobileNumber: "" });
-  const [studentTab, setStudentTab] = useState<"board" | "cpct" | "navodaya">("board");
+  const [studentTab, setStudentTab] = useState<"board" | "cpct" | "navodaya" | "chapterPractice">("board");
+  const [chapterPracticeGradeFilter, setChapterPracticeGradeFilter] = useState<string>("all");
+  const [expandedChapterPracticeStudent, setExpandedChapterPracticeStudent] = useState<number | null>(null);
   const [expandedCpctStudent, setExpandedCpctStudent] = useState<number | null>(null);
   const [expandedNavodayaStudent, setExpandedNavodayaStudent] = useState<number | null>(null);
   const [showNoticeForm, setShowNoticeForm] = useState(false);
   const [noticeForm, setNoticeForm] = useState({ title: "", subtitle: "", description: "", priority: 0 });
   const [editingNotice, setEditingNotice] = useState<Notice | null>(null);
 
-  const handleTabChange = (tab: "board" | "cpct" | "navodaya") => {
+  const handleTabChange = (tab: "board" | "cpct" | "navodaya" | "chapterPractice") => {
     setStudentTab(tab);
     setExpandedStudent(null);
     setExpandedCpctStudent(null);
     setExpandedNavodayaStudent(null);
+    setExpandedChapterPracticeStudent(null);
   };
 
   const handleAdminLogin = async (e: React.FormEvent) => {
@@ -218,6 +246,22 @@ export default function AdminPage() {
     queryKey: ["/api/admin/notices"],
     enabled: isAuthenticated,
   });
+
+  const { data: chapterPracticePdfs, isLoading: chapterPracticePdfsLoading } = useQuery<Pdf[]>({
+    queryKey: ["/api/admin/chapter-practice-pdfs"],
+    enabled: isAuthenticated,
+  });
+
+  const { data: chapterPracticeStudents, isLoading: chapterPracticeStudentsLoading } = useQuery<ChapterPracticeStudentProgress[]>({
+    queryKey: ["/api/admin/chapter-practice-students"],
+    enabled: isAuthenticated,
+  });
+
+  const CHAPTER_PRACTICE_GRADES = ["6th", "7th", "8th", "9th", "10th"];
+
+  const filteredChapterPracticeStudents = chapterPracticeStudents?.filter(
+    student => chapterPracticeGradeFilter === "all" || student.grade === chapterPracticeGradeFilter
+  );
 
   const createNoticeMutation = useMutation({
     mutationFn: async (data: { title: string; subtitle?: string; description?: string; priority?: number }) => {
@@ -554,29 +598,45 @@ export default function AdminPage() {
     }
   };
 
-  const validateFilename = (filename: string): { isValid: boolean; error?: string } => {
+  const validateFilename = (filename: string): { isValid: boolean; error?: string; type?: string } => {
     // Check for CPCT section format: CPCT_{section}.pdf (e.g., CPCT_MS_Office.pdf)
     const cpctMatch = filename.match(/^CPCT_(.+)\.pdf$/i);
     if (cpctMatch) {
-      return { isValid: true };
+      return { isValid: true, type: "cpct" };
     }
     
     // Check for Navodaya section format: grade_navodaya_{section}.pdf (e.g., 9th_navodaya_mathematics.pdf)
     const navodayaSectionMatch = filename.match(/^(\d+(?:st|nd|rd|th)?|6th|9th)_navodaya_(.+)\.pdf$/i);
     if (navodayaSectionMatch) {
-      return { isValid: true };
+      return { isValid: true, type: "navodaya" };
     }
     
     // Check for Navodaya simple format: grade_navodaya.pdf (e.g., 6th_navodaya.pdf)
     const navodayaSimpleMatch = filename.match(/^(\d+(?:st|nd|rd|th)?|6th|9th)_navodaya\.pdf$/i);
     if (navodayaSimpleMatch) {
-      return { isValid: true };
+      return { isValid: true, type: "navodaya" };
+    }
+    
+    // Check for Chapter Practice format: grade_board_chapter_plan_subject.pdf (e.g., 8th_MP_Chapter_Plan_Mathematics.pdf)
+    const chapterPracticeMatch = filename.match(/^(\d+(?:st|nd|rd|th))_([A-Za-z]+)_Chapter_Plan_(.+)\.pdf$/i);
+    if (chapterPracticeMatch) {
+      const [, grade, board, subject] = chapterPracticeMatch;
+      if (!CHAPTER_PRACTICE_GRADES.includes(grade)) {
+        return { isValid: false, error: `Invalid grade "${grade}" for Chapter Practice. Use: ${CHAPTER_PRACTICE_GRADES.join(", ")}` };
+      }
+      if (!VALID_BOARDS.includes(board.toUpperCase())) {
+        return { isValid: false, error: `Invalid board "${board}". Use: ${VALID_BOARDS.join(", ")}` };
+      }
+      if (!VALID_SUBJECTS.includes(subject)) {
+        return { isValid: false, error: `Invalid subject "${subject}". Use: ${VALID_SUBJECTS.join(", ")}` };
+      }
+      return { isValid: true, type: "chapter_practice" };
     }
     
     // Check for Board Exam format: grade_board_subject.pdf
     const boardMatch = filename.match(/^(.+)_(.+)_(.+)\.pdf$/i);
     if (!boardMatch) {
-      return { isValid: false, error: "Format must be: grade_board_subject.pdf (Board Exam), CPCT_{section}.pdf (CPCT), or grade_navodaya_{section}.pdf (Navodaya)" };
+      return { isValid: false, error: "Format must be: grade_board_subject.pdf (Board Exam), grade_board_Chapter_Plan_subject.pdf (Chapter Practice), CPCT_{section}.pdf (CPCT), or grade_navodaya_{section}.pdf (Navodaya)" };
     }
     
     const [, grade, board, subject] = boardMatch;
@@ -591,7 +651,7 @@ export default function AdminPage() {
       return { isValid: false, error: `Invalid subject "${subject}". Use: ${VALID_SUBJECTS.join(", ")}` };
     }
     
-    return { isValid: true };
+    return { isValid: true, type: "board" };
   };
 
   const filenameValidation = selectedFile ? validateFilename(selectedFile.name) : { isValid: true };
@@ -883,6 +943,76 @@ export default function AdminPage() {
           </CardContent>
         </Card>
 
+        {/* Chapter Practice PDFs Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-violet-600" />
+              Chapter Practice PDFs
+            </CardTitle>
+            <CardDescription>
+              PDFs for Chapter Practice feature. Format: grade_board_Chapter_Plan_subject.pdf (e.g., 8th_MP_Chapter_Plan_Mathematics.pdf)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {chapterPracticePdfsLoading ? (
+              <p className="text-muted-foreground text-center py-8">Loading...</p>
+            ) : !chapterPracticePdfs || chapterPracticePdfs.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">
+                No Chapter Practice PDFs uploaded yet. Upload PDFs with the format: grade_board_Chapter_Plan_subject.pdf
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {chapterPracticePdfs.map((pdf) => (
+                  <div
+                    key={pdf.id}
+                    className="flex items-center gap-3 p-3 bg-violet-50 dark:bg-violet-950/30 rounded-lg"
+                    data-testid={`chapter-practice-pdf-${pdf.id}`}
+                  >
+                    <FileText className="h-5 w-5 flex-shrink-0 text-violet-600" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{pdf.filename}</p>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        <Badge variant="secondary" className="text-xs bg-violet-100 dark:bg-violet-900 text-violet-700 dark:text-violet-300">
+                          {pdf.grade}
+                        </Badge>
+                        <Badge variant="secondary" className="text-xs bg-violet-100 dark:bg-violet-900 text-violet-700 dark:text-violet-300">
+                          {pdf.board.replace('_Chapter_Plan', '')}
+                        </Badge>
+                        <Badge variant="secondary" className="text-xs bg-violet-100 dark:bg-violet-900 text-violet-700 dark:text-violet-300">
+                          {pdf.subject}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handlePreview(pdf.id)}
+                        disabled={previewLoading}
+                        data-testid={`button-preview-chapter-pdf-${pdf.id}`}
+                        title="Preview PDF content"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => deleteMutation.mutate(pdf.id)}
+                        disabled={deleteMutation.isPending}
+                        data-testid={`button-archive-chapter-pdf-${pdf.id}`}
+                        title="Archive PDF"
+                      >
+                        <Trash2 className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -941,6 +1071,15 @@ export default function AdminPage() {
                 data-testid="tab-navodaya-students"
               >
                 Navodaya ({navodayaStudents?.length || 0})
+              </Button>
+              <Button
+                variant={studentTab === "chapterPractice" ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleTabChange("chapterPractice")}
+                data-testid="tab-chapter-practice-students"
+                className="bg-violet-100 dark:bg-violet-950/50 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-800 hover:bg-violet-200 dark:hover:bg-violet-900"
+              >
+                Chapter Practice ({chapterPracticeStudents?.length || 0})
               </Button>
             </div>
 
@@ -1276,6 +1415,126 @@ export default function AdminPage() {
                                 Delete
                               </Button>
                             </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {studentTab === "chapterPractice" && (
+              <>
+                {/* Grade Filter */}
+                <div className="flex items-center gap-2 mb-4 flex-wrap">
+                  <span className="text-sm text-muted-foreground">Filter by Grade:</span>
+                  <Button
+                    variant={chapterPracticeGradeFilter === "all" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setChapterPracticeGradeFilter("all")}
+                    data-testid="filter-grade-all"
+                    className={chapterPracticeGradeFilter === "all" ? "bg-violet-600 hover:bg-violet-700" : ""}
+                  >
+                    All ({chapterPracticeStudents?.length || 0})
+                  </Button>
+                  {CHAPTER_PRACTICE_GRADES.map(grade => {
+                    const count = chapterPracticeStudents?.filter(s => s.grade === grade).length || 0;
+                    return (
+                      <Button
+                        key={grade}
+                        variant={chapterPracticeGradeFilter === grade ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setChapterPracticeGradeFilter(grade)}
+                        data-testid={`filter-grade-${grade}`}
+                        className={chapterPracticeGradeFilter === grade ? "bg-violet-600 hover:bg-violet-700" : ""}
+                      >
+                        {grade} ({count})
+                      </Button>
+                    );
+                  })}
+                </div>
+
+                {chapterPracticeStudentsLoading ? (
+                  <p className="text-muted-foreground text-center py-8">Loading students...</p>
+                ) : !filteredChapterPracticeStudents || filteredChapterPracticeStudents.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">
+                    {chapterPracticeGradeFilter === "all" 
+                      ? "No Chapter Practice students registered yet."
+                      : `No students in ${chapterPracticeGradeFilter} grade.`}
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {filteredChapterPracticeStudents.map((student) => (
+                      <div
+                        key={student.id}
+                        className="border border-violet-200 dark:border-violet-800 rounded-lg overflow-hidden"
+                        data-testid={`chapter-practice-student-row-${student.id}`}
+                      >
+                        <div 
+                          className="flex items-center gap-3 p-3 bg-violet-50 dark:bg-violet-950/30 cursor-pointer"
+                          onClick={() => setExpandedChapterPracticeStudent(
+                            expandedChapterPracticeStudent === student.id ? null : student.id
+                          )}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-medium">{student.name}</p>
+                              <Badge variant="secondary" className="text-xs bg-violet-100 dark:bg-violet-900 text-violet-700 dark:text-violet-300">
+                                {student.grade}
+                              </Badge>
+                              <Badge variant="secondary" className="text-xs bg-violet-100 dark:bg-violet-900 text-violet-700 dark:text-violet-300">
+                                {student.board}
+                              </Badge>
+                              {student.schoolName && (
+                                <Badge variant="outline" className="text-xs">
+                                  {student.schoolName}
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground">{student.mobileNumber} - {student.location}</p>
+                          </div>
+                          <div className="text-right mr-2">
+                            <p className="font-medium">{student.totalQuizzes} quizzes</p>
+                            <p className="text-sm text-muted-foreground">
+                              {student.averageScore}% avg
+                            </p>
+                          </div>
+                          <ChevronDown 
+                            className={`h-5 w-5 transition-transform ${
+                              expandedChapterPracticeStudent === student.id ? "rotate-180" : ""
+                            }`} 
+                          />
+                        </div>
+                        
+                        {expandedChapterPracticeStudent === student.id && (
+                          <div className="p-3 border-t border-violet-200 dark:border-violet-800 bg-background">
+                            {student.sessions.length > 0 ? (
+                              <div className="space-y-1">
+                                <p className="text-sm font-medium mb-2">Quiz History:</p>
+                                {student.sessions.map((session) => (
+                                  <div 
+                                    key={session.id}
+                                    className="flex items-center justify-between text-sm p-2 bg-violet-50 dark:bg-violet-950/30 rounded"
+                                  >
+                                    <span>{session.subject} - {session.chapterName}</span>
+                                    <div className="flex items-center gap-4">
+                                      <span>
+                                        {session.score}/{session.totalQuestions} 
+                                        ({session.totalQuestions ? Math.round((session.score || 0) / session.totalQuestions * 100) : 0}%)
+                                      </span>
+                                      <span className="text-muted-foreground">
+                                        {session.completedAt 
+                                          ? new Date(session.completedAt).toLocaleDateString("en-IN")
+                                          : "In progress"}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">No quizzes completed yet.</p>
+                            )}
                           </div>
                         )}
                       </div>

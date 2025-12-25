@@ -12,6 +12,7 @@ import logoIcon from "@assets/Unklass_-_1_1765392666171.png";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
+  schoolName: z.string().min(2, "School name must be at least 2 characters"),
   grade: z.string().min(1, "Please select your grade"),
   board: z.string().min(1, "Please select your board"),
   medium: z.string().min(1, "Please select your medium"),
@@ -35,6 +36,7 @@ export default function ChapterPracticeOnboardingForm({ onSubmit, onLogin, onBac
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
+      schoolName: "",
       grade: "",
       board: "",
       medium: "English",
@@ -169,6 +171,20 @@ export default function ChapterPracticeOnboardingForm({ onSubmit, onLogin, onBac
 
               <FormField
                 control={form.control}
+                name="schoolName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>School Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter your school name" {...field} data-testid="input-school-name" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name="grade"
                 render={({ field }) => (
                   <FormItem>
@@ -180,9 +196,11 @@ export default function ChapterPracticeOnboardingForm({ onSubmit, onLogin, onBac
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
+                        <SelectItem value="6th">6th</SelectItem>
+                        <SelectItem value="7th">7th</SelectItem>
                         <SelectItem value="8th">8th</SelectItem>
+                        <SelectItem value="9th">9th</SelectItem>
                         <SelectItem value="10th">10th</SelectItem>
-                        <SelectItem value="12th">12th</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

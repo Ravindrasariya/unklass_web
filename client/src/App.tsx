@@ -637,6 +637,7 @@ function App() {
     try {
       const response = await apiRequest("POST", "/api/chapter-practice/students/register", {
         name: data.name,
+        schoolName: data.schoolName,
         grade: data.grade,
         board: data.board,
         medium: data.medium,

@@ -134,6 +134,7 @@ export interface IStorage {
 
   // Chapter Practice PDFs
   getChapterPracticePdf(grade: string, board: string, subject: string): Promise<Pdf | undefined>;
+  getChapterPracticePdfs(): Promise<Pdf[]>;
   getChapterPracticePdfsForSubject(subject: string): Promise<Pdf[]>;
 }
 
@@ -856,39 +857,53 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(chapterPracticeQuizSessions.createdAt));
   }
 
-  // Chapter Practice PDFs - look for NCERT_{grade}_{board}_{subject}.pdf format
+  // Chapter Practice PDFs - look for {grade}_{board}_Chapter_Plan_{subject}.pdf format
   async getChapterPracticePdf(grade: string, board: string, subject: string): Promise<Pdf | undefined> {
     const gradeVariants = normalizeGrade(grade);
     
-    // Look for NCERT_{grade}_{board}_{subject}.pdf format
-    for (const g of gradeVariants) {
-      const filename = `NCERT_${g}_${board}_${subject}.pdf`;
-      const [pdf] = await db.select().from(pdfs).where(
-        and(eq(pdfs.filename, filename), eq(pdfs.isArchived, false))
-      );
-      if (pdf) return pdf;
-    }
-    
-    // Fallback: try just grade_board_subject pattern (like existing board exam PDFs)
+    // Look for grade_board_Chapter_Plan_subject.pdf format (stored with board as "{board}_Chapter_Plan")
+    const chapterPlanBoard = `${board}_Chapter_Plan`;
     const [pdf] = await db.select().from(pdfs).where(
       and(
         or(
           eq(pdfs.grade, gradeVariants[0]),
           eq(pdfs.grade, gradeVariants[1])
         ),
-        eq(pdfs.board, board),
+        eq(pdfs.board, chapterPlanBoard),
         eq(pdfs.subject, subject),
         eq(pdfs.isArchived, false)
       )
     );
-    return pdf || undefined;
+    if (pdf) return pdf;
+    
+    // Fallback: try old NCERT_{grade}_{board}_{subject}.pdf format for backward compatibility
+    for (const g of gradeVariants) {
+      const filename = `NCERT_${g}_${board}_${subject}.pdf`;
+      const [oldFormatPdf] = await db.select().from(pdfs).where(
+        and(eq(pdfs.filename, filename), eq(pdfs.isArchived, false))
+      );
+      if (oldFormatPdf) return oldFormatPdf;
+    }
+    
+    return undefined;
+  }
+
+  // Get all Chapter Practice PDFs (for admin section)
+  async getChapterPracticePdfs(): Promise<Pdf[]> {
+    return await db.select().from(pdfs).where(
+      and(
+        like(pdfs.board, '%_Chapter_Plan'),
+        eq(pdfs.isArchived, false)
+      )
+    );
   }
 
   async getChapterPracticePdfsForSubject(subject: string): Promise<Pdf[]> {
-    // Get all active PDFs that contain this subject (for chapter extraction)
+    // Get all active Chapter Practice PDFs for a subject
     return await db.select().from(pdfs).where(
       and(
-        like(pdfs.filename, `%${subject}%`),
+        like(pdfs.board, '%_Chapter_Plan'),
+        eq(pdfs.subject, subject),
         eq(pdfs.isArchived, false)
       )
     );

@@ -154,6 +154,9 @@ export async function registerRoutes(
       // Check for Navodaya simple format: {grade}_navodaya.pdf (e.g., 6th_navodaya.pdf)
       const navodayaSimpleMatch = filename.match(/^(\d+(?:st|nd|rd|th)?|6th|9th)_navodaya\.pdf$/i);
       
+      // Check for Chapter Practice format: {grade}_{board}_Chapter_Plan_{subject}.pdf (e.g., 8th_MP_Chapter_Plan_Mathematics.pdf)
+      const chapterPracticeMatch = filename.match(/^(\d+(?:st|nd|rd|th))_([A-Za-z]+)_Chapter_Plan_(.+)\.pdf$/i);
+      
       // Check for Board Exam format: {grade}_{board}_{subject}.pdf
       const boardMatch = filename.match(/^(.+)_(.+)_(.+)\.pdf$/i);
       
@@ -162,10 +165,11 @@ export async function registerRoutes(
       const isNavodayaSection = navodayaSectionMatch !== null;
       const isNavodayaSimple = navodayaSimpleMatch !== null;
       const isNavodaya = isNavodayaSection || isNavodayaSimple;
+      const isChapterPractice = chapterPracticeMatch !== null;
       
-      if (!isCpct && !isNavodaya && !boardMatch) {
+      if (!isCpct && !isNavodaya && !isChapterPractice && !boardMatch) {
         return res.status(400).json({ 
-          error: "Invalid filename format. Expected: grade_board_subject.pdf (Board Exam), CPCT_{section}.pdf (CPCT), or grade_navodaya_{section}.pdf (Navodaya)" 
+          error: "Invalid filename format. Expected: grade_board_subject.pdf (Board Exam), grade_board_Chapter_Plan_subject.pdf (Chapter Practice), CPCT_{section}.pdf (CPCT), or grade_navodaya_{section}.pdf (Navodaya)" 
         });
       }
 
@@ -199,6 +203,12 @@ export async function registerRoutes(
         grade = navodayaSimpleMatch![1];
         board = "Navodaya";
         subject = "Navodaya Entrance";
+      } else if (isChapterPractice) {
+        // Chapter Practice format - e.g., 8th_MP_Chapter_Plan_Mathematics.pdf
+        const [, g, b, s] = chapterPracticeMatch!;
+        grade = g;
+        board = `${b.toUpperCase()}_Chapter_Plan`; // Store as "MP_Chapter_Plan" to distinguish from regular Board PDFs
+        subject = s;
       } else {
         // Board Exam format
         const [, g, b, s] = boardMatch!;
@@ -268,6 +278,25 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching PDFs:", error);
       res.status(500).json({ error: "Failed to fetch PDFs" });
+    }
+  });
+
+  // Get Chapter Practice PDFs (admin)
+  app.get("/api/admin/chapter-practice-pdfs", async (req, res) => {
+    try {
+      const pdfs = await storage.getChapterPracticePdfs();
+      res.json(pdfs.map(pdf => ({
+        id: pdf.id,
+        filename: pdf.filename,
+        grade: pdf.grade,
+        board: pdf.board,
+        subject: pdf.subject,
+        uploadedAt: pdf.uploadedAt,
+        isArchived: pdf.isArchived ?? false,
+      })));
+    } catch (error) {
+      console.error("Error fetching Chapter Practice PDFs:", error);
+      res.status(500).json({ error: "Failed to fetch Chapter Practice PDFs" });
     }
   });
 
@@ -1914,10 +1943,54 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
 
   // ==================== CHAPTER PRACTICE ROUTES ====================
 
+  // Admin: Get all Chapter Practice students with progress
+  app.get("/api/admin/chapter-practice-students", async (req, res) => {
+    try {
+      const allStudents = await storage.getAllChapterPracticeStudents();
+      
+      const studentsWithProgress = await Promise.all(
+        allStudents.map(async (student) => {
+          const sessions = await storage.getChapterPracticeStudentQuizSessions(student.id);
+          const completedSessions = sessions.filter(s => s.completedAt);
+          const totalQuizzes = completedSessions.length;
+          const totalScore = completedSessions.reduce((sum, s) => sum + (s.score || 0), 0);
+          const totalQuestions = completedSessions.reduce((sum, s) => sum + (s.totalQuestions || 10), 0);
+          const averageScore = totalQuizzes > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
+          
+          return {
+            id: student.id,
+            name: student.name,
+            schoolName: student.schoolName,
+            grade: student.grade,
+            board: student.board,
+            medium: student.medium,
+            location: student.location,
+            mobileNumber: student.mobileNumber,
+            totalQuizzes,
+            averageScore,
+            sessions: completedSessions.map(s => ({
+              id: s.id,
+              subject: s.subject,
+              chapterName: s.chapterName,
+              score: s.score,
+              totalQuestions: s.totalQuestions,
+              completedAt: s.completedAt,
+            })),
+          };
+        })
+      );
+      
+      res.json(studentsWithProgress);
+    } catch (error) {
+      console.error("Error fetching Chapter Practice students:", error);
+      res.status(500).json({ error: "Failed to fetch students" });
+    }
+  });
+
   // Chapter Practice Student registration
   app.post("/api/chapter-practice/students/register", async (req, res) => {
     try {
-      const { name, grade, board, medium, location, mobileNumber } = req.body;
+      const { name, schoolName, grade, board, medium, location, mobileNumber } = req.body;
       
       if (!name || !grade || !board || !location || !mobileNumber) {
         return res.status(400).json({ error: "All fields are required" });
@@ -1930,6 +2003,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
       
       const student = await storage.createChapterPracticeStudent({
         name,
+        schoolName: schoolName || null,
         grade,
         board,
         medium: medium || "English",

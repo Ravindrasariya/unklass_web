@@ -128,7 +128,8 @@ export const navodayaQuizSessions = pgTable("navodaya_quiz_sessions", {
 export const chapterPracticeStudents = pgTable("chapter_practice_students", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  grade: varchar("grade", { length: 10 }).notNull(), // 8th, 10th, 12th
+  schoolName: text("school_name"), // School name (optional for backward compatibility)
+  grade: varchar("grade", { length: 10 }).notNull(), // 6th, 7th, 8th, 9th, 10th
   board: varchar("board", { length: 10 }).notNull(), // MP, CBSE
   medium: varchar("medium", { length: 10 }).notNull().default("English"), // Hindi, English
   location: text("location").notNull(),
