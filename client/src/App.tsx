@@ -739,7 +739,7 @@ function App() {
                   totalQuestions={questions.length}
                   onRetakeQuiz={handleRetakeQuiz}
                   onTryAnotherSubject={handleTryAnotherSubject}
-                  onBackToHome={() => setAppState("landing")}
+                  onBackToHome={() => setAppState("ready")}
                 />
               )}
 
