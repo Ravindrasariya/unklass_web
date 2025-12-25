@@ -511,7 +511,7 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick, onNavodayaC
                     <Library className="w-8 h-8 text-violet-600" />
                   </div>
                   <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-1">
-                    Chapter Practice - NCERT
+                    UNKLASS Chapter Practice - NCERT
                   </h3>
                   <p className="text-violet-600 text-xs font-medium mb-2">
                     6th to 10th Grade
