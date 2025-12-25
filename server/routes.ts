@@ -145,18 +145,27 @@ export async function registerRoutes(
 
       const filename = req.file.originalname;
       
-      // Check for CPCT format: CPCT_Year.pdf (e.g., CPCT_2024.pdf)
-      const cpctMatch = filename.match(/^CPCT_(\d{4})\.pdf$/i);
+      // Check for CPCT section format: CPCT_{section}.pdf (e.g., CPCT_MS_Office.pdf)
+      const cpctSectionMatch = filename.match(/^CPCT_(.+)\.pdf$/i);
       
-      // Check for Navodaya format: {grade}_navodaya.pdf (e.g., 6th_navodaya.pdf, 9th_navodaya.pdf, 6_navodaya.pdf)
-      const navodayaMatch = filename.match(/^(\d+(?:st|nd|rd|th)?|6th|9th)_navodaya\.pdf$/i);
+      // Check for Navodaya section format: {grade}_navodaya_{section}.pdf (e.g., 6th_navodaya_mental_ability_test.pdf, 9th_navodaya_mathematics.pdf)
+      const navodayaSectionMatch = filename.match(/^(\d+(?:st|nd|rd|th)?|6th|9th)_navodaya_(.+)\.pdf$/i);
+      
+      // Check for Navodaya simple format: {grade}_navodaya.pdf (e.g., 6th_navodaya.pdf)
+      const navodayaSimpleMatch = filename.match(/^(\d+(?:st|nd|rd|th)?|6th|9th)_navodaya\.pdf$/i);
       
       // Check for Board Exam format: {grade}_{board}_{subject}.pdf
       const boardMatch = filename.match(/^(.+)_(.+)_(.+)\.pdf$/i);
       
-      if (!cpctMatch && !navodayaMatch && !boardMatch) {
+      // Determine which format this file matches (order matters - check specific formats first)
+      const isCpct = cpctSectionMatch !== null;
+      const isNavodayaSection = navodayaSectionMatch !== null;
+      const isNavodayaSimple = navodayaSimpleMatch !== null;
+      const isNavodaya = isNavodayaSection || isNavodayaSimple;
+      
+      if (!isCpct && !isNavodaya && !boardMatch) {
         return res.status(400).json({ 
-          error: "Invalid filename format. Expected: grade_board_subject.pdf (Board Exam), CPCT_Year.pdf (CPCT), or grade_navodaya.pdf (Navodaya)" 
+          error: "Invalid filename format. Expected: grade_board_subject.pdf (Board Exam), CPCT_{section}.pdf (CPCT), or grade_navodaya_{section}.pdf (Navodaya)" 
         });
       }
 
@@ -175,14 +184,19 @@ export async function registerRoutes(
 
       let grade: string, board: string, subject: string;
       
-      if (cpctMatch) {
+      if (isCpct) {
         // CPCT format - use special values
         grade = "CPCT";
         board = "CPCT";
-        subject = `CPCT ${cpctMatch[1]}`;
-      } else if (navodayaMatch) {
-        // Navodaya format - use special values
-        grade = navodayaMatch[1];
+        subject = cpctSectionMatch![1]; // Section name from filename
+      } else if (isNavodayaSection) {
+        // Navodaya section format - e.g., 9th_navodaya_mathematics.pdf
+        grade = navodayaSectionMatch![1];
+        board = "Navodaya";
+        subject = navodayaSectionMatch![2]; // Section name from filename
+      } else if (isNavodayaSimple) {
+        // Navodaya simple format - e.g., 6th_navodaya.pdf
+        grade = navodayaSimpleMatch![1];
         board = "Navodaya";
         subject = "Navodaya Entrance";
       } else {
