@@ -369,6 +369,30 @@ export default function AdminPage() {
     },
   });
 
+  const reparseMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/admin/reparse-all-pdfs");
+      return response.json();
+    },
+    onSuccess: (data: { message: string; results: { filename: string; oldCount: number; newCount: number; status: string }[] }) => {
+      const successResults = data.results.filter(r => r.status === "success");
+      const changedResults = successResults.filter(r => r.oldCount !== r.newCount);
+      
+      toast({
+        title: "PDFs Re-parsed",
+        description: `${successResults.length} PDFs processed. ${changedResults.length} had question count changes.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pdfs"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Re-parse Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const updateStudentMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: typeof editFormData }) => {
       const response = await apiRequest("PATCH", `/api/admin/students/${id}`, data);
@@ -724,12 +748,24 @@ export default function AdminPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Uploaded PDFs
-            </CardTitle>
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Uploaded PDFs
+              </CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => reparseMutation.mutate()}
+                disabled={reparseMutation.isPending || !pdfs || pdfs.length === 0}
+                data-testid="button-reparse-all-pdfs"
+              >
+                <RotateCcw className={`h-4 w-4 mr-2 ${reparseMutation.isPending ? 'animate-spin' : ''}`} />
+                {reparseMutation.isPending ? "Re-parsing..." : "Re-parse All PDFs"}
+              </Button>
+            </div>
             <CardDescription>
-              These PDFs are used to generate quiz questions for students. Archived PDFs preserve quiz history.
+              These PDFs are used to generate quiz questions for students. Use "Re-parse All PDFs" after deployment to apply parser updates to existing PDFs.
             </CardDescription>
           </CardHeader>
           <CardContent>
