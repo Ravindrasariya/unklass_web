@@ -1,4 +1,4 @@
-import type { ParsedQuestion } from "@shared/schema";
+import type { ParsedQuestion, ChapterMetadata } from "@shared/schema";
 
 function isTableLine(line: string): boolean {
   // Detect table-like lines: pipes, multiple consecutive spaces (3+), tab-separated content
@@ -340,4 +340,178 @@ export function getSequentialQuestions(
     questions: selectedQuestions,
     newLastIndex,
   };
+}
+
+export function parseChaptersFromPdfContent(content: string): ChapterMetadata[] {
+  const normalizedContent = normalizeContent(content);
+  const lines = normalizedContent.split('\n');
+  
+  const chapterPatterns = [
+    /^(?:Chapter|अध्याय|Ch\.?)\s*(\d+)\s*[:\.\-–—]\s*(.+)/i,
+    /^(?:Chapter|अध्याय)\s*(\d+)\s+(.+)/i,
+    /^(\d+)\s*[:\.\-–—]\s*(.+)$/,
+    /^Unit\s*(\d+)\s*[:\.\-–—]\s*(.+)/i,
+    /^पाठ\s*(\d+)\s*[:\.\-–—]?\s*(.+)/i,
+  ];
+  
+  const chapters: { chapterNumber: number; chapterName: string; lineIndex: number }[] = [];
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line || line.length < 3 || line.length > 150) continue;
+    
+    for (const pattern of chapterPatterns) {
+      const match = line.match(pattern);
+      if (match && match[1] && match[2]) {
+        const chapterNumber = parseInt(match[1], 10);
+        const chapterName = match[2].trim();
+        
+        if (chapterNumber > 0 && chapterNumber <= 50 && chapterName.length >= 2) {
+          const exists = chapters.some(c => c.chapterNumber === chapterNumber);
+          if (!exists) {
+            chapters.push({ chapterNumber, chapterName, lineIndex: i });
+          }
+          break;
+        }
+      }
+    }
+  }
+  
+  chapters.sort((a, b) => a.chapterNumber - b.chapterNumber);
+  
+  return chapters.map(c => ({
+    chapterNumber: c.chapterNumber,
+    chapterName: c.chapterName,
+    questionCount: 0,
+    startIndex: 0,
+    endIndex: 0,
+  }));
+}
+
+export function parseQuestionsWithChapters(content: string): {
+  questions: ParsedQuestion[];
+  chapters: ChapterMetadata[];
+} {
+  const normalizedContent = normalizeContent(content);
+  
+  const chapterPatterns = [
+    /(?:Chapter|अध्याय|Ch\.?)\s*(\d+)\s*[:\.\-–—]\s*(.+)/gi,
+    /(?:Chapter|अध्याय)\s*(\d+)\s+(.+)/gi,
+    /^Unit\s*(\d+)\s*[:\.\-–—]\s*(.+)/gim,
+    /^पाठ\s*(\d+)\s*[:\.\-–—]?\s*(.+)/gim,
+  ];
+  
+  const chapterPositions: { chapterNumber: number; chapterName: string; position: number }[] = [];
+  
+  for (const pattern of chapterPatterns) {
+    pattern.lastIndex = 0;
+    let match;
+    while ((match = pattern.exec(normalizedContent)) !== null) {
+      const chapterNumber = parseInt(match[1], 10);
+      const chapterName = match[2]?.trim() || `Chapter ${chapterNumber}`;
+      
+      if (chapterNumber > 0 && chapterNumber <= 50) {
+        const exists = chapterPositions.some(c => c.chapterNumber === chapterNumber);
+        if (!exists) {
+          chapterPositions.push({
+            chapterNumber,
+            chapterName,
+            position: match.index,
+          });
+        }
+      }
+    }
+  }
+  
+  chapterPositions.sort((a, b) => a.position - b.position);
+  
+  const parsedQuestions = parseQuestionsFromPdfContent(content);
+  
+  if (chapterPositions.length === 0) {
+    return {
+      questions: parsedQuestions,
+      chapters: [{
+        chapterNumber: 1,
+        chapterName: "All Questions",
+        questionCount: parsedQuestions.length,
+        startIndex: 0,
+        endIndex: parsedQuestions.length - 1,
+      }],
+    };
+  }
+  
+  const questionsWithPositions: { question: ParsedQuestion; position: number }[] = [];
+  
+  for (const q of parsedQuestions) {
+    const pos = normalizedContent.indexOf(q.rawText.substring(0, 50));
+    questionsWithPositions.push({
+      question: q,
+      position: pos >= 0 ? pos : 0,
+    });
+  }
+  
+  const chapters: ChapterMetadata[] = [];
+  
+  for (let i = 0; i < chapterPositions.length; i++) {
+    const current = chapterPositions[i];
+    const nextPosition = i + 1 < chapterPositions.length 
+      ? chapterPositions[i + 1].position 
+      : normalizedContent.length;
+    
+    const chapterQuestions = questionsWithPositions.filter(
+      qp => qp.position >= current.position && qp.position < nextPosition
+    );
+    
+    if (chapterQuestions.length > 0) {
+      const indices = chapterQuestions.map(qp => parsedQuestions.indexOf(qp.question));
+      const startIndex = Math.min(...indices);
+      const endIndex = Math.max(...indices);
+      
+      chapters.push({
+        chapterNumber: current.chapterNumber,
+        chapterName: current.chapterName,
+        questionCount: chapterQuestions.length,
+        startIndex,
+        endIndex,
+      });
+    } else {
+      chapters.push({
+        chapterNumber: current.chapterNumber,
+        chapterName: current.chapterName,
+        questionCount: 0,
+        startIndex: 0,
+        endIndex: 0,
+      });
+    }
+  }
+  
+  return { questions: parsedQuestions, chapters };
+}
+
+export function getQuestionsForChapter(
+  parsedQuestions: ParsedQuestion[],
+  chapters: ChapterMetadata[],
+  chapterNumber: number
+): ParsedQuestion[] {
+  const chapter = chapters.find(c => c.chapterNumber === chapterNumber);
+  
+  if (!chapter || chapter.questionCount === 0) {
+    return [];
+  }
+  
+  return parsedQuestions.slice(chapter.startIndex, chapter.endIndex + 1);
+}
+
+export function getQuestionsForChapterByName(
+  parsedQuestions: ParsedQuestion[],
+  chapters: ChapterMetadata[],
+  chapterName: string
+): ParsedQuestion[] {
+  const chapter = chapters.find(c => c.name === chapterName || c.chapterName === chapterName);
+  
+  if (!chapter || chapter.questionCount === 0) {
+    return [];
+  }
+  
+  return parsedQuestions.slice(chapter.startIndex, chapter.endIndex + 1);
 }

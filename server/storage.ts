@@ -1,6 +1,6 @@
 import { 
   students, pdfs, quizSessions, cpctStudents, cpctQuizSessions,
-  navodayaStudents, navodayaQuizSessions,
+  navodayaStudents, navodayaQuizSessions, chapterPracticeStudents, chapterPracticeQuizSessions,
   contactSubmissions, visitorStats, uniqueVisitors, questionPointers, notices,
   type Student, type InsertStudent,
   type Pdf, type InsertPdf,
@@ -9,9 +9,11 @@ import {
   type CpctQuizSession, type InsertCpctQuizSession,
   type NavodayaStudent, type InsertNavodayaStudent,
   type NavodayaQuizSession, type InsertNavodayaQuizSession,
+  type ChapterPracticeStudent, type InsertChapterPracticeStudent,
+  type ChapterPracticeQuizSession, type InsertChapterPracticeQuizSession,
   type ContactSubmission, type InsertContactSubmission,
   type VisitorStats,
-  type QuestionPointer, type ParsedQuestion,
+  type QuestionPointer, type ParsedQuestion, type ChapterMetadata,
   type Notice, type InsertNotice
 } from "@shared/schema";
 import { db } from "./db";
@@ -115,6 +117,24 @@ export interface IStorage {
   deleteNotice(id: number): Promise<boolean>;
   getActiveNotices(): Promise<Notice[]>;
   getAllNotices(): Promise<Notice[]>;
+
+  // Chapter Practice Students
+  getChapterPracticeStudent(id: number): Promise<ChapterPracticeStudent | undefined>;
+  getChapterPracticeStudentByMobile(mobileNumber: string): Promise<ChapterPracticeStudent | undefined>;
+  createChapterPracticeStudent(student: InsertChapterPracticeStudent): Promise<ChapterPracticeStudent>;
+  updateChapterPracticeStudent(id: number, updates: Partial<InsertChapterPracticeStudent>): Promise<ChapterPracticeStudent | undefined>;
+  deleteChapterPracticeStudent(id: number): Promise<boolean>;
+  getAllChapterPracticeStudents(): Promise<ChapterPracticeStudent[]>;
+
+  // Chapter Practice Quiz Sessions
+  createChapterPracticeQuizSession(session: InsertChapterPracticeQuizSession): Promise<ChapterPracticeQuizSession>;
+  updateChapterPracticeQuizSession(id: number, updates: Partial<ChapterPracticeQuizSession>): Promise<ChapterPracticeQuizSession | undefined>;
+  getChapterPracticeQuizSession(id: number): Promise<ChapterPracticeQuizSession | undefined>;
+  getChapterPracticeStudentQuizSessions(studentId: number): Promise<ChapterPracticeQuizSession[]>;
+
+  // Chapter Practice PDFs
+  getChapterPracticePdf(grade: string, board: string, subject: string): Promise<Pdf | undefined>;
+  getChapterPracticePdfsForSubject(subject: string): Promise<Pdf[]>;
 }
 
 export interface LeaderboardEntry {
@@ -773,6 +793,105 @@ export class DatabaseStorage implements IStorage {
 
   async getAllNotices(): Promise<Notice[]> {
     return await db.select().from(notices).orderBy(desc(notices.priority), desc(notices.createdAt));
+  }
+
+  // Chapter Practice Students
+  async getChapterPracticeStudent(id: number): Promise<ChapterPracticeStudent | undefined> {
+    const [student] = await db.select().from(chapterPracticeStudents).where(eq(chapterPracticeStudents.id, id));
+    return student || undefined;
+  }
+
+  async getChapterPracticeStudentByMobile(mobileNumber: string): Promise<ChapterPracticeStudent | undefined> {
+    const [student] = await db.select().from(chapterPracticeStudents).where(eq(chapterPracticeStudents.mobileNumber, mobileNumber));
+    return student || undefined;
+  }
+
+  async createChapterPracticeStudent(insertStudent: InsertChapterPracticeStudent): Promise<ChapterPracticeStudent> {
+    const [student] = await db.insert(chapterPracticeStudents).values(insertStudent).returning();
+    return student;
+  }
+
+  async updateChapterPracticeStudent(id: number, updates: Partial<InsertChapterPracticeStudent>): Promise<ChapterPracticeStudent | undefined> {
+    const [student] = await db
+      .update(chapterPracticeStudents)
+      .set(updates)
+      .where(eq(chapterPracticeStudents.id, id))
+      .returning();
+    return student || undefined;
+  }
+
+  async deleteChapterPracticeStudent(id: number): Promise<boolean> {
+    await db.delete(chapterPracticeQuizSessions).where(eq(chapterPracticeQuizSessions.studentId, id));
+    const result = await db.delete(chapterPracticeStudents).where(eq(chapterPracticeStudents.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getAllChapterPracticeStudents(): Promise<ChapterPracticeStudent[]> {
+    return await db.select().from(chapterPracticeStudents);
+  }
+
+  // Chapter Practice Quiz Sessions
+  async createChapterPracticeQuizSession(insertSession: InsertChapterPracticeQuizSession): Promise<ChapterPracticeQuizSession> {
+    const [session] = await db.insert(chapterPracticeQuizSessions).values(insertSession).returning();
+    return session;
+  }
+
+  async updateChapterPracticeQuizSession(id: number, updates: Partial<ChapterPracticeQuizSession>): Promise<ChapterPracticeQuizSession | undefined> {
+    const [session] = await db
+      .update(chapterPracticeQuizSessions)
+      .set(updates)
+      .where(eq(chapterPracticeQuizSessions.id, id))
+      .returning();
+    return session || undefined;
+  }
+
+  async getChapterPracticeQuizSession(id: number): Promise<ChapterPracticeQuizSession | undefined> {
+    const [session] = await db.select().from(chapterPracticeQuizSessions).where(eq(chapterPracticeQuizSessions.id, id));
+    return session || undefined;
+  }
+
+  async getChapterPracticeStudentQuizSessions(studentId: number): Promise<ChapterPracticeQuizSession[]> {
+    return await db.select().from(chapterPracticeQuizSessions)
+      .where(eq(chapterPracticeQuizSessions.studentId, studentId))
+      .orderBy(desc(chapterPracticeQuizSessions.createdAt));
+  }
+
+  // Chapter Practice PDFs - look for NCERT_{grade}_{board}_{subject}.pdf format
+  async getChapterPracticePdf(grade: string, board: string, subject: string): Promise<Pdf | undefined> {
+    const gradeVariants = normalizeGrade(grade);
+    
+    // Look for NCERT_{grade}_{board}_{subject}.pdf format
+    for (const g of gradeVariants) {
+      const filename = `NCERT_${g}_${board}_${subject}.pdf`;
+      const [pdf] = await db.select().from(pdfs).where(
+        and(eq(pdfs.filename, filename), eq(pdfs.isArchived, false))
+      );
+      if (pdf) return pdf;
+    }
+    
+    // Fallback: try just grade_board_subject pattern (like existing board exam PDFs)
+    const [pdf] = await db.select().from(pdfs).where(
+      and(
+        or(
+          eq(pdfs.grade, gradeVariants[0]),
+          eq(pdfs.grade, gradeVariants[1])
+        ),
+        eq(pdfs.board, board),
+        eq(pdfs.subject, subject),
+        eq(pdfs.isArchived, false)
+      )
+    );
+    return pdf || undefined;
+  }
+
+  async getChapterPracticePdfsForSubject(subject: string): Promise<Pdf[]> {
+    // Get all active PDFs that contain this subject (for chapter extraction)
+    return await db.select().from(pdfs).where(
+      and(
+        like(pdfs.filename, `%${subject}%`),
+        eq(pdfs.isArchived, false)
+      )
+    );
   }
 }
 

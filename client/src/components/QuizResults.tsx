@@ -39,6 +39,9 @@ interface QuizResultsProps {
   onTryAnotherSubject: () => void;
   onBackToHome?: () => void;
   subjectLabel?: string;
+  hideRetakeButton?: boolean;
+  questions?: any[];
+  answers?: any[];
 }
 
 export default function QuizResults({ 
@@ -48,6 +51,7 @@ export default function QuizResults({
   onTryAnotherSubject,
   onBackToHome,
   subjectLabel = "Choose Different Subject",
+  hideRetakeButton = false,
 }: QuizResultsProps) {
   const percentage = Math.round((score / totalQuestions) * 100);
 
@@ -132,14 +136,16 @@ export default function QuizResults({
           </div>
 
           <div className="space-y-3">
-            <Button 
-              className="w-full" 
-              onClick={onRetakeQuiz}
-              data-testid="button-retake-quiz"
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Try Another Test
-            </Button>
+            {!hideRetakeButton && (
+              <Button 
+                className="w-full" 
+                onClick={onRetakeQuiz}
+                data-testid="button-retake-quiz"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Try Another Test
+              </Button>
+            )}
             <Button 
               variant="outline"
               className="w-full" 

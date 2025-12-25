@@ -124,6 +124,47 @@ export const navodayaQuizSessions = pgTable("navodaya_quiz_sessions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Chapter Practice Students table - for NCERT chapter-wise practice
+export const chapterPracticeStudents = pgTable("chapter_practice_students", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  grade: varchar("grade", { length: 10 }).notNull(), // 8th, 10th, 12th
+  board: varchar("board", { length: 10 }).notNull(), // MP, CBSE
+  medium: varchar("medium", { length: 10 }).notNull().default("English"), // Hindi, English
+  location: text("location").notNull(),
+  mobileNumber: varchar("mobile_number", { length: 15 }).notNull(),
+});
+
+// Chapter Practice subjects
+export const CHAPTER_PRACTICE_SUBJECTS = [
+  "Mathematics",
+  "Science", 
+  "SST",
+  "Hindi",
+  "English",
+] as const;
+
+export type ChapterPracticeSubject = typeof CHAPTER_PRACTICE_SUBJECTS[number];
+
+// Chapter Practice Quiz sessions table - stores chapter-wise quiz attempts
+export const chapterPracticeQuizSessions = pgTable("chapter_practice_quiz_sessions", {
+  id: serial("id").primaryKey(),
+  studentId: integer("student_id").notNull().references(() => chapterPracticeStudents.id),
+  pdfId: integer("pdf_id").references(() => pdfs.id),
+  subject: text("subject").notNull(),
+  chapterNumber: integer("chapter_number").notNull(),
+  chapterName: text("chapter_name").notNull(),
+  grade: varchar("grade", { length: 10 }).notNull(),
+  board: varchar("board", { length: 10 }).notNull(),
+  medium: varchar("medium", { length: 10 }).notNull(),
+  score: integer("score"),
+  totalQuestions: integer("total_questions"),
+  questions: jsonb("questions"),
+  answers: jsonb("answers"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Relations
 export const studentsRelations = relations(students, ({ many }) => ({
   quizSessions: many(quizSessions),
@@ -176,6 +217,21 @@ export const navodayaQuizSessionsRelations = relations(navodayaQuizSessions, ({ 
   }),
 }));
 
+export const chapterPracticeStudentsRelations = relations(chapterPracticeStudents, ({ many }) => ({
+  quizSessions: many(chapterPracticeQuizSessions),
+}));
+
+export const chapterPracticeQuizSessionsRelations = relations(chapterPracticeQuizSessions, ({ one }) => ({
+  student: one(chapterPracticeStudents, {
+    fields: [chapterPracticeQuizSessions.studentId],
+    references: [chapterPracticeStudents.id],
+  }),
+  pdf: one(pdfs, {
+    fields: [chapterPracticeQuizSessions.pdfId],
+    references: [pdfs.id],
+  }),
+}));
+
 // Insert schemas
 export const insertStudentSchema = createInsertSchema(students).omit({
   id: true,
@@ -209,6 +265,15 @@ export const insertNavodayaQuizSessionSchema = createInsertSchema(navodayaQuizSe
   createdAt: true,
 });
 
+export const insertChapterPracticeStudentSchema = createInsertSchema(chapterPracticeStudents).omit({
+  id: true,
+});
+
+export const insertChapterPracticeQuizSessionSchema = createInsertSchema(chapterPracticeQuizSessions).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type InsertStudent = z.infer<typeof insertStudentSchema>;
 export type Student = typeof students.$inferSelect;
@@ -230,6 +295,23 @@ export type CpctQuizSession = typeof cpctQuizSessions.$inferSelect;
 
 export type InsertNavodayaQuizSession = z.infer<typeof insertNavodayaQuizSessionSchema>;
 export type NavodayaQuizSession = typeof navodayaQuizSessions.$inferSelect;
+
+export type InsertChapterPracticeStudent = z.infer<typeof insertChapterPracticeStudentSchema>;
+export type ChapterPracticeStudent = typeof chapterPracticeStudents.$inferSelect;
+
+export type InsertChapterPracticeQuizSession = z.infer<typeof insertChapterPracticeQuizSessionSchema>;
+export type ChapterPracticeQuizSession = typeof chapterPracticeQuizSessions.$inferSelect;
+
+// Chapter metadata type for PDF
+export const chapterMetadataSchema = z.object({
+  chapterNumber: z.number(),
+  chapterName: z.string(),
+  questionCount: z.number(),
+  startIndex: z.number(),
+  endIndex: z.number(),
+});
+
+export type ChapterMetadata = z.infer<typeof chapterMetadataSchema>;
 
 // Contact submissions table - stores contact form submissions
 export const contactSubmissions = pgTable("contact_submissions", {

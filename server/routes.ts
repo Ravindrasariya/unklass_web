@@ -1912,6 +1912,289 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     }
   });
 
+  // ==================== CHAPTER PRACTICE ROUTES ====================
+
+  // Chapter Practice Student registration
+  app.post("/api/chapter-practice/students/register", async (req, res) => {
+    try {
+      const { name, grade, board, medium, location, mobileNumber } = req.body;
+      
+      if (!name || !grade || !board || !location || !mobileNumber) {
+        return res.status(400).json({ error: "All fields are required" });
+      }
+      
+      const existingStudent = await storage.getChapterPracticeStudentByMobile(mobileNumber);
+      if (existingStudent) {
+        return res.json(existingStudent);
+      }
+      
+      const student = await storage.createChapterPracticeStudent({
+        name,
+        grade,
+        board,
+        medium: medium || "English",
+        location,
+        mobileNumber,
+      });
+      res.json(student);
+    } catch (error) {
+      console.error("Error registering chapter practice student:", error);
+      res.status(400).json({ error: "Failed to register student" });
+    }
+  });
+
+  // Chapter Practice Student login
+  app.post("/api/chapter-practice/students/login", async (req, res) => {
+    try {
+      const { name, mobileNumber } = req.body;
+      
+      if (!name || !mobileNumber) {
+        return res.status(400).json({ error: "Name and mobile number are required" });
+      }
+      
+      const student = await storage.getChapterPracticeStudentByMobile(mobileNumber);
+      if (!student) {
+        return res.status(404).json({ error: "Student not found. Please register first." });
+      }
+      
+      if (student.name.trim().toLowerCase() !== name.trim().toLowerCase()) {
+        return res.status(404).json({ error: "Student not found. Please check your name and mobile number." });
+      }
+      
+      res.json(student);
+    } catch (error) {
+      console.error("Error logging in chapter practice student:", error);
+      res.status(500).json({ error: "Failed to login" });
+    }
+  });
+
+  // Get available subjects for chapter practice
+  app.get("/api/chapter-practice/available-subjects", async (req, res) => {
+    try {
+      const { grade, board } = req.query;
+      
+      if (!grade || !board) {
+        return res.status(400).json({ error: "Grade and board are required" });
+      }
+      
+      const allPdfs = await storage.getAllPdfs();
+      const normalizedGrade = (grade as string).toLowerCase();
+      const normalizedBoard = (board as string).toLowerCase();
+      
+      const subjects = new Set<string>();
+      
+      for (const pdf of allPdfs) {
+        const lowerName = pdf.filename.toLowerCase();
+        if (lowerName.startsWith('ncert_') && 
+            lowerName.includes(normalizedGrade) && 
+            lowerName.includes(normalizedBoard)) {
+          const parts = pdf.filename.replace('.pdf', '').split('_');
+          if (parts.length >= 4) {
+            const subject = parts.slice(3).join(' ');
+            subjects.add(subject.charAt(0).toUpperCase() + subject.slice(1).toLowerCase());
+          }
+        }
+      }
+      
+      res.json({ subjects: Array.from(subjects) });
+    } catch (error) {
+      console.error("Error fetching available subjects for chapter practice:", error);
+      res.status(500).json({ error: "Failed to fetch subjects" });
+    }
+  });
+
+  // Get available chapters for a subject
+  app.get("/api/chapter-practice/available-chapters", async (req, res) => {
+    try {
+      const { grade, board, subject } = req.query;
+      
+      if (!grade || !board || !subject) {
+        return res.status(400).json({ error: "Grade, board, and subject are required" });
+      }
+      
+      const pdf = await storage.getChapterPracticePdf(grade as string, board as string, subject as string);
+      
+      if (!pdf) {
+        return res.json({ chapters: [], pdfId: null });
+      }
+      
+      const { parseQuestionsWithChapters } = await import("./questionParser");
+      const { chapters } = parseQuestionsWithChapters(pdf.content);
+      
+      const chapterNames = chapters
+        .filter(c => c.questionCount > 0)
+        .map(c => c.chapterName);
+      
+      res.json({ 
+        chapters: chapterNames,
+        pdfId: pdf.id
+      });
+    } catch (error) {
+      console.error("Error fetching available chapters:", error);
+      res.status(500).json({ error: "Failed to fetch chapters" });
+    }
+  });
+
+  // Get chapters for a subject based on student's grade and board
+  app.get("/api/chapter-practice/chapters/:subject", async (req, res) => {
+    try {
+      const { subject } = req.params;
+      const { grade, board } = req.query;
+      
+      if (!grade || !board) {
+        return res.status(400).json({ error: "Grade and board are required" });
+      }
+      
+      const pdf = await storage.getChapterPracticePdf(grade as string, board as string, subject);
+      
+      if (!pdf) {
+        return res.json({ chapters: [], message: "No PDF found for this subject" });
+      }
+      
+      const { parseQuestionsWithChapters } = await import("./questionParser");
+      const { chapters } = parseQuestionsWithChapters(pdf.content);
+      
+      res.json({ 
+        pdfId: pdf.id,
+        chapters: chapters.filter(c => c.questionCount > 0),
+        totalQuestions: pdf.totalQuestions || 0
+      });
+    } catch (error) {
+      console.error("Error fetching chapters:", error);
+      res.status(500).json({ error: "Failed to fetch chapters" });
+    }
+  });
+
+  // Generate chapter practice quiz (all questions from the chapter)
+  app.post("/api/chapter-practice/quiz/generate", async (req, res) => {
+    try {
+      const { studentId, grade, board, subject, chapter, medium } = req.body;
+      
+      if (!studentId || !subject || !chapter) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      
+      const student = await storage.getChapterPracticeStudent(studentId);
+      if (!student) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+      
+      const pdf = await storage.getChapterPracticePdf(
+        grade || student.grade, 
+        board || student.board, 
+        subject
+      );
+      if (!pdf) {
+        return res.status(404).json({ error: "PDF not found for this subject" });
+      }
+      
+      const { parseQuestionsWithChapters, getQuestionsForChapterByName } = await import("./questionParser");
+      const { questions: parsedQuestions, chapters } = parseQuestionsWithChapters(pdf.content);
+      
+      const chapterQuestions = getQuestionsForChapterByName(parsedQuestions, chapters, chapter);
+      
+      if (chapterQuestions.length === 0) {
+        return res.status(400).json({ error: "No questions found for this chapter" });
+      }
+      
+      const chapterInfo = chapters.find(c => c.name === chapter);
+      const chapterNumber = chapterInfo?.chapterNumber || 1;
+      
+      console.log(`Generating chapter practice quiz for student ${studentId}, chapter "${chapter}": ${chapterQuestions.length} questions`);
+      
+      const questionsToSend = chapterQuestions.map(q => q.rawText).join('\n\n---\n\n');
+      
+      const generatedQuestions = await generateQuizQuestions(
+        questionsToSend,
+        medium || student.medium || "English",
+        grade || student.grade,
+        subject,
+        chapterQuestions.length
+      );
+      
+      const session = await storage.createChapterPracticeQuizSession({
+        studentId,
+        pdfId: pdf.id,
+        subject,
+        chapterNumber,
+        chapterName: chapter,
+        grade: grade || student.grade,
+        board: board || student.board,
+        medium: medium || student.medium || "English",
+        totalQuestions: generatedQuestions.length,
+        questions: generatedQuestions,
+      });
+      
+      res.json({
+        sessionId: session.id,
+        questions: generatedQuestions,
+        totalQuestions: generatedQuestions.length,
+        chapterName: chapter,
+      });
+    } catch (error) {
+      console.error("Error generating chapter practice quiz:", error);
+      res.status(500).json({ error: "Failed to generate quiz" });
+    }
+  });
+
+  // Submit chapter practice quiz
+  app.post("/api/chapter-practice/quiz/submit", async (req, res) => {
+    try {
+      const { sessionId, answers, score } = req.body;
+      
+      if (!sessionId || !answers || score === undefined) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      
+      const session = await storage.getChapterPracticeQuizSession(sessionId);
+      if (!session) {
+        return res.status(404).json({ error: "Quiz session not found" });
+      }
+      
+      const updatedSession = await storage.updateChapterPracticeQuizSession(sessionId, {
+        answers,
+        score,
+        completedAt: new Date(),
+      });
+      
+      res.json({
+        success: true,
+        score,
+        totalQuestions: session.totalQuestions,
+      });
+    } catch (error) {
+      console.error("Error submitting chapter practice quiz:", error);
+      res.status(500).json({ error: "Failed to submit quiz" });
+    }
+  });
+
+  // Get chapter practice quiz history
+  app.get("/api/chapter-practice/students/:studentId/quiz-history", async (req, res) => {
+    try {
+      const studentId = parseInt(req.params.studentId, 10);
+      if (isNaN(studentId)) {
+        return res.status(400).json({ error: "Invalid student ID" });
+      }
+      
+      const sessions = await storage.getChapterPracticeStudentQuizSessions(studentId);
+      
+      res.json(sessions.map(s => ({
+        id: s.id,
+        subject: s.subject,
+        chapterNumber: s.chapterNumber,
+        chapterName: s.chapterName,
+        score: s.score,
+        totalQuestions: s.totalQuestions,
+        completedAt: s.completedAt,
+        questions: s.questions,
+        answers: s.answers,
+      })));
+    } catch (error) {
+      console.error("Error fetching chapter practice quiz history:", error);
+      res.status(500).json({ error: "Failed to fetch quiz history" });
+    }
+  });
+
   // Weekly Leaderboard - IST timezone (Monday to Sunday)
   app.get("/api/leaderboard/weekly", async (req, res) => {
     // Prevent caching to ensure fresh data after student deletions
