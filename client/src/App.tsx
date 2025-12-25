@@ -1285,11 +1285,30 @@ function App() {
                                   <SelectValue placeholder="Select a chapter" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {availableChapters.map((chapter) => (
-                                    <SelectItem key={chapter} value={chapter}>
-                                      {chapter}
-                                    </SelectItem>
-                                  ))}
+                                  {availableChapters.map((chapter, index) => {
+                                    const colors = [
+                                      "bg-rose-100 dark:bg-rose-900/30",
+                                      "bg-orange-100 dark:bg-orange-900/30",
+                                      "bg-amber-100 dark:bg-amber-900/30",
+                                      "bg-lime-100 dark:bg-lime-900/30",
+                                      "bg-emerald-100 dark:bg-emerald-900/30",
+                                      "bg-teal-100 dark:bg-teal-900/30",
+                                      "bg-cyan-100 dark:bg-cyan-900/30",
+                                      "bg-sky-100 dark:bg-sky-900/30",
+                                      "bg-violet-100 dark:bg-violet-900/30",
+                                      "bg-fuchsia-100 dark:bg-fuchsia-900/30",
+                                    ];
+                                    const colorClass = colors[index % colors.length];
+                                    return (
+                                      <SelectItem 
+                                        key={chapter} 
+                                        value={chapter}
+                                        className={`${colorClass} my-1 rounded-md`}
+                                      >
+                                        {chapter}
+                                      </SelectItem>
+                                    );
+                                  })}
                                 </SelectContent>
                               </Select>
                             )}
