@@ -2126,9 +2126,14 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
       const { parseQuestionsWithChapters } = await import("./questionParser");
       const { chapters } = parseQuestionsWithChapters(pdf.content);
       
+      // Format chapter names with chapter numbers (e.g., "Chapter 1: Patterns in Mathematics")
+      const formattedChapters = chapters
+        .filter(c => c.questionCount > 0)
+        .map(c => `Chapter ${c.chapterNumber}: ${c.chapterName}`);
+      
       res.json({ 
         pdfId: pdf.id,
-        chapters: chapters.filter(c => c.questionCount > 0),
+        chapters: formattedChapters,
         totalQuestions: pdf.totalQuestions || 0
       });
     } catch (error) {

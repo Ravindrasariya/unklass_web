@@ -619,7 +619,14 @@ export function getQuestionsForChapterByName(
   chapters: ChapterMetadata[],
   chapterName: string
 ): ParsedQuestion[] {
-  const chapter = chapters.find(c => c.chapterName === chapterName);
+  // Handle formatted chapter names like "Chapter 1: Patterns in Mathematics"
+  let searchName = chapterName;
+  const prefixMatch = chapterName.match(/^Chapter\s+\d+:\s*(.+)$/i);
+  if (prefixMatch) {
+    searchName = prefixMatch[1].trim();
+  }
+  
+  const chapter = chapters.find(c => c.chapterName === searchName);
   
   if (!chapter || chapter.questionCount === 0) {
     return [];
