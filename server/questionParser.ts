@@ -59,43 +59,73 @@ function normalizeContent(content: string): string {
 }
 
 function extractQuestionsWithPatterns(content: string): { num: number; text: string; startPos: number }[] {
-  const allMatches: { num: number; text: string; startPos: number; pattern: string }[] = [];
-
-  const patterns: { regex: RegExp; name: string }[] = [
-    { regex: /(?:^|\n)\s*(?:Que?s?(?:tion)?|Q|प्रश्न|Qn)[\s.\-:]*(\d+)[\s.\-:)\]]*([^\n]+(?:\n(?!\s*(?:Que?s?(?:tion)?|Q|प्रश्न|Qn)[\s.\-:]*\d+)[^\n]+)*)/gi, name: 'question_prefix' },
-    { regex: /(?:^|\n)\s*(\d{1,3})\s*[.\):\-\]]\s*([^\n]+(?:\n(?!\s*\d{1,3}\s*[.\):\-\]])[^\n]+)*)/g, name: 'numbered_line' },
-    { regex: /(?:^|\n)\s*\[(\d+)\]\s*([^\n]+(?:\n(?!\s*\[\d+\])[^\n]+)*)/g, name: 'bracketed' },
-    { regex: /(?:^|\n)\s*(\d+)\s*[\.\)]\s*(?:What|Which|Who|When|Where|Why|How|Find|Calculate|Solve|Write|Name|Define|Explain|State|Describe|List|Give|क्या|कौन|कब|कहाँ|क्यों|कैसे|बताइए|लिखिए|समझाइए)([^\n]+(?:\n(?!\s*\d+\s*[\.\)])[^\n]+)*)/gi, name: 'question_words' },
+  // Step 1: Find ALL question start positions using multiple patterns
+  // Pattern 1: "Question 1", "Question\t1", "Question | 1", "Q1.", "प्रश्न 1", etc.
+  // Pattern 2: Just numbered questions like "81. What is..." (for PDFs that switch format mid-file)
+  
+  const patterns = [
+    // "Question N" format (with optional prefix word)
+    /(?:^|\n|[.\s])(?:Que?s?(?:tion)?|Q|प्रश्न|Qn)[\s.\-:\t|]*(\d+)[\s.\-:)\]\t|]*/gi,
+    // Just number followed by period at start of line: "81. What is..."
+    /(?:^|\n)(\d{1,3})\.\s+(?=[A-Z])/g,
   ];
-
-  for (const { regex, name } of patterns) {
-    regex.lastIndex = 0;
+  
+  const questionStarts: { num: number; startPos: number; matchEnd: number }[] = [];
+  
+  for (const pattern of patterns) {
+    pattern.lastIndex = 0;
     let match;
-    while ((match = regex.exec(content)) !== null) {
+    while ((match = pattern.exec(content)) !== null) {
       const num = parseInt(match[1], 10);
-      const text = match[2]?.trim() || '';
-      if (num > 0 && num <= 500 && text.length > 15 && text.length < 8000) {
-        allMatches.push({ num, text, startPos: match.index, pattern: name });
+      if (num > 0 && num <= 500) {
+        // Check if we already have this position (to avoid duplicates from different patterns)
+        const exists = questionStarts.some(q => Math.abs(q.startPos - match!.index) < 10 && q.num === num);
+        if (!exists) {
+          questionStarts.push({
+            num,
+            startPos: match.index,
+            matchEnd: match.index + match[0].length
+          });
+        }
       }
-      if (match.index === regex.lastIndex) regex.lastIndex++;
+      if (match.index === pattern.lastIndex) pattern.lastIndex++;
     }
   }
-
-  type MatchEntry = { num: number; text: string; startPos: number; pattern: string };
-  const grouped: Record<number, MatchEntry[]> = {};
-  for (const m of allMatches) {
-    if (!grouped[m.num]) grouped[m.num] = [];
-    grouped[m.num].push(m);
-  }
-
+  
+  // Step 2: Sort by position to ensure correct order
+  questionStarts.sort((a, b) => a.startPos - b.startPos);
+  
+  // Step 3: Slice content between question boundaries
   const result: { num: number; text: string; startPos: number }[] = [];
-  for (const numKey of Object.keys(grouped)) {
-    const matches = grouped[parseInt(numKey, 10)];
-    const best = matches.reduce((a: MatchEntry, b: MatchEntry) => b.text.length > a.text.length ? b : a);
-    result.push({ num: best.num, text: best.text, startPos: best.startPos });
+  
+  for (let i = 0; i < questionStarts.length; i++) {
+    const current = questionStarts[i];
+    const nextStart = i + 1 < questionStarts.length ? questionStarts[i + 1].startPos : content.length;
+    
+    // Extract text from after the "Question N" marker to just before the next question
+    const text = content.substring(current.matchEnd, nextStart).trim();
+    
+    if (text.length > 15 && text.length < 8000) {
+      result.push({
+        num: current.num,
+        text,
+        startPos: current.startPos
+      });
+    }
   }
-
-  return result.sort((a, b) => a.num - b.num);
+  
+  // Step 4: Deduplicate by question number (keep first occurrence by position)
+  const seen = new Set<number>();
+  const deduped: { num: number; text: string; startPos: number }[] = [];
+  
+  for (const q of result) {
+    if (!seen.has(q.num)) {
+      seen.add(q.num);
+      deduped.push(q);
+    }
+  }
+  
+  return deduped.sort((a, b) => a.num - b.num);
 }
 
 function extractQuestionsLineByLine(content: string): { num: number; text: string }[] {
