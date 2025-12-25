@@ -555,22 +555,28 @@ export default function AdminPage() {
   };
 
   const validateFilename = (filename: string): { isValid: boolean; error?: string } => {
-    // Check for CPCT format: CPCT_Year.pdf (e.g., CPCT_2024.pdf)
-    const cpctMatch = filename.match(/^CPCT_(\d{4})\.pdf$/i);
+    // Check for CPCT section format: CPCT_{section}.pdf (e.g., CPCT_MS_Office.pdf)
+    const cpctMatch = filename.match(/^CPCT_(.+)\.pdf$/i);
     if (cpctMatch) {
       return { isValid: true };
     }
     
-    // Check for Navodaya format: grade_navodaya.pdf (e.g., 6th_navodaya.pdf, 6_navodaya.pdf)
-    const navodayaMatch = filename.match(/^(\d+(?:st|nd|rd|th)?|6th|9th)_navodaya\.pdf$/i);
-    if (navodayaMatch) {
+    // Check for Navodaya section format: grade_navodaya_{section}.pdf (e.g., 9th_navodaya_mathematics.pdf)
+    const navodayaSectionMatch = filename.match(/^(\d+(?:st|nd|rd|th)?|6th|9th)_navodaya_(.+)\.pdf$/i);
+    if (navodayaSectionMatch) {
+      return { isValid: true };
+    }
+    
+    // Check for Navodaya simple format: grade_navodaya.pdf (e.g., 6th_navodaya.pdf)
+    const navodayaSimpleMatch = filename.match(/^(\d+(?:st|nd|rd|th)?|6th|9th)_navodaya\.pdf$/i);
+    if (navodayaSimpleMatch) {
       return { isValid: true };
     }
     
     // Check for Board Exam format: grade_board_subject.pdf
     const boardMatch = filename.match(/^(.+)_(.+)_(.+)\.pdf$/i);
     if (!boardMatch) {
-      return { isValid: false, error: "Format must be: grade_board_subject.pdf (Board Exam), CPCT_Year.pdf (CPCT), or grade_navodaya.pdf (Navodaya)" };
+      return { isValid: false, error: "Format must be: grade_board_subject.pdf (Board Exam), CPCT_{section}.pdf (CPCT), or grade_navodaya_{section}.pdf (Navodaya)" };
     }
     
     const [, grade, board, subject] = boardMatch;
