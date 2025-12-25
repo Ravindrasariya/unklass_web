@@ -510,9 +510,12 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick, onNavodayaC
                   <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-violet-100 to-violet-50 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-sm">
                     <Library className="w-8 h-8 text-violet-600" />
                   </div>
-                  <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-2">
+                  <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-1">
                     Chapter Practice - NCERT
                   </h3>
+                  <p className="text-violet-600 text-xs font-medium mb-2">
+                    6th to 10th Grade
+                  </p>
                   <p className="text-gray-600 text-sm mb-4 flex-1">
                     Practice chapter-wise questions from NCERT textbooks
                   </p>
