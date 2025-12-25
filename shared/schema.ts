@@ -91,12 +91,30 @@ export const cpctQuizSessions = pgTable("cpct_quiz_sessions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Navodaya exam sections - grade-specific
+export const NAVODAYA_SECTIONS_6TH = [
+  "Mental Ability Test",
+  "Arithmetic Test",
+  "Language Test",
+] as const;
+
+export const NAVODAYA_SECTIONS_9TH = [
+  "Mathematics",
+  "Science",
+  "English",
+  "Hindi",
+] as const;
+
+export type NavodayaSection6th = typeof NAVODAYA_SECTIONS_6TH[number];
+export type NavodayaSection9th = typeof NAVODAYA_SECTIONS_9TH[number];
+
 // Navodaya Quiz sessions table - stores JNV quiz attempts and results
 export const navodayaQuizSessions = pgTable("navodaya_quiz_sessions", {
   id: serial("id").primaryKey(),
   studentId: integer("student_id").notNull().references(() => navodayaStudents.id),
   pdfId: integer("pdf_id").references(() => pdfs.id),
   examGrade: varchar("exam_grade", { length: 10 }).notNull(), // 6th, 9th
+  section: varchar("section", { length: 100 }), // Section within the exam grade (new)
   medium: varchar("medium", { length: 10 }).notNull(), // Hindi or English
   score: integer("score"),
   totalQuestions: integer("total_questions").default(10),

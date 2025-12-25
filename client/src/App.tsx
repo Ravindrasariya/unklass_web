@@ -25,7 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 
 type AppState = "landing" | "onboarding" | "ready" | "loading" | "quiz" | "results" | "history" 
   | "cpct-onboarding" | "cpct-ready" | "cpct-loading" | "cpct-quiz" | "cpct-results" | "cpct-history"
-  | "navodaya-onboarding" | "navodaya-loading" | "navodaya-quiz" | "navodaya-results" | "navodaya-history";
+  | "navodaya-onboarding" | "navodaya-ready" | "navodaya-loading" | "navodaya-quiz" | "navodaya-results" | "navodaya-history";
 
 interface QuizAnswer {
   questionId: number;
@@ -110,10 +110,12 @@ function App() {
   
   // Navodaya state
   const [navodayaStudentData, setNavodayaStudentData] = useState<RegisteredNavodayaStudent | null>(null);
+  const [selectedNavodayaSection, setSelectedNavodayaSection] = useState<string>("");
   const [navodayaQuestions, setNavodayaQuestions] = useState<Question[]>([]);
   const [navodayaCurrentQuestionIndex, setNavodayaCurrentQuestionIndex] = useState(0);
   const [navodayaAnswers, setNavodayaAnswers] = useState<QuizAnswer[]>([]);
   const [navodayaSessionId, setNavodayaSessionId] = useState<number | null>(null);
+  const [availableNavodayaSections, setAvailableNavodayaSections] = useState<string[]>([]);
   
   const { toast } = useToast();
 
@@ -146,6 +148,21 @@ function App() {
         });
     }
   }, [cpctStudentData, appState]);
+
+  // Fetch available Navodaya sections when Navodaya student is ready
+  useEffect(() => {
+    if (navodayaStudentData && appState === "navodaya-ready") {
+      fetch(`/api/navodaya/available-sections?grade=${encodeURIComponent(navodayaStudentData.examGrade)}`)
+        .then(res => res.json())
+        .then(data => {
+          setAvailableNavodayaSections(data.sections || []);
+        })
+        .catch(err => {
+          console.error("Failed to fetch available Navodaya sections:", err);
+          setAvailableNavodayaSections([]);
+        });
+    }
+  }, [navodayaStudentData, appState]);
 
   const handleOnboardingSubmit = useCallback(async (data: StudentData) => {
     try {
@@ -419,13 +436,16 @@ function App() {
     setAppState("cpct-history");
   }, []);
 
-  // Function to start Navodaya quiz directly
-  const startNavodayaQuizForStudent = useCallback(async (student: RegisteredNavodayaStudent) => {
+  // Function to start Navodaya quiz with section
+  const startNavodayaQuizWithSection = useCallback(async (section: string) => {
+    if (!navodayaStudentData) return;
+    
     setAppState("navodaya-loading");
     
     try {
       const response = await apiRequest("POST", "/api/navodaya/quiz/generate", {
-        studentId: student.id,
+        studentId: navodayaStudentData.id,
+        section,
       });
       
       const data = await response.json();
@@ -441,9 +461,9 @@ function App() {
         description: "Please try again later.",
         variant: "destructive",
       });
-      setAppState("navodaya-onboarding");
+      setAppState("navodaya-ready");
     }
-  }, [toast]);
+  }, [navodayaStudentData, toast]);
 
   // Navodaya Handlers
   const handleNavodayaOnboardingSubmit = useCallback(async (data: NavodayaStudentData) => {
@@ -457,8 +477,8 @@ function App() {
       });
       const student = await response.json();
       setNavodayaStudentData(student);
-      // Directly start quiz after registration
-      startNavodayaQuizForStudent(student);
+      setSelectedNavodayaSection("");
+      setAppState("navodaya-ready");
     } catch (error) {
       console.error("Navodaya Registration error:", error);
       toast({
@@ -467,7 +487,7 @@ function App() {
         variant: "destructive",
       });
     }
-  }, [toast, startNavodayaQuizForStudent]);
+  }, [toast]);
 
   const handleNavodayaLogin = useCallback(async (data: { name: string; mobile: string }): Promise<boolean> => {
     try {
@@ -478,8 +498,8 @@ function App() {
       const student = await response.json();
       if (student && student.id) {
         setNavodayaStudentData(student);
-        // Directly start quiz after login
-        startNavodayaQuizForStudent(student);
+        setSelectedNavodayaSection("");
+        setAppState("navodaya-ready");
         return true;
       }
       return false;
@@ -487,7 +507,12 @@ function App() {
       console.error("Navodaya Login error:", error);
       return false;
     }
-  }, [startNavodayaQuizForStudent]);
+  }, []);
+
+  const handleNavodayaStartQuiz = useCallback(() => {
+    if (!navodayaStudentData || !selectedNavodayaSection) return;
+    startNavodayaQuizWithSection(selectedNavodayaSection);
+  }, [navodayaStudentData, selectedNavodayaSection, startNavodayaQuizWithSection]);
 
   const handleNavodayaAnswer = useCallback((selectedOption: number, isCorrect: boolean) => {
     const currentQuestion = navodayaQuestions[navodayaCurrentQuestionIndex];
@@ -522,8 +547,9 @@ function App() {
 
   const handleNavodayaRetakeQuiz = useCallback(async () => {
     if (!navodayaStudentData) return;
-    startNavodayaQuizForStudent(navodayaStudentData);
-  }, [navodayaStudentData, startNavodayaQuizForStudent]);
+    setSelectedNavodayaSection("");
+    setAppState("navodaya-ready");
+  }, [navodayaStudentData]);
 
   const handleNavodayaViewHistory = useCallback(() => {
     setAppState("navodaya-history");
@@ -824,6 +850,75 @@ function App() {
                 />
               )}
 
+              {appState === "navodaya-ready" && navodayaStudentData && (
+                <div className="min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center p-4">
+                  <Card className="w-full max-w-lg">
+                    <CardContent className="p-6">
+                      <div className="flex items-center gap-3 mb-6">
+                        <img src={logoIcon} alt="UNKLASS" className="w-10 h-10" />
+                        <div>
+                          <h2 className="text-xl font-semibold">Welcome, {navodayaStudentData.name}!</h2>
+                          <p className="text-sm text-muted-foreground">
+                            Select a section to start your {navodayaStudentData.examGrade} Navodaya quiz
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="navodaya-section">Select Section</Label>
+                          <Select value={selectedNavodayaSection} onValueChange={setSelectedNavodayaSection}>
+                            <SelectTrigger id="navodaya-section" data-testid="select-navodaya-section">
+                              <SelectValue placeholder="Choose a section..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableNavodayaSections.length > 0 ? (
+                                availableNavodayaSections.map((section) => (
+                                  <SelectItem key={section} value={section} data-testid={`option-navodaya-section-${section}`}>
+                                    {section}
+                                  </SelectItem>
+                                ))
+                              ) : navodayaStudentData.examGrade === "6th" ? (
+                                <>
+                                  <SelectItem value="Mental Ability Test">Mental Ability Test</SelectItem>
+                                  <SelectItem value="Arithmetic Test">Arithmetic Test</SelectItem>
+                                  <SelectItem value="Language Test">Language Test</SelectItem>
+                                </>
+                              ) : (
+                                <>
+                                  <SelectItem value="Mathematics">Mathematics</SelectItem>
+                                  <SelectItem value="Science">Science</SelectItem>
+                                  <SelectItem value="English">English</SelectItem>
+                                  <SelectItem value="Hindi">Hindi</SelectItem>
+                                </>
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                          <Button 
+                            onClick={handleNavodayaStartQuiz}
+                            disabled={!selectedNavodayaSection}
+                            className="flex-1"
+                            data-testid="button-start-navodaya-quiz"
+                          >
+                            Start Quiz
+                          </Button>
+                          <Button 
+                            variant="outline"
+                            onClick={handleNavodayaViewHistory}
+                            data-testid="button-navodaya-history"
+                          >
+                            View History
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
               {appState === "navodaya-loading" && (
                 <div className="min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center p-4">
                   <Card className="w-full max-w-md text-center">
@@ -862,7 +957,7 @@ function App() {
               {appState === "navodaya-history" && navodayaStudentData && (
                 <QuizHistory
                   studentId={navodayaStudentData.id}
-                  onBack={() => startNavodayaQuizForStudent(navodayaStudentData)}
+                  onBack={() => setAppState("navodaya-ready")}
                   isNavodaya={true}
                 />
               )}

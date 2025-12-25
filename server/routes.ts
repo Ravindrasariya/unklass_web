@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertStudentSchema, insertCpctStudentSchema, insertNavodayaStudentSchema, insertContactSubmissionSchema, insertNoticeSchema, type Question, type ParsedQuestion } from "@shared/schema";
+import { insertStudentSchema, insertCpctStudentSchema, insertNavodayaStudentSchema, insertContactSubmissionSchema, insertNoticeSchema, NAVODAYA_SECTIONS_6TH, NAVODAYA_SECTIONS_9TH, type Question, type ParsedQuestion } from "@shared/schema";
 import { generateQuizQuestions, generateAnswerFeedback, generateCpctQuizQuestions, generateNavodayaQuizQuestions } from "./openai";
 import { parseQuestionsFromPdfContent, getSequentialQuestions } from "./questionParser";
 import multer from "multer";
@@ -1516,13 +1516,92 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     }
   });
 
+  // Helper function to find Navodaya PDF for a section
+  const findNavodayaPdfForSection = (
+    pdfs: { id: number; filename: string; content: string; parsedQuestions?: unknown; totalQuestions?: number | null }[],
+    grade: string,
+    section: string
+  ): { id: number; filename: string; content: string; parsedQuestions?: unknown; totalQuestions?: number | null } | null => {
+    const normalizeForMatch = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const normalizedSection = normalizeForMatch(section);
+    const normalizedGrade = grade.replace(/th$/, ''); // "6th" -> "6", "9th" -> "9"
+    
+    // Find PDFs matching the grade and section
+    // Expected format: {grade}_navodaya_{section}.pdf (e.g., 6th_navodaya_mental_ability_test.pdf)
+    const matchingPdfs = pdfs.filter(pdf => {
+      const filename = pdf.filename.toLowerCase();
+      
+      // Check if it starts with the grade (e.g., 6th_, 6_, 9th_, 9_)
+      if (!filename.startsWith(`${normalizedGrade}th_navodaya_`) && 
+          !filename.startsWith(`${normalizedGrade}_navodaya_`)) {
+        return false;
+      }
+      
+      // Extract section part from filename
+      const parts = filename.replace(/\.pdf$/i, '').split('_navodaya_');
+      if (parts.length < 2) return false;
+      
+      const fileSection = normalizeForMatch(parts[1]);
+      
+      // Check for various matching strategies
+      return fileSection.includes(normalizedSection) || 
+             normalizedSection.includes(fileSection) ||
+             // Specific mappings for 6th grade
+             (section === "Mental Ability Test" && (fileSection.includes("mental") || fileSection.includes("ability"))) ||
+             (section === "Arithmetic Test" && (fileSection.includes("arithmetic") || fileSection.includes("math"))) ||
+             (section === "Language Test" && (fileSection.includes("language") || fileSection.includes("lang"))) ||
+             // Specific mappings for 9th grade
+             (section === "Mathematics" && (fileSection.includes("math") || fileSection.includes("mathematics"))) ||
+             (section === "Science" && fileSection.includes("science")) ||
+             (section === "English" && fileSection.includes("english")) ||
+             (section === "Hindi" && fileSection.includes("hindi"));
+    });
+    
+    return matchingPdfs.length > 0 ? matchingPdfs[0] : null;
+  };
+
+  // Get available Navodaya sections (based on grade and uploaded PDFs)
+  app.get("/api/navodaya/available-sections", async (req, res) => {
+    try {
+      const { grade } = req.query;
+      
+      if (!grade || (grade !== "6th" && grade !== "9th")) {
+        return res.status(400).json({ error: "Valid grade (6th or 9th) is required" });
+      }
+      
+      const allSections = grade === "6th" 
+        ? [...NAVODAYA_SECTIONS_6TH] 
+        : [...NAVODAYA_SECTIONS_9TH];
+      
+      const allPdfs = await storage.getActivePdfs();
+      const navodayaPdfs = allPdfs.filter(pdf => 
+        pdf.filename.toLowerCase().includes('navodaya') && 
+        pdf.filename.endsWith(".pdf")
+      );
+      
+      // Map uploaded PDFs to their corresponding sections
+      const availableSections = allSections.filter(section => {
+        const matchingPdf = findNavodayaPdfForSection(navodayaPdfs, grade, section);
+        return matchingPdf !== null;
+      });
+      
+      // If no PDFs match, return all sections (fallback questions will be used)
+      const sections = availableSections.length > 0 ? availableSections : allSections;
+      
+      res.json({ sections, grade });
+    } catch (error) {
+      console.error("Error fetching available Navodaya sections:", error);
+      res.status(500).json({ error: "Failed to fetch available sections" });
+    }
+  });
+
   // Generate Navodaya quiz questions
   app.post("/api/navodaya/quiz/generate", async (req, res) => {
     try {
-      const { studentId } = req.body;
+      const { studentId, section } = req.body;
 
-      if (!studentId) {
-        return res.status(400).json({ error: "Student ID is required" });
+      if (!studentId || !section) {
+        return res.status(400).json({ error: "Missing required fields: studentId and section are required" });
       }
 
       // Verify student exists
@@ -1531,9 +1610,33 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         return res.status(404).json({ error: "Student not found" });
       }
 
-      // Get PDF content for the student's exam grade
-      const pdf = await storage.getNavodayaPdf(student.examGrade);
-      console.log(`Looking for PDF for examGrade: ${student.examGrade}, Found: ${pdf ? pdf.filename : 'NO PDF FOUND'}`);
+      // Validate section based on grade
+      const validSections: readonly string[] = student.examGrade === "6th" 
+        ? NAVODAYA_SECTIONS_6TH 
+        : NAVODAYA_SECTIONS_9TH;
+      
+      if (!validSections.includes(section)) {
+        return res.status(400).json({ 
+          error: `Invalid section for ${student.examGrade} grade. Valid sections: ${validSections.join(", ")}` 
+        });
+      }
+
+      // Get PDF for the section (try section-specific PDF first)
+      const allPdfs = await storage.getActivePdfs();
+      const navodayaPdfs = allPdfs.filter(p => 
+        p.filename.toLowerCase().includes('navodaya') && 
+        p.filename.endsWith(".pdf")
+      );
+      
+      // Try to find section-specific PDF
+      let pdf = findNavodayaPdfForSection(navodayaPdfs, student.examGrade, section);
+      
+      // Fallback to general grade PDF if no section-specific PDF
+      if (!pdf) {
+        pdf = await storage.getNavodayaPdf(student.examGrade);
+      }
+      
+      console.log(`Looking for PDF for examGrade: ${student.examGrade}, section: ${section}, Found: ${pdf ? pdf.filename : 'NO PDF FOUND'}`);
       if (pdf) {
         console.log(`PDF content length: ${pdf.content.length}, First 200 chars: ${pdf.content.substring(0, 200)}`);
       }
@@ -1591,10 +1694,41 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
           previousQuestions
         );
       } else {
-        // Generate general Navodaya questions (fallback when no PDF uploaded)
-        const fallbackContent = examGrade === "6th"
-          ? `Navodaya Class 6 entrance exam curriculum. Topics: Mental Ability (patterns, sequences, coding-decoding, analogies, mirror images, classifications), Arithmetic (basic operations, fractions, decimals, percentages, time and distance, profit and loss), Language comprehension (reading passages, grammar basics, vocabulary), General Knowledge (current affairs, science facts, geography basics, Indian history).`
-          : `Navodaya Class 9 entrance exam curriculum. Topics: Mental Ability (advanced patterns, series completion, coding-decoding, blood relations, direction sense, ranking tests), Mathematics (algebra basics, geometry, mensuration, statistics, number system), Science (physics fundamentals, chemistry basics, biology concepts), Social Studies (history, geography, civics), Language (English and Hindi comprehension, grammar).`;
+        // Generate section-specific Navodaya questions (fallback when no PDF uploaded)
+        let fallbackContent: string;
+        
+        if (examGrade === "6th") {
+          switch (section) {
+            case "Mental Ability Test":
+              fallbackContent = `Navodaya Class 6 Mental Ability Test. Topics: Patterns and sequences, coding-decoding, analogies, mirror images, classifications, odd one out, figure completion, paper folding, water images, embedded figures.`;
+              break;
+            case "Arithmetic Test":
+              fallbackContent = `Navodaya Class 6 Arithmetic Test. Topics: Basic operations, fractions, decimals, percentages, time and distance, profit and loss, ratio and proportion, simple interest, unitary method, number systems.`;
+              break;
+            case "Language Test":
+              fallbackContent = `Navodaya Class 6 Language Test. Topics: Reading comprehension passages, grammar basics, vocabulary, sentence completion, antonyms and synonyms, word meanings, paragraph writing.`;
+              break;
+            default:
+              fallbackContent = `Navodaya Class 6 entrance exam curriculum focusing on ${section}.`;
+          }
+        } else {
+          switch (section) {
+            case "Mathematics":
+              fallbackContent = `Navodaya Class 9 Mathematics. Topics: Algebra basics, linear equations, geometry, mensuration, statistics, number system, polynomials, triangles, circles, coordinate geometry.`;
+              break;
+            case "Science":
+              fallbackContent = `Navodaya Class 9 Science. Topics: Physics fundamentals (motion, force, work, energy), chemistry basics (atoms, molecules, chemical reactions), biology concepts (cells, tissues, life processes).`;
+              break;
+            case "English":
+              fallbackContent = `Navodaya Class 9 English. Topics: Reading comprehension, grammar (tenses, voice, narration), vocabulary, sentence correction, paragraph writing, antonyms and synonyms.`;
+              break;
+            case "Hindi":
+              fallbackContent = `Navodaya Class 9 Hindi. Topics: Reading comprehension (गद्यांश, पद्यांश), grammar (व्याकरण), vocabulary (शब्द भंडार), letter writing, essay writing.`;
+              break;
+            default:
+              fallbackContent = `Navodaya Class 9 entrance exam curriculum focusing on ${section}.`;
+          }
+        }
         
         const previousQuestions = await storage.getNavodayaStudentPreviousQuestions(studentId);
         questions = await generateNavodayaQuizQuestions(
@@ -1606,11 +1740,12 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         );
       }
 
-      // Create Navodaya quiz session
+      // Create Navodaya quiz session with section
       const session = await storage.createNavodayaQuizSession({
         studentId,
         pdfId: pdf?.id || null,
         examGrade: student.examGrade,
+        section,
         medium: student.medium,
         questions,
         totalQuestions: 10,

@@ -79,18 +79,27 @@ Preferred communication style: Simple, everyday language.
 ### CPCT Exam Prep
 - **Separate student table**: `cpctStudents` with fields (name, medium, location, mobileNumber)
 - **Medium selection**: Hindi or English - questions, answers, and explanations are rendered in the selected medium
-- **PDF format**: CPCT_Year.pdf (e.g., CPCT_2024.pdf)
-- **Direct quiz start**: After login/registration, quiz starts immediately without year selection
+- **Section-based quiz**: Students select from 5 sections after login:
+  1. MS Office
+  2. Software Operating System & IT Fundamentals
+  3. Internet, Networking & Security
+  4. Hardware Peripheral & Devices
+  5. Aptitude & Logical Reasoning
+- **PDF format**: CPCT_{SectionName}.pdf (e.g., CPCT_MS_OFFICE.pdf, CPCT_Internet_Networking_Security.pdf)
+- **Fuzzy PDF matching**: Backend matches section names to PDF filenames using fuzzy matching
 - **Quiz history**: Students can view their CPCT quiz history and review past questions
 
 ### Navodaya Exam Prep (JNV Entrance)
 - **Separate student table**: `navodayaStudents` with fields (name, examGrade, medium, location, mobileNumber)
 - **Exam grade selection**: 6th or 9th - determines which grade-level questions are generated
 - **Medium selection**: Hindi or English - questions, answers, and explanations are rendered in the selected medium
-- **PDF format**: {grade}_navodaya.pdf (e.g., 6th_navodaya.pdf, 9th_navodaya.pdf)
-- **Direct quiz start**: After login/registration, quiz starts immediately
+- **Section-based quiz**: Students select sections after login based on their grade:
+  - **6th Grade Sections**: Mental Ability Test, Arithmetic Test, Language Test
+  - **9th Grade Sections**: Mathematics, Science, English, Hindi
+- **PDF format**: {grade}_navodaya_{section}.pdf (e.g., 6th_navodaya_mental_ability_test.pdf, 9th_navodaya_mathematics.pdf)
+- **Fuzzy PDF matching**: Backend matches section names to PDF filenames using fuzzy matching
 - **Quiz history**: Students can view their Navodaya quiz history and review past questions
-- **Fallback questions**: Grade-specific fallback questions for Mental Ability, Arithmetic, Language, and GK
+- **Fallback questions**: Section-specific fallback questions when no PDF available
 
 ### Design System
 - **Typography**: Inter (primary), Poppins (headings) via Google Fonts
