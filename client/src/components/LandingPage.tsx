@@ -1,8 +1,19 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, BookOpen, Monitor, GraduationCap, Shield, School } from "lucide-react";
+import { ChevronLeft, ChevronRight, BookOpen, Monitor, GraduationCap, Shield, School, Bell } from "lucide-react";
 import { Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import WeeklyLeaderboard from "./WeeklyLeaderboard";
+
+interface Notice {
+  id: number;
+  title: string;
+  subtitle: string | null;
+  description: string | null;
+  isActive: boolean | null;
+  priority: number | null;
+  createdAt: string | null;
+}
 import logoImage from "@assets/Screenshot_2025-12-11_at_12.16.26_AM_1765392397522.png";
 import studentImage from "@assets/Screenshot_2025-12-17_at_6.41.41_AM_1765934337756.png";
 import classroom1 from "@assets/Screenshot_2025-12-17_at_2.54.23_PM_1765963603824.png";
@@ -42,6 +53,10 @@ const sliderContent = [
 export default function LandingPage({ onBoardExamClick, onCPCTClick, onNavodayaClick }: LandingPageProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [currentClassroom, setCurrentClassroom] = useState(0);
+
+  const { data: notices } = useQuery<Notice[]>({
+    queryKey: ["/api/notices"],
+  });
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -203,6 +218,42 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick, onNavodayaC
           </div>
           <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-gray-50 to-transparent"></div>
         </section>
+
+        {/* Notice Board Section */}
+        {notices && notices.length > 0 && (
+          <section className="bg-gradient-to-r from-amber-50 via-yellow-50 to-orange-50 py-6 md:py-8 border-y border-amber-200/50">
+            <div className="max-w-4xl mx-auto px-4">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="p-2 bg-amber-100 rounded-lg">
+                  <Bell className="w-5 h-5 text-amber-600" />
+                </div>
+                <h3 className="text-lg md:text-xl font-bold text-gray-900">Notice Board</h3>
+              </div>
+              <div className="grid gap-3 md:gap-4">
+                {notices.map((notice) => (
+                  <div
+                    key={notice.id}
+                    className="bg-white/80 backdrop-blur-sm rounded-xl p-4 md:p-5 shadow-sm border border-amber-100 transition-all hover:shadow-md hover:bg-white"
+                    data-testid={`notice-display-${notice.id}`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="w-1 h-full min-h-[40px] bg-gradient-to-b from-amber-400 to-orange-400 rounded-full flex-shrink-0"></div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-gray-900 text-base md:text-lg">{notice.title}</h4>
+                        {notice.subtitle && (
+                          <p className="text-sm text-amber-700 font-medium mt-0.5">{notice.subtitle}</p>
+                        )}
+                        {notice.description && (
+                          <p className="text-sm text-gray-600 mt-2 leading-relaxed">{notice.description}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
 
         <section className="bg-gray-50 py-10 md:py-14 relative">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(14,165,233,0.05)_0%,transparent_50%)]"></div>
