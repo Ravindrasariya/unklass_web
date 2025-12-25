@@ -235,6 +235,18 @@ export const uniqueVisitors = pgTable("unique_visitors", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Notices table - for notice board on landing page
+export const notices = pgTable("notices", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(), // Main header
+  subtitle: text("subtitle"), // Sub header (optional)
+  description: text("description"), // 2-3 liner description (optional)
+  isActive: boolean("is_active").default(true), // Show/hide notice
+  priority: integer("priority").default(0), // Higher priority = shown first
+  createdAt: timestamp("created_at").defaultNow(),
+  expiresAt: timestamp("expires_at"), // Auto-hide after this date (optional)
+});
+
 // Insert schemas for new tables
 export const insertContactSubmissionSchema = createInsertSchema(contactSubmissions).omit({
   id: true,
@@ -245,12 +257,20 @@ export const insertVisitorStatsSchema = createInsertSchema(visitorStats).omit({
   id: true,
 });
 
+export const insertNoticeSchema = createInsertSchema(notices).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types for new tables
 export type InsertContactSubmission = z.infer<typeof insertContactSubmissionSchema>;
 export type ContactSubmission = typeof contactSubmissions.$inferSelect;
 
 export type InsertVisitorStats = z.infer<typeof insertVisitorStatsSchema>;
 export type VisitorStats = typeof visitorStats.$inferSelect;
+
+export type InsertNotice = z.infer<typeof insertNoticeSchema>;
+export type Notice = typeof notices.$inferSelect;
 
 export type QuestionPointer = typeof questionPointers.$inferSelect;
 
