@@ -54,26 +54,6 @@ export async function generateQuizQuestions(
   previousQuestions: string[] = [],
   medium: string = "English"
 ): Promise<Question[]> {
-  // Calculate starting position based on total previous questions asked
-  const startPosition = previousQuestions.length + 1;
-  const endPosition = previousQuestions.length + numQuestions;
-  
-  const sequentialInstruction = `
-SEQUENTIAL QUESTION PICKING WITH CYCLING:
-
-Task: Select exactly ${numQuestions} questions from the provided PDF content based on a Sequential Cycling Logic.
-
-1. Reference Data:
-   1a. Find Total number of Questions from the given subject's PDF: [Count all questions in PDF]
-   1b. Last Question Position (X) from the latest quiz history for the subject: ${previousQuestions.length}
-
-2. Selection Logic (The "Cycling" Rule): Follow these steps strictly to determine which question numbers to pick:
-   2a. Identify Start Point: Begin at Question #(X + 1) = #${startPosition}.
-   2b. Sequential Count: Select the next ${numQuestions} questions in numerical order.
-   
-   The Loop Rule: If you reach the final question number in the PDF before hitting a count of ${numQuestions}, "cycle" back to Question #1 and continue until the total count of ${numQuestions} is reached.
-   - Example: PDF if has N=25 questions, and X=22 → pick Q23, Q24, Q25 (3) + Q1-Q7 (7) = 10 total`;
-
   const languageInstruction = medium === "Hindi" 
     ? `IMPORTANT LANGUAGE INSTRUCTION: Generate ALL content in Hindi (Devanagari script). The questions, all 4 options, and explanations MUST be written in Hindi. Use proper Hindi language and Devanagari script throughout.`
     : `Generate all content in English.`;
@@ -82,7 +62,15 @@ Task: Select exactly ${numQuestions} questions from the provided PDF content bas
 
 ${languageInstruction}
 
-Your PRIMARY task is to EXTRACT ${numQuestions} multiple-choice questions DIRECTLY from the provided PDF content.
+Your PRIMARY task is to CONVERT the provided questions into multiple-choice format.
+
+CRITICAL - ORDER PRESERVATION (MANDATORY):
+- The questions are provided in a SPECIFIC ORDER (Question 1, Question 2, etc.)
+- You MUST return the questions in the EXACT SAME ORDER as provided
+- Question 1 in input MUST be the first question in your output
+- Question 2 in input MUST be the second question in your output
+- And so on... DO NOT reorder, shuffle, or rearrange questions
+- This is CRITICAL for the sequential learning system
 
 You MUST return a JSON object with exactly this structure:
 {
@@ -107,7 +95,7 @@ RULES:
 - "explanation" must explain why the answer is correct AND the explanation MUST match the correctAnswer index
 - If extracting from PDF, use the PDF's answer as the correct answer
 - Return exactly ${numQuestions} questions based on the study material
-- Each question must be UNIQUE and cover different concepts
+- PRESERVE THE EXACT INPUT ORDER - do not skip, merge, or reorder questions
 
 MATH FORMATTING (IMPORTANT):
 - For exponents/powers, use caret notation: a^2 for a squared, x^3 for x cubed
@@ -125,19 +113,12 @@ As an expert teacher, you MUST critically verify EACH question before including 
 5. For arithmetic: If the question asks "Sum of two numbers is 40, one is 18, what is the other?" → Calculate: 40-18=22 → Find "22" in options → Set correctAnswer to that index
 6. DOUBLE-CHECK: Read options[correctAnswer] - is it truly the correct answer? If not, FIX the correctAnswer index
 
-EXAMPLE VERIFICATION:
-Question: "What is 25% of 80?"
-Step 1: Calculate → 25/100 × 80 = 20
-Step 2: options = ["15", "20", "25", "30"]
-Step 3: "20" is at index 1
-Step 4: correctAnswer MUST be 1
-Step 5: Explanation must say "25% of 80 = 20"
+REJECT any question where the correctAnswer index does not match the calculated/verified answer.`;
 
-REJECT any question where the correctAnswer index does not match the calculated/verified answer.
+  const userPrompt = `CONVERT the following ${numQuestions} questions into MCQ format for ${subject}.
 
-${sequentialInstruction}`;
-
-  const userPrompt = `EXTRACT ${numQuestions} questions from the ENTIRE PDF content below for ${subject}.
+CRITICAL: Process questions in the EXACT ORDER they appear below (Question 1 first, then Question 2, etc.)
+DO NOT reorder or shuffle - preserve sequential order exactly as numbered.
 
 MCQ CONVERSION RULES:
 
@@ -155,7 +136,7 @@ MCQ CONVERSION RULES:
 12. Wrong options must be plausible but clearly incorrect.
 13. NEVER create questions from topics not in PDF.
 
-PDF Content for ${subject}:
+Questions to convert (PRESERVE THIS ORDER in your response):
 ${pdfContent.substring(0, 150000)}`;
 
   try {
@@ -166,7 +147,7 @@ ${pdfContent.substring(0, 150000)}`;
         { role: "user", content: userPrompt },
       ],
       response_format: { type: "json_object" },
-      temperature: 0.7,
+      temperature: 0.2,
     });
 
     const content = response.choices[0]?.message?.content;
@@ -280,26 +261,6 @@ export async function generateCpctQuizQuestions(
   numQuestions: number = 10,
   previousQuestions: string[] = []
 ): Promise<Question[]> {
-  // Calculate starting position based on total previous questions asked
-  const startPosition = previousQuestions.length + 1;
-  const endPosition = previousQuestions.length + numQuestions;
-  
-  const sequentialInstruction = `
-SEQUENTIAL QUESTION PICKING WITH CYCLING:
-
-Task: Select exactly ${numQuestions} questions from the provided PDF content based on a Sequential Cycling Logic.
-
-1. Reference Data:
-   1a. Find Total number of Questions from the given PDF: [Count all questions in PDF]
-   1b. Last Question Position (X) from the latest quiz history: ${previousQuestions.length}
-
-2. Selection Logic (The "Cycling" Rule): Follow these steps strictly to determine which question numbers to pick:
-   2a. Identify Start Point: Begin at Question #(X + 1) = #${startPosition}.
-   2b. Sequential Count: Select the next ${numQuestions} questions in numerical order.
-   
-   The Loop Rule: If you reach the final question number in the PDF before hitting a count of ${numQuestions}, "cycle" back to Question #1 and continue until the total count of ${numQuestions} is reached.
-   - Example: PDF if has N=25 questions, and X=22 → pick Q23, Q24, Q25 (3) + Q1-Q7 (7) = 10 total`;
-
   const languageInstruction = medium === "Hindi" 
     ? `IMPORTANT: Generate ALL content (questions, options, explanations) in HINDI (Devanagari script). The entire quiz must be in Hindi language.`
     : `Generate all content in clear, simple English.`;
@@ -307,7 +268,15 @@ Task: Select exactly ${numQuestions} questions from the provided PDF content bas
   const systemPrompt = `You are an EXPERT TEACHER and CPCT (Computer Proficiency Certification Test) exam content creator for Madhya Pradesh, India.
 ${languageInstruction}
 
-Your PRIMARY task is to EXTRACT ${numQuestions} multiple-choice questions DIRECTLY from the provided PDF content for CPCT exam preparation.
+Your PRIMARY task is to CONVERT the provided questions into multiple-choice format for CPCT exam preparation.
+
+CRITICAL - ORDER PRESERVATION (MANDATORY):
+- The questions are provided in a SPECIFIC ORDER (Question 1, Question 2, etc.)
+- You MUST return the questions in the EXACT SAME ORDER as provided
+- Question 1 in input MUST be the first question in your output
+- Question 2 in input MUST be the second question in your output
+- And so on... DO NOT reorder, shuffle, or rearrange questions
+- This is CRITICAL for the sequential learning system
 
 You MUST return a JSON object with exactly this structure:
 {
@@ -332,6 +301,7 @@ RULES:
 - "explanation" must explain why the answer is correct in ${medium} AND MUST match the correctAnswer index
 - If extracting from PDF, use the PDF's answer as the correct answer
 - Return exactly ${numQuestions} questions based on CPCT syllabus concepts
+- PRESERVE THE EXACT INPUT ORDER - do not skip, merge, or reorder questions
 
 MATH FORMATTING (IMPORTANT):
 - For exponents/powers, use caret notation: a^2 for a squared, x^3 for x cubed
@@ -347,19 +317,12 @@ As an expert teacher, you MUST critically verify EACH question before including 
 5. For arithmetic: If the question asks "1 KB = ? bytes" and correct answer is 1024 → Find "1024" in options → Set correctAnswer to that index
 6. DOUBLE-CHECK: Read options[correctAnswer] - is it truly the correct answer? If not, FIX the correctAnswer index
 
-EXAMPLE VERIFICATION:
-Question: "1 KB कितने बाइट्स के बराबर है?"
-Step 1: Factual answer → 1024 bytes
-Step 2: options = ["1000 बाइट्स", "1024 बाइट्स", "100 बाइट्स", "512 बाइट्स"]
-Step 3: "1024 बाइट्स" is at index 1
-Step 4: correctAnswer MUST be 1
-Step 5: Explanation must say "1 KB = 1024 bytes"
+REJECT any question where the correctAnswer index does not match the verified answer.`;
 
-REJECT any question where the correctAnswer index does not match the verified answer.
+  const userPrompt = `CONVERT the following ${numQuestions} questions into MCQ format for CPCT exam preparation.
 
-${sequentialInstruction}`;
-
-  const userPrompt = `EXTRACT ${numQuestions} questions from the ENTIRE PDF content below for CPCT exam preparation.
+CRITICAL: Process questions in the EXACT ORDER they appear below (Question 1 first, then Question 2, etc.)
+DO NOT reorder or shuffle - preserve sequential order exactly as numbered.
 
 MCQ CONVERSION RULES:
 
@@ -379,7 +342,7 @@ MCQ CONVERSION RULES:
 
 LANGUAGE: Generate all content in ${medium === "Hindi" ? "Hindi (Devanagari script देवनागरी)" : "English"}
 
-PDF Content from CPCT ${year}:
+Questions to convert (PRESERVE THIS ORDER in your response):
 ${pdfContent.substring(0, 150000)}`;
 
   try {
@@ -390,7 +353,7 @@ ${pdfContent.substring(0, 150000)}`;
         { role: "user", content: userPrompt },
       ],
       response_format: { type: "json_object" },
-      temperature: 0.7,
+      temperature: 0.2,
     });
 
     const content = response.choices[0]?.message?.content;
