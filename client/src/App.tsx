@@ -698,7 +698,7 @@ function App() {
           id: idx + 1,
           question: q.question,
           options: q.options,
-          correctOption: q.correctAnswer,
+          correctAnswer: q.correctAnswer,
           explanation: q.explanation || "",
         }));
         
@@ -1346,7 +1346,7 @@ function App() {
               {appState === "chapter-practice-quiz" && chapterPracticeQuestions.length > 0 && (
                 <QuizQuestion
                   question={chapterPracticeQuestions[chapterPracticeCurrentQuestionIndex]}
-                  questionNumber={chapterPracticeCurrentQuestionIndex + 1}
+                  currentQuestion={chapterPracticeCurrentQuestionIndex + 1}
                   totalQuestions={chapterPracticeQuestions.length}
                   onAnswer={handleChapterPracticeAnswer}
                   onNext={handleChapterPracticeNext}
@@ -1370,8 +1370,9 @@ function App() {
                     setAppState("chapter-practice-ready");
                   }}
                   onBackToHome={() => {
-                    setChapterPracticeStudentData(null);
-                    setAppState("landing");
+                    setSelectedChapter("");
+                    setSelectedChapterPracticeSubject("");
+                    setAppState("chapter-practice-ready");
                   }}
                   subjectLabel="Practice Another Chapter"
                   hideRetakeButton={true}
