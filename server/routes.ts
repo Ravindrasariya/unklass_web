@@ -549,7 +549,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         grade,
         board: board.toUpperCase(),
         questions,
-        totalQuestions: 10,
+        totalQuestions: questions.length, // Use actual count of generated questions
       });
 
       res.json({
@@ -1210,7 +1210,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         section: section,
         medium: student.medium,
         questions,
-        totalQuestions: 10,
+        totalQuestions: questions.length, // Use actual count of generated questions
       });
 
       res.json({
@@ -1756,7 +1756,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         section,
         medium: student.medium,
         questions,
-        totalQuestions: 10,
+        totalQuestions: questions.length, // Use actual count of generated questions
       });
 
       res.json({
