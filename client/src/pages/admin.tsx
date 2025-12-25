@@ -6,7 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Upload, FileText, Trash2, AlertCircle, CheckCircle2, Eye, Lock, LogOut, Users, Download, ChevronDown, ChevronUp, MessageSquare, TrendingUp, Phone, Pencil, RotateCcw, Archive } from "lucide-react";
+import { Upload, FileText, Trash2, AlertCircle, CheckCircle2, Eye, Lock, LogOut, Users, Download, ChevronDown, ChevronUp, MessageSquare, TrendingUp, Phone, Pencil, RotateCcw, Archive, Bell, Plus, X } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -111,6 +113,17 @@ interface VisitorStats {
   dailyStats: Array<{ date: string; totalVisitors: number; uniqueVisitors: number }>;
 }
 
+interface Notice {
+  id: number;
+  title: string;
+  subtitle: string | null;
+  description: string | null;
+  isActive: boolean | null;
+  priority: number | null;
+  createdAt: string | null;
+  expiresAt: string | null;
+}
+
 export default function AdminPage() {
   const { toast } = useToast();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -134,6 +147,9 @@ export default function AdminPage() {
   const [studentTab, setStudentTab] = useState<"board" | "cpct" | "navodaya">("board");
   const [expandedCpctStudent, setExpandedCpctStudent] = useState<number | null>(null);
   const [expandedNavodayaStudent, setExpandedNavodayaStudent] = useState<number | null>(null);
+  const [showNoticeForm, setShowNoticeForm] = useState(false);
+  const [noticeForm, setNoticeForm] = useState({ title: "", subtitle: "", description: "", priority: 0 });
+  const [editingNotice, setEditingNotice] = useState<Notice | null>(null);
 
   const handleTabChange = (tab: "board" | "cpct" | "navodaya") => {
     setStudentTab(tab);
@@ -196,6 +212,56 @@ export default function AdminPage() {
   const { data: visitorStats, isLoading: visitorStatsLoading } = useQuery<VisitorStats>({
     queryKey: ["/api/admin/analytics/visitors"],
     enabled: isAuthenticated,
+  });
+
+  const { data: notices, isLoading: noticesLoading } = useQuery<Notice[]>({
+    queryKey: ["/api/admin/notices"],
+    enabled: isAuthenticated,
+  });
+
+  const createNoticeMutation = useMutation({
+    mutationFn: async (data: { title: string; subtitle?: string; description?: string; priority?: number }) => {
+      const response = await apiRequest("POST", "/api/admin/notices", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Notice Created", description: "The notice has been added to the board." });
+      setShowNoticeForm(false);
+      setNoticeForm({ title: "", subtitle: "", description: "", priority: 0 });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/notices"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const updateNoticeMutation = useMutation({
+    mutationFn: async ({ id, ...data }: { id: number; [key: string]: unknown }) => {
+      const response = await apiRequest("PATCH", `/api/admin/notices/${id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Notice Updated", description: "The notice has been updated." });
+      setEditingNotice(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/notices"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteNoticeMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiRequest("DELETE", `/api/admin/notices/${id}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Notice Deleted", description: "The notice has been removed." });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/notices"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
   });
 
   const handleToggleStudent = (studentId: number) => {
@@ -1287,6 +1353,150 @@ export default function AdminPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Notice Board Management */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Bell className="h-5 w-5" />
+                  Notice Board
+                </CardTitle>
+                <CardDescription>
+                  Manage announcements shown on the landing page
+                </CardDescription>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => setShowNoticeForm(true)}
+                data-testid="button-add-notice"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Notice
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {showNoticeForm && (
+              <div className="mb-4 p-4 border rounded-lg bg-muted/50 space-y-4">
+                <div className="flex items-center justify-between gap-2">
+                  <h4 className="font-medium">New Notice</h4>
+                  <Button size="icon" variant="ghost" onClick={() => setShowNoticeForm(false)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="notice-title">Title (required)</Label>
+                  <Input
+                    id="notice-title"
+                    value={noticeForm.title}
+                    onChange={(e) => setNoticeForm(prev => ({ ...prev, title: e.target.value }))}
+                    placeholder="Main heading for the notice"
+                    data-testid="input-notice-title"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="notice-subtitle">Subtitle (optional)</Label>
+                  <Input
+                    id="notice-subtitle"
+                    value={noticeForm.subtitle}
+                    onChange={(e) => setNoticeForm(prev => ({ ...prev, subtitle: e.target.value }))}
+                    placeholder="Sub heading or date"
+                    data-testid="input-notice-subtitle"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="notice-description">Description (optional)</Label>
+                  <Textarea
+                    id="notice-description"
+                    value={noticeForm.description}
+                    onChange={(e) => setNoticeForm(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="2-3 lines of additional details"
+                    rows={3}
+                    data-testid="input-notice-description"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="notice-priority">Priority (higher = shown first)</Label>
+                  <Input
+                    id="notice-priority"
+                    type="number"
+                    value={noticeForm.priority}
+                    onChange={(e) => setNoticeForm(prev => ({ ...prev, priority: parseInt(e.target.value) || 0 }))}
+                    data-testid="input-notice-priority"
+                  />
+                </div>
+                <Button
+                  onClick={() => createNoticeMutation.mutate(noticeForm)}
+                  disabled={!noticeForm.title.trim() || createNoticeMutation.isPending}
+                  data-testid="button-save-notice"
+                >
+                  {createNoticeMutation.isPending ? "Saving..." : "Save Notice"}
+                </Button>
+              </div>
+            )}
+            {noticesLoading ? (
+              <p className="text-muted-foreground">Loading...</p>
+            ) : notices && notices.length > 0 ? (
+              <div className="space-y-3">
+                {notices.map((notice) => (
+                  <div
+                    key={notice.id}
+                    className={`p-4 rounded-lg border ${notice.isActive ? 'bg-background' : 'bg-muted/50 opacity-60'}`}
+                    data-testid={`notice-item-${notice.id}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="font-semibold">{notice.title}</h4>
+                          {notice.priority !== null && notice.priority > 0 && (
+                            <Badge variant="secondary" className="text-xs">Priority: {notice.priority}</Badge>
+                          )}
+                          {!notice.isActive && (
+                            <Badge variant="outline" className="text-xs">Hidden</Badge>
+                          )}
+                        </div>
+                        {notice.subtitle && (
+                          <p className="text-sm text-muted-foreground mt-1">{notice.subtitle}</p>
+                        )}
+                        {notice.description && (
+                          <p className="text-sm mt-2">{notice.description}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                          <Switch
+                            checked={notice.isActive ?? false}
+                            onCheckedChange={(checked) => updateNoticeMutation.mutate({ id: notice.id, isActive: checked })}
+                            data-testid={`switch-notice-active-${notice.id}`}
+                          />
+                          <span className="text-xs text-muted-foreground">Active</span>
+                        </div>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => {
+                            if (confirm("Delete this notice?")) {
+                              deleteNoticeMutation.mutate(notice.id);
+                            }
+                          }}
+                          data-testid={`button-delete-notice-${notice.id}`}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-center py-4">
+                No notices yet. Add one to display on the landing page.
+              </p>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       <Dialog open={!!previewPdf} onOpenChange={(open) => !open && setPreviewPdf(null)}>
