@@ -2051,17 +2051,28 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         return res.status(400).json({ error: "Grade and board are required" });
       }
       
-      const allPdfs = await storage.getAllPdfs();
+      const allPdfs = await storage.getActivePdfs();
       const normalizedGrade = (grade as string).toLowerCase();
-      const normalizedBoard = (board as string).toLowerCase();
+      const normalizedBoard = (board as string).toUpperCase();
       
       const subjects = new Set<string>();
       
+      // Check for new format: grade_board_Chapter_Plan_subject.pdf (board stored as "MP_Chapter_Plan")
+      const chapterPlanBoard = `${normalizedBoard}_Chapter_Plan`;
+      for (const pdf of allPdfs) {
+        if (pdf.grade.toLowerCase() === normalizedGrade && 
+            pdf.board === chapterPlanBoard && 
+            !pdf.isArchived) {
+          subjects.add(pdf.subject);
+        }
+      }
+      
+      // Fallback: check for old NCERT format
       for (const pdf of allPdfs) {
         const lowerName = pdf.filename.toLowerCase();
         if (lowerName.startsWith('ncert_') && 
             lowerName.includes(normalizedGrade) && 
-            lowerName.includes(normalizedBoard)) {
+            lowerName.includes(normalizedBoard.toLowerCase())) {
           const parts = pdf.filename.replace('.pdf', '').split('_');
           if (parts.length >= 4) {
             const subject = parts.slice(3).join(' ');
