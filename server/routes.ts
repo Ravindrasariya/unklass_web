@@ -454,11 +454,12 @@ export async function registerRoutes(
         
         console.log(`Student ${studentId} - PDF ${pdf.id}: Starting from index ${startIndex} of ${parsedQuestions.length} questions`);
         
-        // Get sequential questions with cycling
+        // Request 12 questions as buffer to ensure we get at least 10 after LLM conversion
+        const requestCount = Math.min(12, parsedQuestions.length);
         const { questions: selectedQuestions, newLastIndex } = getSequentialQuestions(
           parsedQuestions,
           startIndex,
-          10
+          requestCount
         );
         
         // Build subset content from selected questions
@@ -469,19 +470,26 @@ export async function registerRoutes(
         console.log(`Sending ${selectedQuestions.length} sequential questions to LLM for conversion`);
         
         // Generate MCQs from the subset
-        questions = await generateQuizQuestions(
+        let generatedQuestions = await generateQuizQuestions(
           subsetContent,
           subject,
           grade,
           board,
-          10,
+          requestCount,
           [], // No previous questions needed - we handle sequencing server-side
           studentMedium
         );
         
+        // Trim to exactly 10 questions if we got more
+        questions = generatedQuestions.slice(0, 10);
+        
+        // Calculate pointer based on actual questions used (max 10)
+        const questionsUsed = Math.min(questions.length, 10);
+        const actualNewIndex = (startIndex + questionsUsed - 1) % parsedQuestions.length;
+        
         // Update question pointer for next quiz
-        await storage.updateQuestionPointer(studentId, 'board', pdf.id, newLastIndex);
-        console.log(`Updated pointer to index ${newLastIndex} for next quiz`);
+        await storage.updateQuestionPointer(studentId, 'board', pdf.id, actualNewIndex);
+        console.log(`Generated ${generatedQuestions.length} questions, using ${questions.length}. Updated pointer to index ${actualNewIndex} for next quiz`);
         
       } else if (pdf) {
         // Fallback: PDF exists but no parsed questions - use full content
@@ -1139,11 +1147,12 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
           
           console.log(`CPCT Student ${studentId} - PDF ${matchingPdf.id} (${section}): Starting from index ${startIndex} of ${parsedQuestions.length} questions`);
           
-          // Get sequential questions with cycling
+          // Request 12 questions as buffer to ensure we get at least 10 after LLM conversion
+          const requestCount = Math.min(12, parsedQuestions.length);
           const { questions: selectedQuestions, newLastIndex } = getSequentialQuestions(
             parsedQuestions,
             startIndex,
-            10
+            requestCount
           );
           
           // Build subset content from selected questions
@@ -1154,17 +1163,24 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
           console.log(`Sending ${selectedQuestions.length} sequential CPCT questions to LLM for conversion`);
           
           // Generate MCQs from the subset
-          questions = await generateCpctQuizQuestions(
+          let generatedQuestions = await generateCpctQuizQuestions(
             subsetContent,
             usedYear,
             medium,
-            10,
+            requestCount,
             [] // No previous questions needed - we handle sequencing server-side
           );
           
+          // Trim to exactly 10 questions if we got more
+          questions = generatedQuestions.slice(0, 10);
+          
+          // Calculate pointer based on actual questions used (max 10)
+          const questionsUsed = Math.min(questions.length, 10);
+          const actualNewIndex = (startIndex + questionsUsed - 1) % parsedQuestions.length;
+          
           // Update question pointer for next quiz
-          await storage.updateQuestionPointer(studentId, 'cpct', matchingPdf.id, newLastIndex);
-          console.log(`Updated CPCT pointer to index ${newLastIndex} for next quiz`);
+          await storage.updateQuestionPointer(studentId, 'cpct', matchingPdf.id, actualNewIndex);
+          console.log(`Generated ${generatedQuestions.length} questions, using ${questions.length}. Updated CPCT pointer to index ${actualNewIndex} for next quiz`);
         } else {
           // Fallback: PDF exists but no parsed questions - use full content
           console.log(`CPCT PDF ${matchingPdf.id} has no parsed questions, using full content`);
@@ -1663,11 +1679,12 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         
         console.log(`Navodaya Student ${studentId} - PDF ${pdf.id}: Starting from index ${startIndex} of ${parsedQuestions.length} questions`);
         
-        // Get sequential questions with cycling
+        // Request 12 questions as buffer to ensure we get at least 10 after LLM conversion
+        const requestCount = Math.min(12, parsedQuestions.length);
         const { questions: selectedQuestions, newLastIndex } = getSequentialQuestions(
           parsedQuestions,
           startIndex,
-          10
+          requestCount
         );
         
         // Build subset content from selected questions
@@ -1678,17 +1695,24 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         console.log(`Sending ${selectedQuestions.length} sequential Navodaya questions to LLM for conversion`);
         
         // Generate MCQs from the subset
-        questions = await generateNavodayaQuizQuestions(
+        let generatedQuestions = await generateNavodayaQuizQuestions(
           subsetContent,
           examGrade,
           medium,
-          10,
+          requestCount,
           [] // No previous questions needed - we handle sequencing server-side
         );
         
+        // Trim to exactly 10 questions if we got more
+        questions = generatedQuestions.slice(0, 10);
+        
+        // Calculate pointer based on actual questions used (max 10)
+        const questionsUsed = Math.min(questions.length, 10);
+        const actualNewIndex = (startIndex + questionsUsed - 1) % parsedQuestions.length;
+        
         // Update question pointer for next quiz
-        await storage.updateQuestionPointer(studentId, 'navodaya', pdf.id, newLastIndex);
-        console.log(`Updated Navodaya pointer to index ${newLastIndex} for next quiz`);
+        await storage.updateQuestionPointer(studentId, 'navodaya', pdf.id, actualNewIndex);
+        console.log(`Generated ${generatedQuestions.length} Navodaya questions, using ${questions.length}. Updated pointer to index ${actualNewIndex} for next quiz`);
         
       } else if (pdf) {
         // Fallback: PDF exists but no parsed questions - use full content
