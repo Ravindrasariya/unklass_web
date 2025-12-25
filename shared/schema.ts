@@ -38,7 +38,7 @@ export const pdfs = pgTable("pdfs", {
   id: serial("id").primaryKey(),
   filename: text("filename").notNull().unique(), // {grade}_{board}_{subject}.pdf
   grade: varchar("grade", { length: 10 }).notNull(),
-  board: varchar("board", { length: 10 }).notNull(),
+  board: varchar("board", { length: 20 }).notNull(), // Increased to accommodate "MP_Chapter_Plan", "CBSE_Chapter_Plan"
   subject: text("subject").notNull(),
   content: text("content").notNull(), // Extracted text from PDF
   parsedQuestions: jsonb("parsed_questions"), // Array of pre-parsed question objects from PDF
