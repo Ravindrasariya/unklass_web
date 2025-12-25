@@ -101,12 +101,12 @@ function App() {
   
   // CPCT state
   const [cpctStudentData, setCpctStudentData] = useState<RegisteredCpctStudent | null>(null);
-  const [selectedYear, setSelectedYear] = useState<string>("");
+  const [selectedCpctSection, setSelectedCpctSection] = useState<string>("");
   const [cpctQuestions, setCpctQuestions] = useState<Question[]>([]);
   const [cpctCurrentQuestionIndex, setCpctCurrentQuestionIndex] = useState(0);
   const [cpctAnswers, setCpctAnswers] = useState<QuizAnswer[]>([]);
   const [cpctSessionId, setCpctSessionId] = useState<number | null>(null);
-  const [availableYears, setAvailableYears] = useState<string[]>([]);
+  const [availableCpctSections, setAvailableCpctSections] = useState<string[]>([]);
   
   // Navodaya state
   const [navodayaStudentData, setNavodayaStudentData] = useState<RegisteredNavodayaStudent | null>(null);
@@ -132,17 +132,17 @@ function App() {
     }
   }, [studentData, appState]);
 
-  // Fetch available CPCT years when CPCT student is ready
+  // Fetch available CPCT sections when CPCT student is ready
   useEffect(() => {
     if (cpctStudentData && appState === "cpct-ready") {
-      fetch("/api/cpct/available-years")
+      fetch("/api/cpct/available-sections")
         .then(res => res.json())
         .then(data => {
-          setAvailableYears(data.years || []);
+          setAvailableCpctSections(data.sections || []);
         })
         .catch(err => {
-          console.error("Failed to fetch available CPCT years:", err);
-          setAvailableYears([]);
+          console.error("Failed to fetch available CPCT sections:", err);
+          setAvailableCpctSections([]);
         });
     }
   }, [cpctStudentData, appState]);
@@ -293,13 +293,16 @@ function App() {
     setAppState("ready");
   }, []);
 
-  // Function to start CPCT quiz directly
-  const startCpctQuizForStudent = useCallback(async (student: RegisteredCpctStudent) => {
+  // Function to start CPCT quiz with selected section
+  const startCpctQuizWithSection = useCallback(async (section: string) => {
+    if (!cpctStudentData) return;
+    
     setAppState("cpct-loading");
     
     try {
       const response = await apiRequest("POST", "/api/cpct/quiz/generate", {
-        studentId: student.id,
+        studentId: cpctStudentData.id,
+        section: section,
       });
       
       const data = await response.json();
@@ -315,9 +318,9 @@ function App() {
         description: "Please try again later.",
         variant: "destructive",
       });
-      setAppState("cpct-onboarding");
+      setAppState("cpct-ready");
     }
-  }, [toast]);
+  }, [cpctStudentData, toast]);
 
   // CPCT Handlers
   const handleCpctOnboardingSubmit = useCallback(async (data: CpctStudentData) => {
@@ -330,8 +333,8 @@ function App() {
       });
       const student = await response.json();
       setCpctStudentData(student);
-      // Directly start quiz after registration
-      startCpctQuizForStudent(student);
+      // Go to section selection after registration
+      setAppState("cpct-ready");
     } catch (error) {
       console.error("CPCT Registration error:", error);
       toast({
@@ -340,7 +343,7 @@ function App() {
         variant: "destructive",
       });
     }
-  }, [toast, startCpctQuizForStudent]);
+  }, [toast]);
 
   const handleCpctLogin = useCallback(async (data: { name: string; mobile: string }): Promise<boolean> => {
     try {
@@ -351,8 +354,8 @@ function App() {
       const student = await response.json();
       if (student && student.id) {
         setCpctStudentData(student);
-        // Directly start quiz after login
-        startCpctQuizForStudent(student);
+        // Go to section selection after login
+        setAppState("cpct-ready");
         return true;
       }
       return false;
@@ -360,12 +363,12 @@ function App() {
       console.error("CPCT Login error:", error);
       return false;
     }
-  }, [startCpctQuizForStudent]);
+  }, []);
 
   const handleCpctStartQuiz = useCallback(async () => {
-    if (!cpctStudentData) return;
-    startCpctQuizForStudent(cpctStudentData);
-  }, [cpctStudentData, startCpctQuizForStudent]);
+    if (!cpctStudentData || !selectedCpctSection) return;
+    startCpctQuizWithSection(selectedCpctSection);
+  }, [cpctStudentData, selectedCpctSection, startCpctQuizWithSection]);
 
   const handleCpctAnswer = useCallback((selectedOption: number, isCorrect: boolean) => {
     const currentQuestion = cpctQuestions[cpctCurrentQuestionIndex];
@@ -399,9 +402,18 @@ function App() {
   }, [cpctCurrentQuestionIndex, cpctQuestions.length, cpctAnswers, cpctSessionId]);
 
   const handleCpctRetakeQuiz = useCallback(async () => {
-    if (!cpctStudentData) return;
-    startCpctQuizForStudent(cpctStudentData);
-  }, [cpctStudentData, startCpctQuizForStudent]);
+    if (!cpctStudentData || !selectedCpctSection) return;
+    startCpctQuizWithSection(selectedCpctSection);
+  }, [cpctStudentData, selectedCpctSection, startCpctQuizWithSection]);
+
+  const handleCpctTryAnotherSection = useCallback(() => {
+    setSelectedCpctSection("");
+    setCpctQuestions([]);
+    setCpctCurrentQuestionIndex(0);
+    setCpctAnswers([]);
+    setCpctSessionId(null);
+    setAppState("cpct-ready");
+  }, []);
 
   const handleCpctViewHistory = useCallback(() => {
     setAppState("cpct-history");
@@ -698,6 +710,68 @@ function App() {
                 />
               )}
 
+              {appState === "cpct-ready" && cpctStudentData && (
+                <div className="min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center p-4">
+                  <Card className="w-full max-w-lg">
+                    <CardContent className="p-6">
+                      <div className="flex items-center gap-3 mb-6">
+                        <img src={logoIcon} alt="UNKLASS" className="w-10 h-10" />
+                        <div>
+                          <h2 className="text-xl font-semibold">Welcome, {cpctStudentData.name}!</h2>
+                          <p className="text-sm text-muted-foreground">Select a section to start your CPCT quiz</p>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="cpct-section">Select Section</Label>
+                          <Select value={selectedCpctSection} onValueChange={setSelectedCpctSection}>
+                            <SelectTrigger id="cpct-section" data-testid="select-cpct-section">
+                              <SelectValue placeholder="Choose a section..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableCpctSections.length > 0 ? (
+                                availableCpctSections.map((section) => (
+                                  <SelectItem key={section} value={section} data-testid={`option-cpct-section-${section}`}>
+                                    {section}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <>
+                                  <SelectItem value="MS Office">MS Office</SelectItem>
+                                  <SelectItem value="Software Operating System & IT Fundamentals">Software Operating System & IT Fundamentals</SelectItem>
+                                  <SelectItem value="Internet, Networking & Security">Internet, Networking & Security</SelectItem>
+                                  <SelectItem value="Hardware Peripheral & Devices">Hardware Peripheral & Devices</SelectItem>
+                                  <SelectItem value="Aptitude & Logical Reasoning">Aptitude & Logical Reasoning</SelectItem>
+                                </>
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                          <Button 
+                            onClick={handleCpctStartQuiz}
+                            disabled={!selectedCpctSection}
+                            className="flex-1"
+                            data-testid="button-start-cpct-quiz"
+                          >
+                            Start Quiz
+                          </Button>
+                          <Button 
+                            variant="outline"
+                            onClick={handleCpctViewHistory}
+                            data-testid="button-cpct-history"
+                          >
+                            View History
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
               {appState === "cpct-loading" && (
                 <div className="min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center p-4">
                   <Card className="w-full max-w-md text-center">
@@ -727,16 +801,16 @@ function App() {
                   score={cpctScore}
                   totalQuestions={cpctQuestions.length}
                   onRetakeQuiz={handleCpctRetakeQuiz}
-                  onTryAnotherSubject={handleCpctViewHistory}
+                  onTryAnotherSubject={handleCpctTryAnotherSection}
                   onBackToHome={() => setAppState("landing")}
-                  subjectLabel="View Quiz History"
+                  subjectLabel="Try Another Section"
                 />
               )}
 
               {appState === "cpct-history" && cpctStudentData && (
                 <QuizHistory
                   studentId={cpctStudentData.id}
-                  onBack={handleCpctRetakeQuiz}
+                  onBack={() => setAppState("cpct-ready")}
                   isCpct={true}
                 />
               )}

@@ -991,7 +991,77 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     }
   });
 
-  // Get available CPCT years (PDFs named CPCT_Year.pdf)
+  // CPCT Section constants
+  const CPCT_SECTIONS = [
+    "MS Office",
+    "Software Operating System & IT Fundamentals",
+    "Internet, Networking & Security",
+    "Hardware Peripheral & Devices",
+    "Aptitude & Logical Reasoning",
+  ];
+
+  // Helper function to normalize text for fuzzy matching
+  const normalizeForMatch = (text: string): string => {
+    return text
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '') // Remove all non-alphanumeric chars
+      .replace(/\s+/g, '');
+  };
+
+  // Helper function to find matching PDF for a section using fuzzy matching
+  const findPdfForSection = (pdfs: Array<{id: number, filename: string, content: string, parsedQuestions: unknown, totalQuestions: number | null}>, section: string) => {
+    const normalizedSection = normalizeForMatch(section);
+    
+    // Find CPCT PDFs that match the section name (fuzzy match)
+    const cpctPdfs = pdfs.filter(pdf => {
+      if (!pdf.filename.startsWith("CPCT_") || !pdf.filename.endsWith(".pdf")) return false;
+      
+      // Extract section name from filename (e.g., CPCT_MS_OFFICE.pdf -> ms_office)
+      const filenamePart = pdf.filename
+        .replace(/^CPCT_/, '')
+        .replace(/\.pdf$/i, '');
+      const normalizedFilename = normalizeForMatch(filenamePart);
+      
+      // Check if the filename contains the key parts of the section name
+      return normalizedFilename.includes(normalizedSection) || 
+             normalizedSection.includes(normalizedFilename) ||
+             // Handle specific mappings
+             (section === "MS Office" && normalizedFilename.includes("msoffice")) ||
+             (section === "MS Office" && normalizedFilename.includes("office")) ||
+             (section === "Software Operating System & IT Fundamentals" && (normalizedFilename.includes("software") || normalizedFilename.includes("operating") || normalizedFilename.includes("itfundamentals"))) ||
+             (section === "Internet, Networking & Security" && (normalizedFilename.includes("internet") || normalizedFilename.includes("networking") || normalizedFilename.includes("security"))) ||
+             (section === "Hardware Peripheral & Devices" && (normalizedFilename.includes("hardware") || normalizedFilename.includes("peripheral") || normalizedFilename.includes("devices"))) ||
+             (section === "Aptitude & Logical Reasoning" && (normalizedFilename.includes("aptitude") || normalizedFilename.includes("logical") || normalizedFilename.includes("reasoning")));
+    });
+    
+    return cpctPdfs.length > 0 ? cpctPdfs[0] : null;
+  };
+
+  // Get available CPCT sections (based on uploaded PDFs)
+  app.get("/api/cpct/available-sections", async (req, res) => {
+    try {
+      const allPdfs = await storage.getActivePdfs();
+      const cpctPdfs = allPdfs.filter(pdf => 
+        pdf.filename.startsWith("CPCT_") && pdf.filename.endsWith(".pdf")
+      );
+      
+      // Map uploaded PDFs to their corresponding sections
+      const availableSections = CPCT_SECTIONS.filter(section => {
+        const matchingPdf = findPdfForSection(cpctPdfs, section);
+        return matchingPdf !== null;
+      });
+      
+      // If no PDFs match, return all sections (fallback questions will be used)
+      const sections = availableSections.length > 0 ? availableSections : CPCT_SECTIONS;
+      
+      res.json({ sections });
+    } catch (error) {
+      console.error("Error fetching available CPCT sections:", error);
+      res.status(500).json({ error: "Failed to fetch available sections" });
+    }
+  });
+
+  // Get available CPCT years (PDFs named CPCT_Year.pdf) - kept for backward compatibility
   app.get("/api/cpct/available-years", async (req, res) => {
     try {
       const allPdfs = await storage.getActivePdfs();
@@ -1013,10 +1083,15 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
   // Generate CPCT quiz questions
   app.post("/api/cpct/quiz/generate", async (req, res) => {
     try {
-      const { studentId } = req.body;
+      const { studentId, section } = req.body;
 
-      if (!studentId) {
-        return res.status(400).json({ error: "Missing required fields" });
+      if (!studentId || !section) {
+        return res.status(400).json({ error: "Missing required fields: studentId and section are required" });
+      }
+
+      // Validate section is one of the allowed sections
+      if (!CPCT_SECTIONS.includes(section)) {
+        return res.status(400).json({ error: "Invalid section. Please select a valid CPCT section." });
       }
 
       // Verify CPCT student exists
@@ -1027,38 +1102,31 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
 
       // Get all available CPCT PDFs (only active, not archived)
       const allPdfs = await storage.getActivePdfs();
-      const cpctPdfs = allPdfs.filter(pdf => 
-        pdf.filename.startsWith("CPCT_") && pdf.filename.endsWith(".pdf")
-      );
+      
+      // Find PDF matching the selected section using fuzzy matching
+      const matchingPdf = findPdfForSection(allPdfs, section);
       
       let usedYear = "2024"; // Default year for reference
       let usedPdfId: number | null = null;
       let questions: Question[];
       const medium = student.medium as "Hindi" | "English";
       
-      if (cpctPdfs.length > 0) {
-        // Sort by year descending to prioritize latest content
-        cpctPdfs.sort((a, b) => {
-          const yearA = a.filename.match(/CPCT_(\d+)\.pdf/)?.[1] || "0";
-          const yearB = b.filename.match(/CPCT_(\d+)\.pdf/)?.[1] || "0";
-          return yearB.localeCompare(yearA);
-        });
-        
-        const latestPdf = cpctPdfs[0];
-        const latestMatch = latestPdf.filename.match(/CPCT_(\d+)\.pdf/);
-        usedYear = latestMatch ? latestMatch[1] : "2024";
-        usedPdfId = latestPdf.id;
+      console.log(`CPCT Quiz generation - Section: ${section}, Student: ${studentId}`);
+      
+      if (matchingPdf) {
+        console.log(`Found matching PDF: ${matchingPdf.filename} for section: ${section}`);
+        usedPdfId = matchingPdf.id;
         
         // Check if PDF has parsed questions for sequential picking
-        if (latestPdf.parsedQuestions && Array.isArray(latestPdf.parsedQuestions) && latestPdf.parsedQuestions.length > 0) {
+        if (matchingPdf.parsedQuestions && Array.isArray(matchingPdf.parsedQuestions) && matchingPdf.parsedQuestions.length > 0) {
           // SERVER-SIDE SEQUENTIAL QUESTION PICKING
-          const parsedQuestions = latestPdf.parsedQuestions as ParsedQuestion[];
+          const parsedQuestions = matchingPdf.parsedQuestions as ParsedQuestion[];
           
           // Get current question pointer for this student + PDF
-          const pointer = await storage.getQuestionPointer(studentId, 'cpct', latestPdf.id);
+          const pointer = await storage.getQuestionPointer(studentId, 'cpct', matchingPdf.id);
           const startIndex = pointer ? (pointer.lastQuestionIndex + 1) % parsedQuestions.length : 0;
           
-          console.log(`CPCT Student ${studentId} - PDF ${latestPdf.id}: Starting from index ${startIndex} of ${parsedQuestions.length} questions`);
+          console.log(`CPCT Student ${studentId} - PDF ${matchingPdf.id} (${section}): Starting from index ${startIndex} of ${parsedQuestions.length} questions`);
           
           // Get sequential questions with cycling
           const { questions: selectedQuestions, newLastIndex } = getSequentialQuestions(
@@ -1084,14 +1152,14 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
           );
           
           // Update question pointer for next quiz
-          await storage.updateQuestionPointer(studentId, 'cpct', latestPdf.id, newLastIndex);
+          await storage.updateQuestionPointer(studentId, 'cpct', matchingPdf.id, newLastIndex);
           console.log(`Updated CPCT pointer to index ${newLastIndex} for next quiz`);
         } else {
           // Fallback: PDF exists but no parsed questions - use full content
-          console.log(`CPCT PDF ${latestPdf.id} has no parsed questions, using full content`);
+          console.log(`CPCT PDF ${matchingPdf.id} has no parsed questions, using full content`);
           const previousQuestions = await storage.getCpctStudentPreviousQuestions(studentId);
           questions = await generateCpctQuizQuestions(
-            latestPdf.content,
+            matchingPdf.content,
             usedYear,
             medium,
             10,
@@ -1099,10 +1167,23 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
           );
         }
       } else {
-        // Generate general CPCT questions (fallback when no PDF uploaded)
+        // Generate section-specific CPCT questions (fallback when no matching PDF uploaded)
+        console.log(`No matching PDF found for section: ${section}, using fallback questions`);
         const previousQuestions = await storage.getCpctStudentPreviousQuestions(studentId);
+        
+        // Section-specific curriculum descriptions
+        const sectionCurriculum: Record<string, string> = {
+          "MS Office": "CPCT exam questions on MS Office including Microsoft Word (formatting, tables, mail merge), Microsoft Excel (formulas, functions, charts, pivot tables), Microsoft PowerPoint (presentations, animations, transitions), and basic office productivity concepts.",
+          "Software Operating System & IT Fundamentals": "CPCT exam questions on Operating Systems (Windows fundamentals, file management, system settings), Computer Basics (hardware vs software, types of software), IT Fundamentals (number systems, storage units, basic troubleshooting).",
+          "Internet, Networking & Security": "CPCT exam questions on Internet concepts (browsers, email, web protocols), Networking basics (LAN, WAN, TCP/IP, network devices), Cyber Security (viruses, malware, safe browsing, passwords, firewalls).",
+          "Hardware Peripheral & Devices": "CPCT exam questions on Computer Hardware (CPU, RAM, motherboard, storage devices), Input/Output Devices (keyboard, mouse, printer, scanner, monitor), and peripheral connectivity.",
+          "Aptitude & Logical Reasoning": "CPCT exam questions on Numerical Aptitude (arithmetic, percentages, ratios), Logical Reasoning (series, patterns, coding-decoding, analogies), and Basic Mathematics.",
+        };
+        
+        const curriculum = sectionCurriculum[section] || `CPCT exam questions on ${section} for computer proficiency certification in Madhya Pradesh, India.`;
+        
         questions = await generateCpctQuizQuestions(
-          `General CPCT exam curriculum for computer proficiency certification in Madhya Pradesh, India. Topics include: Computer Fundamentals, Operating Systems (Windows), MS Office (Word, Excel, PowerPoint), Internet and Email, Basic Networking, Computer Security, Hindi Typing, English Typing.`,
+          curriculum,
           usedYear,
           medium,
           10,
@@ -1115,6 +1196,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         studentId,
         pdfId: usedPdfId,
         year: usedYear,
+        section: section,
         medium: student.medium,
         questions,
         totalQuestions: 10,

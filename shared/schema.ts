@@ -64,12 +64,24 @@ export const quizSessions = pgTable("quiz_sessions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// CPCT exam sections - the 5 question paper sections
+export const CPCT_SECTIONS = [
+  "MS Office",
+  "Software Operating System & IT Fundamentals",
+  "Internet, Networking & Security",
+  "Hardware Peripheral & Devices",
+  "Aptitude & Logical Reasoning",
+] as const;
+
+export type CpctSection = typeof CPCT_SECTIONS[number];
+
 // CPCT Quiz sessions table - stores CPCT quiz attempts and results
 export const cpctQuizSessions = pgTable("cpct_quiz_sessions", {
   id: serial("id").primaryKey(),
   studentId: integer("student_id").notNull().references(() => cpctStudents.id),
   pdfId: integer("pdf_id").references(() => pdfs.id),
-  year: varchar("year", { length: 10 }).notNull(), // CPCT year
+  year: varchar("year", { length: 10 }).notNull(), // CPCT year (kept for backward compatibility)
+  section: varchar("section", { length: 100 }), // CPCT section (new)
   medium: varchar("medium", { length: 10 }).notNull(), // Hindi or English
   score: integer("score"),
   totalQuestions: integer("total_questions").default(10),
