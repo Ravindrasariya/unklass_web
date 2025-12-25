@@ -394,6 +394,7 @@ export function parseQuestionsWithChapters(content: string): {
 } {
   const normalizedContent = normalizeContent(content);
   
+  // Standard patterns for single-line chapter headings
   const chapterPatterns = [
     /(?:Chapter|अध्याय|Ch\.?)\s*(\d+)\s*[:\.\-–—]\s*(.+)/gi,
     /(?:Chapter|अध्याय)\s*(\d+)\s+(.+)/gi,
@@ -403,6 +404,7 @@ export function parseQuestionsWithChapters(content: string): {
   
   const chapterPositions: { chapterNumber: number; chapterName: string; position: number }[] = [];
   
+  // First, try standard single-line patterns
   for (const pattern of chapterPatterns) {
     pattern.lastIndex = 0;
     let match;
@@ -418,6 +420,99 @@ export function parseQuestionsWithChapters(content: string): {
             chapterName,
             position: match.index,
           });
+        }
+      }
+    }
+  }
+  
+  // Handle multi-line chapter headings (common with large font PDFs)
+  // Pattern: "Chapter" on one line, number on next, title on following line(s)
+  const lines = normalizedContent.split('\n');
+  for (let i = 0; i < lines.length - 1; i++) {
+    const line = lines[i].trim();
+    
+    // Check if line is just "Chapter" or "अध्याय" (chapter heading split across lines)
+    if (/^(?:Chapter|अध्याय|Ch\.?)$/i.test(line)) {
+      // Look at next few lines for number and title
+      let chapterNumber: number | null = null;
+      let chapterName: string | null = null;
+      let lineOffset = 1;
+      
+      // Find the chapter number in next 2 lines
+      for (let j = i + 1; j <= Math.min(i + 2, lines.length - 1); j++) {
+        const nextLine = lines[j].trim();
+        const numMatch = nextLine.match(/^(\d+)$/);
+        if (numMatch) {
+          chapterNumber = parseInt(numMatch[1], 10);
+          lineOffset = j - i + 1;
+          break;
+        }
+        // Also check for "Chapter N" on a single line (number only)
+        const numOnlyMatch = nextLine.match(/^(\d+)\s*[:\.\-–—]?\s*$/);
+        if (numOnlyMatch) {
+          chapterNumber = parseInt(numOnlyMatch[1], 10);
+          lineOffset = j - i + 1;
+          break;
+        }
+      }
+      
+      // Find chapter name in the lines after the number
+      if (chapterNumber && chapterNumber > 0 && chapterNumber <= 50) {
+        for (let j = i + lineOffset; j <= Math.min(i + lineOffset + 2, lines.length - 1); j++) {
+          const titleLine = lines[j].trim();
+          // Skip empty lines and lines that are just numbers
+          if (!titleLine || /^\d+$/.test(titleLine)) continue;
+          // Skip if this looks like a question
+          if (/^(?:Que?s?(?:tion)?|Q|प्रश्न)/i.test(titleLine)) break;
+          // This should be the chapter name
+          if (titleLine.length >= 2 && titleLine.length <= 100) {
+            chapterName = titleLine;
+            break;
+          }
+        }
+        
+        if (chapterName) {
+          const exists = chapterPositions.some(c => c.chapterNumber === chapterNumber);
+          if (!exists) {
+            // Find position in original content
+            const linesBefore = lines.slice(0, i).join('\n');
+            const position = linesBefore.length;
+            chapterPositions.push({
+              chapterNumber,
+              chapterName,
+              position,
+            });
+          }
+        }
+      }
+    }
+    
+    // Also check for pattern: just a number on its own line followed by chapter title
+    // This handles "1" followed by "Real Numbers" format
+    const justNumber = line.match(/^(\d+)$/);
+    if (justNumber) {
+      const num = parseInt(justNumber[1], 10);
+      // Only consider as chapter if between 1-20 (reasonable chapter numbers)
+      if (num >= 1 && num <= 20) {
+        // Check if previous line was "Chapter" or if next line looks like a title
+        const prevLine = i > 0 ? lines[i - 1].trim().toLowerCase() : '';
+        const nextLine = i + 1 < lines.length ? lines[i + 1].trim() : '';
+        
+        const isAfterChapter = /^(?:chapter|अध्याय|ch\.?)$/i.test(prevLine);
+        const nextIsTitle = nextLine.length >= 3 && nextLine.length <= 100 && 
+                           !/^(?:Que?s?(?:tion)?|Q|प्रश्न|\d+\.)/i.test(nextLine) &&
+                           !/^\d+$/.test(nextLine);
+        
+        if (isAfterChapter && nextIsTitle) {
+          const exists = chapterPositions.some(c => c.chapterNumber === num);
+          if (!exists) {
+            const linesBefore = lines.slice(0, i - 1).join('\n');
+            chapterPositions.push({
+              chapterNumber: num,
+              chapterName: nextLine,
+              position: linesBefore.length,
+            });
+          }
         }
       }
     }
