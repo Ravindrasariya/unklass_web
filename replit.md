@@ -101,6 +101,23 @@ Preferred communication style: Simple, everyday language.
 - **Quiz history**: Students can view their Navodaya quiz history and review past questions
 - **Fallback questions**: Section-specific fallback questions when no PDF available
 
+### Chapter Practice - NCERT
+- **Separate student table**: `chapterPracticeStudents` with fields (name, schoolName, grade, board, medium, location, mobileNumber)
+- **Grades supported**: 6th, 7th, 8th, 9th, 10th (defined in CHAPTER_PRACTICE_GRADES constant)
+- **School name field**: Optional field for student's school name
+- **PDF format**: `{grade}_{board}_Chapter_Plan_{subject}.pdf` (e.g., `8th_MP_Chapter_Plan_Mathematics.pdf`)
+- **PDF storage**: Board stored as `{board}_Chapter_Plan` in database (e.g., `MP_Chapter_Plan`)
+- **Admin panel**: 
+  - Separate "Chapter Practice PDFs" section with violet theme
+  - "Chapter Practice" tab in Student Progress with grade filter (6th-10th)
+- **API Endpoints**:
+  - `POST /api/chapter-practice/students/register` - Register chapter practice student
+  - `POST /api/chapter-practice/students/login` - Login existing student
+  - `GET /api/admin/chapter-practice-students` - Admin: Get all students with progress
+  - `GET /api/admin/chapter-practice-pdfs` - Admin: Get all Chapter Practice PDFs
+- **Subjects**: Mathematics, Science, SST, Hindi, English
+- **Chapter-based learning**: Students select grade, board, subject, then chapter for practice
+
 ### Design System
 - **Typography**: Inter (primary), Poppins (headings) via Google Fonts
 - **Layout**: Max-width containers (3xl for quiz, md for forms)
