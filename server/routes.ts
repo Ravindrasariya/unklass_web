@@ -1045,16 +1045,13 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         pdf.filename.startsWith("CPCT_") && pdf.filename.endsWith(".pdf")
       );
       
-      // Map uploaded PDFs to their corresponding sections
+      // Map uploaded PDFs to their corresponding sections - only return sections with actual PDFs
       const availableSections = CPCT_SECTIONS.filter(section => {
         const matchingPdf = findPdfForSection(cpctPdfs, section);
         return matchingPdf !== null;
       });
       
-      // If no PDFs match, return all sections (fallback questions will be used)
-      const sections = availableSections.length > 0 ? availableSections : CPCT_SECTIONS;
-      
-      res.json({ sections });
+      res.json({ sections: availableSections });
     } catch (error) {
       console.error("Error fetching available CPCT sections:", error);
       res.status(500).json({ error: "Failed to fetch available sections" });
@@ -1579,16 +1576,13 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         pdf.filename.endsWith(".pdf")
       );
       
-      // Map uploaded PDFs to their corresponding sections
+      // Map uploaded PDFs to their corresponding sections - only return sections with actual PDFs
       const availableSections = allSections.filter(section => {
-        const matchingPdf = findNavodayaPdfForSection(navodayaPdfs, grade, section);
+        const matchingPdf = findNavodayaPdfForSection(navodayaPdfs, grade as string, section);
         return matchingPdf !== null;
       });
       
-      // If no PDFs match, return all sections (fallback questions will be used)
-      const sections = availableSections.length > 0 ? availableSections : allSections;
-      
-      res.json({ sections, grade });
+      res.json({ sections: availableSections, grade });
     } catch (error) {
       console.error("Error fetching available Navodaya sections:", error);
       res.status(500).json({ error: "Failed to fetch available sections" });
