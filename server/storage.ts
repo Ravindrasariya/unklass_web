@@ -1,7 +1,7 @@
 import { 
   students, pdfs, quizSessions, cpctStudents, cpctQuizSessions,
   navodayaStudents, navodayaQuizSessions,
-  contactSubmissions, visitorStats, uniqueVisitors, questionPointers,
+  contactSubmissions, visitorStats, uniqueVisitors, questionPointers, notices,
   type Student, type InsertStudent,
   type Pdf, type InsertPdf,
   type QuizSession, type InsertQuizSession,
@@ -11,7 +11,8 @@ import {
   type NavodayaQuizSession, type InsertNavodayaQuizSession,
   type ContactSubmission, type InsertContactSubmission,
   type VisitorStats,
-  type QuestionPointer, type ParsedQuestion
+  type QuestionPointer, type ParsedQuestion,
+  type Notice, type InsertNotice
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, like, sql, desc, gte, lte, lt, isNotNull, or } from "drizzle-orm";
@@ -107,6 +108,13 @@ export interface IStorage {
   
   // PDF parsed questions
   updatePdfParsedQuestions(pdfId: number, parsedQuestions: ParsedQuestion[], totalQuestions: number): Promise<Pdf | undefined>;
+
+  // Notices
+  createNotice(notice: InsertNotice): Promise<Notice>;
+  updateNotice(id: number, updates: Partial<InsertNotice>): Promise<Notice | undefined>;
+  deleteNotice(id: number): Promise<boolean>;
+  getActiveNotices(): Promise<Notice[]>;
+  getAllNotices(): Promise<Notice[]>;
 }
 
 export interface LeaderboardEntry {
@@ -728,6 +736,43 @@ export class DatabaseStorage implements IStorage {
       .where(eq(pdfs.id, pdfId))
       .returning();
     return updated || undefined;
+  }
+
+  // Notices
+  async createNotice(notice: InsertNotice): Promise<Notice> {
+    const [created] = await db.insert(notices).values(notice).returning();
+    return created;
+  }
+
+  async updateNotice(id: number, updates: Partial<InsertNotice>): Promise<Notice | undefined> {
+    const [updated] = await db
+      .update(notices)
+      .set(updates)
+      .where(eq(notices.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteNotice(id: number): Promise<boolean> {
+    const result = await db.delete(notices).where(eq(notices.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getActiveNotices(): Promise<Notice[]> {
+    const now = new Date();
+    return await db.select().from(notices).where(
+      and(
+        eq(notices.isActive, true),
+        or(
+          sql`${notices.expiresAt} IS NULL`,
+          gte(notices.expiresAt, now)
+        )
+      )
+    ).orderBy(desc(notices.priority), desc(notices.createdAt));
+  }
+
+  async getAllNotices(): Promise<Notice[]> {
+    return await db.select().from(notices).orderBy(desc(notices.priority), desc(notices.createdAt));
   }
 }
 

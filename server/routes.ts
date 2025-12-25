@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertStudentSchema, insertCpctStudentSchema, insertNavodayaStudentSchema, insertContactSubmissionSchema, type Question, type ParsedQuestion } from "@shared/schema";
+import { insertStudentSchema, insertCpctStudentSchema, insertNavodayaStudentSchema, insertContactSubmissionSchema, insertNoticeSchema, type Question, type ParsedQuestion } from "@shared/schema";
 import { generateQuizQuestions, generateAnswerFeedback, generateCpctQuizQuestions, generateNavodayaQuizQuestions } from "./openai";
 import { parseQuestionsFromPdfContent, getSequentialQuestions } from "./questionParser";
 import multer from "multer";
@@ -1265,6 +1265,76 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     } catch (error) {
       console.error("Error fetching visitor stats:", error);
       res.status(500).json({ error: "Failed to fetch visitor stats" });
+    }
+  });
+
+  // ============================================
+  // NOTICES ROUTES
+  // ============================================
+
+  // Public: Get active notices for landing page
+  app.get("/api/notices", async (req, res) => {
+    try {
+      const notices = await storage.getActiveNotices();
+      res.json(notices);
+    } catch (error) {
+      console.error("Error fetching active notices:", error);
+      res.status(500).json({ error: "Failed to fetch notices" });
+    }
+  });
+
+  // Admin: Get all notices
+  app.get("/api/admin/notices", async (req, res) => {
+    try {
+      const notices = await storage.getAllNotices();
+      res.json(notices);
+    } catch (error) {
+      console.error("Error fetching all notices:", error);
+      res.status(500).json({ error: "Failed to fetch notices" });
+    }
+  });
+
+  // Admin: Create notice
+  app.post("/api/admin/notices", async (req, res) => {
+    try {
+      const validatedData = insertNoticeSchema.parse(req.body);
+      const notice = await storage.createNotice(validatedData);
+      res.json(notice);
+    } catch (error: unknown) {
+      console.error("Error creating notice:", error);
+      const message = error instanceof Error ? error.message : "Failed to create notice";
+      res.status(400).json({ error: message });
+    }
+  });
+
+  // Admin: Update notice
+  app.patch("/api/admin/notices/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const notice = await storage.updateNotice(id, req.body);
+      if (!notice) {
+        return res.status(404).json({ error: "Notice not found" });
+      }
+      res.json(notice);
+    } catch (error: unknown) {
+      console.error("Error updating notice:", error);
+      const message = error instanceof Error ? error.message : "Failed to update notice";
+      res.status(400).json({ error: message });
+    }
+  });
+
+  // Admin: Delete notice
+  app.delete("/api/admin/notices/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteNotice(id);
+      if (!success) {
+        return res.status(404).json({ error: "Notice not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting notice:", error);
+      res.status(500).json({ error: "Failed to delete notice" });
     }
   });
 
