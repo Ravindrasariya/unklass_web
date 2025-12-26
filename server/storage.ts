@@ -154,6 +154,9 @@ export interface IStorage {
   upsertStudentExamProfile(studentId: number, examType: string, lastSelections: any): Promise<StudentExamProfile>;
   getStudentAllExamProfiles(studentId: number): Promise<StudentExamProfile[]>;
   
+  // Legacy user lookup and auto-migration
+  findAndMigrateLegacyUser(name: string, mobileNumber: string): Promise<UnifiedStudent | null>;
+  
   // Unified Quiz History
   getUnifiedStudentQuizHistory(studentId: number, examType: string): Promise<any[]>;
 }
@@ -994,6 +997,88 @@ export class DatabaseStorage implements IStorage {
 
   async getStudentAllExamProfiles(studentId: number): Promise<StudentExamProfile[]> {
     return await db.select().from(studentExamProfiles).where(eq(studentExamProfiles.studentId, studentId));
+  }
+
+  async findAndMigrateLegacyUser(name: string, mobileNumber: string): Promise<UnifiedStudent | null> {
+    // Search in legacy tables for existing user
+    // Check students (board exam)
+    const [boardStudent] = await db.select().from(students).where(
+      and(
+        sql`LOWER(${students.name}) = LOWER(${name})`,
+        eq(students.mobileNumber, mobileNumber)
+      )
+    );
+    if (boardStudent) {
+      // Create unified student from board student data
+      const newUnified = await this.createUnifiedStudent({
+        name: boardStudent.name,
+        fatherName: null, // Not available in legacy
+        location: boardStudent.location,
+        mobileNumber: boardStudent.mobileNumber,
+        schoolName: null,
+        dateOfBirth: null,
+      });
+      return newUnified;
+    }
+
+    // Check cpctStudents
+    const [cpctStudent] = await db.select().from(cpctStudents).where(
+      and(
+        sql`LOWER(${cpctStudents.name}) = LOWER(${name})`,
+        eq(cpctStudents.mobileNumber, mobileNumber)
+      )
+    );
+    if (cpctStudent) {
+      const newUnified = await this.createUnifiedStudent({
+        name: cpctStudent.name,
+        fatherName: null,
+        location: cpctStudent.location,
+        mobileNumber: cpctStudent.mobileNumber,
+        schoolName: null,
+        dateOfBirth: null,
+      });
+      return newUnified;
+    }
+
+    // Check navodayaStudents
+    const [navodayaStudent] = await db.select().from(navodayaStudents).where(
+      and(
+        sql`LOWER(${navodayaStudents.name}) = LOWER(${name})`,
+        eq(navodayaStudents.mobileNumber, mobileNumber)
+      )
+    );
+    if (navodayaStudent) {
+      const newUnified = await this.createUnifiedStudent({
+        name: navodayaStudent.name,
+        fatherName: null,
+        location: navodayaStudent.location,
+        mobileNumber: navodayaStudent.mobileNumber,
+        schoolName: null,
+        dateOfBirth: null,
+      });
+      return newUnified;
+    }
+
+    // Check chapterPracticeStudents
+    const [chapterStudent] = await db.select().from(chapterPracticeStudents).where(
+      and(
+        sql`LOWER(${chapterPracticeStudents.name}) = LOWER(${name})`,
+        eq(chapterPracticeStudents.mobileNumber, mobileNumber)
+      )
+    );
+    if (chapterStudent) {
+      const newUnified = await this.createUnifiedStudent({
+        name: chapterStudent.name,
+        fatherName: null,
+        location: chapterStudent.location,
+        mobileNumber: chapterStudent.mobileNumber,
+        schoolName: chapterStudent.schoolName || null,
+        dateOfBirth: null,
+      });
+      return newUnified;
+    }
+
+    return null;
   }
 
   async getUnifiedStudentQuizHistory(studentId: number, examType: string): Promise<any[]> {

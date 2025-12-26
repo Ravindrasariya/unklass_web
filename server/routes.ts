@@ -87,12 +87,26 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Name and mobile number are required" });
       }
       
-      const student = await storage.getUnifiedStudentByNameAndMobile(name, mobileNumber);
+      // First try to find in unified_students
+      let student = await storage.getUnifiedStudentByNameAndMobile(name, mobileNumber);
+      
+      if (!student) {
+        // Check legacy tables and auto-migrate if found
+        student = await storage.findAndMigrateLegacyUser(name, mobileNumber);
+        
+        if (student) {
+          console.log(`Migrated legacy user ${name} to unified_students (ID: ${student.id})`);
+        }
+      }
+      
       if (!student) {
         return res.status(404).json({ error: "Student not found. Please check your name and mobile number, or register if you're new." });
       }
       
-      res.json(student);
+      // Include flag indicating if profile needs completion
+      const needsProfileCompletion = !student.fatherName || !student.location;
+      
+      res.json({ ...student, needsProfileCompletion });
     } catch (error) {
       console.error("Error logging in unified student:", error);
       res.status(500).json({ error: "Failed to login" });
@@ -113,16 +127,27 @@ export async function registerRoutes(
     }
   });
 
-  // Update unified student profile (for editable fields like schoolName, dateOfBirth)
+  // Update unified student profile (for editable fields and profile completion)
   app.patch("/api/auth/student/:id", async (req, res) => {
     try {
       const studentId = parseInt(req.params.id);
-      const { schoolName, dateOfBirth } = req.body;
+      const { schoolName, dateOfBirth, fatherName, location } = req.body;
       
-      const student = await storage.updateUnifiedStudent(studentId, {
+      // Build updates object - fatherName and location only allowed if currently empty (profile completion)
+      const updates: Record<string, string | null | undefined> = {
         schoolName: schoolName ?? undefined,
         dateOfBirth: dateOfBirth ?? undefined,
-      });
+      };
+      
+      // Only allow updating fatherName/location if they're being set (profile completion)
+      if (fatherName !== undefined) {
+        updates.fatherName = fatherName;
+      }
+      if (location !== undefined) {
+        updates.location = location;
+      }
+      
+      const student = await storage.updateUnifiedStudent(studentId, updates);
       
       if (!student) {
         return res.status(404).json({ error: "Student not found" });
