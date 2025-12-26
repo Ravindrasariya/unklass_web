@@ -68,6 +68,10 @@ function extractQuestionsWithPatterns(content: string): { num: number; text: str
     /(?:^|\n|[.\s])(?:Que?s?(?:tion)?|Q|प्रश्न|Qn)[\s.\-:\t|]*(\d+)[\s.\-:)\]\t|]*/gi,
     // Just number followed by period at start of line: "81. What is..."
     /(?:^|\n)(\d{1,3})\.\s+(?=[A-Z])/g,
+    // Hindi PDF format: ".-1." or "प्र-1." or "प्र.-1." patterns (period-dash-number-period)
+    /(?:^|\n|\|)\s*(?:प्र)?\.?\-(\d{1,3})\.\s*/gi,
+    // Format: "Q-1." or "प्र-1" without trailing period
+    /(?:^|\n|\|)\s*(?:Q|प्र)[\.\-](\d{1,3})[\.\s\|]/gi,
   ];
   
   const questionStarts: { num: number; startPos: number; matchEnd: number }[] = [];
