@@ -48,7 +48,8 @@ type AppState = "landing" | "onboarding" | "ready" | "loading" | "quiz" | "resul
   | "cpct-onboarding" | "cpct-ready" | "cpct-loading" | "cpct-quiz" | "cpct-results" | "cpct-history"
   | "navodaya-onboarding" | "navodaya-ready" | "navodaya-loading" | "navodaya-quiz" | "navodaya-results" | "navodaya-history"
   | "chapter-practice-onboarding" | "chapter-practice-ready" | "chapter-practice-loading" | "chapter-practice-quiz" | "chapter-practice-results"
-  | "unified-auth" | "unified-board-options" | "unified-cpct-options" | "unified-navodaya-options" | "unified-chapter-options";
+  | "unified-auth" | "unified-board-options" | "unified-cpct-options" | "unified-navodaya-options" | "unified-chapter-options"
+  | "unified-board-history" | "unified-cpct-history" | "unified-navodaya-history" | "unified-chapter-history";
 
 interface QuizAnswer {
   questionId: number;
@@ -1198,6 +1199,7 @@ function App() {
                   onSubmit={handleUnifiedBoardExamSubmit}
                   onSaveSelections={handleSaveExamProfile}
                   onBack={handleUnifiedBackToLanding}
+                  onViewHistory={() => setAppState("unified-board-history")}
                 />
               )}
 
@@ -1209,6 +1211,7 @@ function App() {
                   onSubmit={handleUnifiedCPCTSubmit}
                   onSaveSelections={handleSaveExamProfile}
                   onBack={handleUnifiedBackToLanding}
+                  onViewHistory={() => setAppState("unified-cpct-history")}
                 />
               )}
 
@@ -1220,6 +1223,7 @@ function App() {
                   onSubmit={handleUnifiedNavodayaSubmit}
                   onSaveSelections={handleSaveExamProfile}
                   onBack={handleUnifiedBackToLanding}
+                  onViewHistory={() => setAppState("unified-navodaya-history")}
                 />
               )}
 
@@ -1231,6 +1235,32 @@ function App() {
                   onSubmit={handleUnifiedChapterPracticeSubmit}
                   onSaveSelections={handleSaveExamProfile}
                   onBack={handleUnifiedBackToLanding}
+                />
+              )}
+
+              {appState === "unified-board-history" && unifiedStudent && (
+                <QuizHistory
+                  studentId={unifiedStudent.id}
+                  onBack={() => setAppState("unified-board-options")}
+                  useUnifiedAuth={true}
+                />
+              )}
+
+              {appState === "unified-cpct-history" && unifiedStudent && (
+                <QuizHistory
+                  studentId={unifiedStudent.id}
+                  onBack={() => setAppState("unified-cpct-options")}
+                  historyType="cpct"
+                  useUnifiedAuth={true}
+                />
+              )}
+
+              {appState === "unified-navodaya-history" && unifiedStudent && (
+                <QuizHistory
+                  studentId={unifiedStudent.id}
+                  onBack={() => setAppState("unified-navodaya-options")}
+                  historyType="navodaya"
+                  useUnifiedAuth={true}
                 />
               )}
 

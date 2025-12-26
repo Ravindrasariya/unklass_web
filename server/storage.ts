@@ -153,6 +153,9 @@ export interface IStorage {
   getStudentExamProfile(studentId: number, examType: string): Promise<StudentExamProfile | undefined>;
   upsertStudentExamProfile(studentId: number, examType: string, lastSelections: any): Promise<StudentExamProfile>;
   getStudentAllExamProfiles(studentId: number): Promise<StudentExamProfile[]>;
+  
+  // Unified Quiz History
+  getUnifiedStudentQuizHistory(studentId: number, examType: string): Promise<any[]>;
 }
 
 export interface LeaderboardEntry {
@@ -991,6 +994,23 @@ export class DatabaseStorage implements IStorage {
 
   async getStudentAllExamProfiles(studentId: number): Promise<StudentExamProfile[]> {
     return await db.select().from(studentExamProfiles).where(eq(studentExamProfiles.studentId, studentId));
+  }
+
+  async getUnifiedStudentQuizHistory(studentId: number, examType: string): Promise<any[]> {
+    if (examType === "board") {
+      return await db.select().from(quizSessions)
+        .where(eq(quizSessions.unifiedStudentId, studentId))
+        .orderBy(desc(quizSessions.completedAt));
+    } else if (examType === "cpct") {
+      return await db.select().from(cpctQuizSessions)
+        .where(eq(cpctQuizSessions.unifiedStudentId, studentId))
+        .orderBy(desc(cpctQuizSessions.completedAt));
+    } else if (examType === "navodaya") {
+      return await db.select().from(navodayaQuizSessions)
+        .where(eq(navodayaQuizSessions.unifiedStudentId, studentId))
+        .orderBy(desc(navodayaQuizSessions.completedAt));
+    }
+    return [];
   }
 }
 

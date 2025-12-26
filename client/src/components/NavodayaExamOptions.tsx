@@ -2,11 +2,11 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Card, CardContent, CardHeader, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowRight, Loader2, School } from "lucide-react";
+import { ArrowRight, Loader2, School, History } from "lucide-react";
 import logoImage from "@assets/Screenshot_2025-12-11_at_12.16.26_AM_1765392397522.png";
 
 const NAVODAYA_SECTIONS_6TH = [
@@ -37,6 +37,7 @@ interface NavodayaExamOptionsProps {
   onSubmit: (data: NavodayaExamOptionsData) => Promise<void>;
   onSaveSelections: (selections: Partial<NavodayaExamOptionsData>) => void;
   onBack: () => void;
+  onViewHistory?: () => void;
 }
 
 export default function NavodayaExamOptions({ 
@@ -45,7 +46,8 @@ export default function NavodayaExamOptions({
   savedSelections, 
   onSubmit, 
   onSaveSelections,
-  onBack 
+  onBack,
+  onViewHistory
 }: NavodayaExamOptionsProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -74,24 +76,24 @@ export default function NavodayaExamOptions({
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center space-y-3">
-          <div className="flex flex-col items-center gap-1 mb-2">
+        <CardHeader className="text-center pb-4">
+          <div className="flex flex-col items-center gap-2 mb-4">
             <img 
               src={logoImage} 
               alt="UNKLASS" 
-              className="h-10 dark:invert" 
+              className="h-12 dark:invert" 
               data-testid="img-navodaya-logo"
             />
             <p className="text-sm text-muted-foreground">
               Learning Beyond Classroom
             </p>
           </div>
-          <div className="flex items-center justify-center gap-2">
+          <CardTitle className="flex items-center justify-center gap-2">
             <School className="w-5 h-5 text-sky-500" />
-            <span className="font-semibold">Navodaya Exam Prep</span>
-          </div>
-          <CardDescription className="text-base">
-            Welcome, {studentName}! Select your exam details
+            Navodaya Exam Prep
+          </CardTitle>
+          <CardDescription className="text-base mt-2">
+            Welcome, {studentName}!
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -182,6 +184,19 @@ export default function NavodayaExamOptions({
                 Start Quiz
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
+
+              {onViewHistory && (
+                <Button 
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={onViewHistory}
+                  data-testid="button-navodaya-history"
+                >
+                  <History className="w-4 h-4 mr-2" />
+                  View History
+                </Button>
+              )}
 
               <Button 
                 type="button"

@@ -154,6 +154,42 @@ export async function registerRoutes(
     }
   });
 
+  // Get unified student quiz history (board exam)
+  app.get("/api/unified/students/:studentId/quiz-history", async (req, res) => {
+    try {
+      const studentId = parseInt(req.params.studentId);
+      const sessions = await storage.getUnifiedStudentQuizHistory(studentId, "board");
+      res.json(sessions);
+    } catch (error) {
+      console.error("Error fetching unified quiz history:", error);
+      res.status(500).json({ error: "Failed to fetch quiz history" });
+    }
+  });
+
+  // Get unified student quiz history (CPCT)
+  app.get("/api/unified/students/:studentId/cpct-quiz-history", async (req, res) => {
+    try {
+      const studentId = parseInt(req.params.studentId);
+      const sessions = await storage.getUnifiedStudentQuizHistory(studentId, "cpct");
+      res.json(sessions);
+    } catch (error) {
+      console.error("Error fetching unified CPCT quiz history:", error);
+      res.status(500).json({ error: "Failed to fetch CPCT quiz history" });
+    }
+  });
+
+  // Get unified student quiz history (Navodaya)
+  app.get("/api/unified/students/:studentId/navodaya-quiz-history", async (req, res) => {
+    try {
+      const studentId = parseInt(req.params.studentId);
+      const sessions = await storage.getUnifiedStudentQuizHistory(studentId, "navodaya");
+      res.json(sessions);
+    } catch (error) {
+      console.error("Error fetching unified Navodaya quiz history:", error);
+      res.status(500).json({ error: "Failed to fetch Navodaya quiz history" });
+    }
+  });
+
   // ==================== LEGACY STUDENT ROUTES ====================
 
   // Student registration

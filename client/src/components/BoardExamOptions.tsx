@@ -2,11 +2,11 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Card, CardContent, CardHeader, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowRight, Loader2, GraduationCap } from "lucide-react";
+import { ArrowRight, Loader2, GraduationCap, History } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import logoImage from "@assets/Screenshot_2025-12-11_at_12.16.26_AM_1765392397522.png";
 
@@ -26,6 +26,7 @@ interface BoardExamOptionsProps {
   onSubmit: (data: BoardExamOptionsData) => Promise<void>;
   onSaveSelections: (selections: Partial<BoardExamOptionsData>) => void;
   onBack: () => void;
+  onViewHistory?: () => void;
 }
 
 const SUBJECTS = ["Mathematics", "Science", "SST", "Hindi", "English"];
@@ -36,7 +37,8 @@ export default function BoardExamOptions({
   savedSelections, 
   onSubmit, 
   onSaveSelections,
-  onBack 
+  onBack,
+  onViewHistory
 }: BoardExamOptionsProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -71,24 +73,24 @@ export default function BoardExamOptions({
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center space-y-3">
-          <div className="flex flex-col items-center gap-1 mb-2">
+        <CardHeader className="text-center pb-4">
+          <div className="flex flex-col items-center gap-2 mb-4">
             <img 
               src={logoImage} 
               alt="UNKLASS" 
-              className="h-10 dark:invert" 
+              className="h-12 dark:invert" 
               data-testid="img-board-logo"
             />
             <p className="text-sm text-muted-foreground">
               Learning Beyond Classroom
             </p>
           </div>
-          <div className="flex items-center justify-center gap-2">
+          <CardTitle className="flex items-center justify-center gap-2">
             <GraduationCap className="w-5 h-5 text-primary" />
-            <span className="font-semibold">Board Exam Prep</span>
-          </div>
-          <CardDescription className="text-base">
-            Welcome, {studentName}! Select your exam details
+            Board Exam Prep
+          </CardTitle>
+          <CardDescription className="text-base mt-2">
+            Welcome, {studentName}!
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -203,6 +205,19 @@ export default function BoardExamOptions({
                 Start Quiz
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
+
+              {onViewHistory && (
+                <Button 
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={onViewHistory}
+                  data-testid="button-board-history"
+                >
+                  <History className="w-4 h-4 mr-2" />
+                  View History
+                </Button>
+              )}
 
               <Button 
                 type="button"
