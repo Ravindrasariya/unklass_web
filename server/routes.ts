@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertStudentSchema, insertCpctStudentSchema, insertNavodayaStudentSchema, insertContactSubmissionSchema, insertNoticeSchema, insertUnifiedStudentSchema, NAVODAYA_SECTIONS_6TH, NAVODAYA_SECTIONS_9TH, type Question, type ParsedQuestion, type ExamType } from "@shared/schema";
-import { generateQuizQuestions, generateAnswerFeedback, generateCpctQuizQuestions, generateNavodayaQuizQuestions } from "./openai";
+import { generateQuizQuestions, generateAnswerFeedback, generateCpctQuizQuestions, generateNavodayaQuizQuestions, shuffleAllQuestionOptions } from "./openai";
 import { parseQuestionsFromPdfContent, getSequentialQuestions } from "./questionParser";
 import multer from "multer";
 import { z } from "zod";
@@ -750,6 +750,9 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         );
       }
 
+      // Shuffle options to randomize correct answer positions
+      const shuffledQuestions = shuffleAllQuestionOptions(questions);
+
       // Create quiz session
       const session = await storage.createQuizSession({
         studentId,
@@ -758,13 +761,13 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         subject,
         grade,
         board: board.toUpperCase(),
-        questions,
-        totalQuestions: questions.length, // Use actual count of generated questions
+        questions: shuffledQuestions,
+        totalQuestions: shuffledQuestions.length,
       });
 
       res.json({
         sessionId: session.id,
-        questions,
+        questions: shuffledQuestions,
       });
     } catch (error: unknown) {
       console.error("Error generating quiz:", error);
@@ -1435,6 +1438,9 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         );
       }
 
+      // Shuffle options to randomize correct answer positions
+      const shuffledQuestions = shuffleAllQuestionOptions(questions);
+
       // Create CPCT quiz session
       const session = await storage.createCpctQuizSession({
         studentId,
@@ -1443,13 +1449,13 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         year: usedYear,
         section: section,
         medium: studentMedium,
-        questions,
-        totalQuestions: questions.length, // Use actual count of generated questions
+        questions: shuffledQuestions,
+        totalQuestions: shuffledQuestions.length,
       });
 
       res.json({
         sessionId: session.id,
-        questions,
+        questions: shuffledQuestions,
       });
     } catch (error: unknown) {
       console.error("Error generating CPCT quiz:", error);
@@ -2041,6 +2047,9 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         );
       }
 
+      // Shuffle options to randomize correct answer positions
+      const shuffledQuestions = shuffleAllQuestionOptions(questions);
+
       // Create Navodaya quiz session with section
       const session = await storage.createNavodayaQuizSession({
         studentId,
@@ -2049,13 +2058,13 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         examGrade: studentExamGrade,
         section,
         medium: studentMedium,
-        questions,
-        totalQuestions: questions.length, // Use actual count of generated questions
+        questions: shuffledQuestions,
+        totalQuestions: shuffledQuestions.length,
       });
 
       res.json({
         sessionId: session.id,
-        questions,
+        questions: shuffledQuestions,
       });
     } catch (error: unknown) {
       console.error("Error generating Navodaya quiz:", error);
@@ -2493,6 +2502,9 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         chapterQuestions.length
       );
       
+      // Shuffle options to randomize correct answer positions
+      const shuffledQuestions = shuffleAllQuestionOptions(generatedQuestions);
+      
       const session = await storage.createChapterPracticeQuizSession({
         studentId,
         pdfId: pdf.id,
@@ -2502,14 +2514,14 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         grade: grade || student.grade,
         board: board || student.board,
         medium: medium || student.medium || "English",
-        totalQuestions: generatedQuestions.length,
-        questions: generatedQuestions,
+        totalQuestions: shuffledQuestions.length,
+        questions: shuffledQuestions,
       });
       
       res.json({
         sessionId: session.id,
-        questions: generatedQuestions,
-        totalQuestions: generatedQuestions.length,
+        questions: shuffledQuestions,
+        totalQuestions: shuffledQuestions.length,
         chapterName: chapter,
       });
     } catch (error) {

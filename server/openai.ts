@@ -5,6 +5,34 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Fisher-Yates shuffle algorithm for randomizing options
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+// Shuffle question options and update correctAnswer index
+export function shuffleQuestionOptions(question: Question): Question {
+  const correctOption = question.options[question.correctAnswer];
+  const shuffledOptions = shuffleArray(question.options);
+  const newCorrectIndex = shuffledOptions.indexOf(correctOption);
+  
+  return {
+    ...question,
+    options: shuffledOptions,
+    correctAnswer: newCorrectIndex,
+  };
+}
+
+// Shuffle options for an array of questions
+export function shuffleAllQuestionOptions(questions: Question[]): Question[] {
+  return questions.map(q => shuffleQuestionOptions(q));
+}
+
 // Fallback questions when OpenAI is unavailable
 const FALLBACK_QUESTIONS: Record<string, Question[]> = {
   Mathematics: [
