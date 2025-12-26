@@ -176,7 +176,7 @@ export default function NavodayaExamOptions({
 
               <Button 
                 type="submit" 
-                className="w-full mt-6 bg-gradient-to-r from-sky-500 to-sky-600" 
+                className="w-full mt-6" 
                 disabled={isSubmitting}
                 data-testid="button-navodaya-start"
               >

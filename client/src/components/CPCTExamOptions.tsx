@@ -136,7 +136,7 @@ export default function CPCTExamOptions({
 
               <Button 
                 type="submit" 
-                className="w-full mt-6 bg-gradient-to-r from-amber-500 to-amber-600" 
+                className="w-full mt-6" 
                 disabled={isSubmitting}
                 data-testid="button-cpct-start"
               >
