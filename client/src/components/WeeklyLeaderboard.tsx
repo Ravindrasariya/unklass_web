@@ -1,5 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { Crown, Medal, Trophy, Flame } from "lucide-react";
+import { Crown, Medal, Trophy, Flame, ChevronLeft, ChevronRight } from "lucide-react";
+import useEmblaCarousel from "embla-carousel-react";
+import { useCallback, useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 
 interface LeaderboardEntry {
   rank: number;
@@ -48,7 +51,7 @@ function LeaderboardCard({
   if (entries.length === 0) return null;
 
   return (
-    <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden" data-testid={`leaderboard-${title.toLowerCase().replace(/\s+/g, '-')}`}>
+    <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden h-full" data-testid={`leaderboard-${title.toLowerCase().replace(/\s+/g, '-')}`}>
       <div className={`${accentColor} px-6 py-4 flex items-center gap-3`}>
         <div className="bg-white/20 p-2 rounded-lg">
           <Icon className="w-6 h-6 text-white" />
@@ -91,11 +94,71 @@ function LeaderboardCard({
   );
 }
 
+interface CarouselDotsProps {
+  selectedIndex: number;
+  scrollSnaps: number[];
+  onDotClick: (index: number) => void;
+}
+
+function CarouselDots({ selectedIndex, scrollSnaps, onDotClick }: CarouselDotsProps) {
+  return (
+    <div className="flex justify-center gap-2 mt-4">
+      {scrollSnaps.map((_, index) => (
+        <button
+          key={index}
+          onClick={() => onDotClick(index)}
+          className={`w-2.5 h-2.5 rounded-full transition-all ${
+            index === selectedIndex 
+              ? 'bg-primary w-6' 
+              : 'bg-gray-300 hover:bg-gray-400'
+          }`}
+          data-testid={`carousel-dot-${index}`}
+          aria-label={`Go to slide ${index + 1}`}
+        />
+      ))}
+    </div>
+  );
+}
+
 export default function WeeklyLeaderboard() {
   const { data, isLoading } = useQuery<LeaderboardData>({
     queryKey: ['/api/leaderboard/weekly'],
     refetchInterval: 60000,
   });
+
+  const [emblaRef, emblaApi] = useEmblaCarousel({ 
+    align: 'start',
+    slidesToScroll: 1,
+    containScroll: 'trimSnaps',
+  });
+  
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
+
+  const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
+  const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
+  const scrollTo = useCallback((index: number) => emblaApi?.scrollTo(index), [emblaApi]);
+
+  const onSelect = useCallback(() => {
+    if (!emblaApi) return;
+    setSelectedIndex(emblaApi.selectedScrollSnap());
+    setCanScrollPrev(emblaApi.canScrollPrev());
+    setCanScrollNext(emblaApi.canScrollNext());
+  }, [emblaApi]);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+    setScrollSnaps(emblaApi.scrollSnapList());
+    onSelect();
+    emblaApi.on('select', onSelect);
+    emblaApi.on('reInit', onSelect);
+    return () => {
+      emblaApi.off('select', onSelect);
+      emblaApi.off('reInit', onSelect);
+    };
+  }, [emblaApi, onSelect]);
 
   const hasBoardExam = data?.boardExam && data.boardExam.length > 0;
   const hasCpct = data?.cpct && data.cpct.length > 0;
@@ -123,7 +186,31 @@ export default function WeeklyLeaderboard() {
     return null;
   }
   
-  const activeCount = [hasBoardExam, hasCpct, hasNavodaya, hasChapterPractice].filter(Boolean).length;
+  const activeCards = [
+    hasBoardExam && { 
+      title: "Board Exam Prep", 
+      entries: data!.boardExam, 
+      accentColor: "bg-gradient-to-r from-sky-500 to-blue-600" 
+    },
+    hasCpct && { 
+      title: "CPCT Exam Prep", 
+      entries: data!.cpct, 
+      accentColor: "bg-gradient-to-r from-purple-500 to-indigo-600" 
+    },
+    hasNavodaya && { 
+      title: "Navodaya Prep", 
+      entries: data!.navodaya, 
+      accentColor: "bg-gradient-to-r from-sky-500 to-sky-600" 
+    },
+    hasChapterPractice && { 
+      title: "Chapter Practice", 
+      entries: data!.chapterPractice, 
+      accentColor: "bg-gradient-to-r from-violet-500 to-purple-600" 
+    },
+  ].filter(Boolean) as { title: string; entries: LeaderboardEntry[]; accentColor: string }[];
+
+  const activeCount = activeCards.length;
+  const useCarousel = activeCount > 2;
 
   return (
     <section className="bg-gradient-to-b from-white to-gray-50 py-14 md:py-18 relative overflow-hidden" data-testid="section-weekly-leaderboard">
@@ -144,40 +231,86 @@ export default function WeeklyLeaderboard() {
           </p>
         </div>
 
-        <div className={`grid gap-6 ${activeCount >= 4 ? 'md:grid-cols-2 lg:grid-cols-4' : activeCount === 3 ? 'md:grid-cols-3' : activeCount === 2 ? 'md:grid-cols-2' : 'max-w-lg mx-auto'}`}>
-          {hasBoardExam && (
-            <LeaderboardCard 
-              title="Board Exam Prep" 
-              entries={data!.boardExam} 
-              icon={Trophy}
-              accentColor="bg-gradient-to-r from-sky-500 to-blue-600"
-            />
-          )}
-          {hasCpct && (
-            <LeaderboardCard 
-              title="CPCT Exam Prep" 
-              entries={data!.cpct} 
-              icon={Trophy}
-              accentColor="bg-gradient-to-r from-purple-500 to-indigo-600"
-            />
-          )}
-          {hasNavodaya && (
-            <LeaderboardCard 
-              title="Navodaya Prep" 
-              entries={data!.navodaya} 
-              icon={Trophy}
-              accentColor="bg-gradient-to-r from-sky-500 to-sky-600"
-            />
-          )}
-          {hasChapterPractice && (
-            <LeaderboardCard 
-              title="Chapter Practice" 
-              entries={data!.chapterPractice} 
-              icon={Trophy}
-              accentColor="bg-gradient-to-r from-violet-500 to-purple-600"
-            />
-          )}
-        </div>
+        {useCarousel ? (
+          <>
+            {/* Mobile: Stack all cards */}
+            <div className="md:hidden space-y-6">
+              {activeCards.map((card) => (
+                <LeaderboardCard 
+                  key={card.title}
+                  title={card.title} 
+                  entries={card.entries} 
+                  icon={Trophy}
+                  accentColor={card.accentColor}
+                />
+              ))}
+            </div>
+
+            {/* Desktop: Carousel showing 2 at a time */}
+            <div className="hidden md:block relative">
+              <div className="overflow-hidden" ref={emblaRef}>
+                <div className="flex gap-6">
+                  {activeCards.map((card) => (
+                    <div 
+                      key={card.title} 
+                      className="flex-[0_0_calc(50%-12px)] min-w-0"
+                    >
+                      <LeaderboardCard 
+                        title={card.title} 
+                        entries={card.entries} 
+                        icon={Trophy}
+                        accentColor={card.accentColor}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Navigation arrows */}
+              <Button
+                variant="outline"
+                size="icon"
+                className={`absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 bg-white shadow-lg z-10 rounded-full ${!canScrollPrev ? 'opacity-50 cursor-not-allowed' : ''}`}
+                onClick={scrollPrev}
+                disabled={!canScrollPrev}
+                data-testid="carousel-prev"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="icon"
+                className={`absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 bg-white shadow-lg z-10 rounded-full ${!canScrollNext ? 'opacity-50 cursor-not-allowed' : ''}`}
+                onClick={scrollNext}
+                disabled={!canScrollNext}
+                data-testid="carousel-next"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </Button>
+
+              {/* Dots indicator */}
+              <CarouselDots 
+                selectedIndex={selectedIndex}
+                scrollSnaps={scrollSnaps}
+                onDotClick={scrollTo}
+              />
+            </div>
+          </>
+        ) : (
+          /* 1-2 cards: Regular grid layout */
+          <div className={`grid gap-6 ${activeCount === 2 ? 'md:grid-cols-2' : 'max-w-lg mx-auto'}`}>
+            {activeCards.map((card) => (
+              <LeaderboardCard 
+                key={card.title}
+                title={card.title} 
+                entries={card.entries} 
+                icon={Trophy}
+                accentColor={card.accentColor}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
