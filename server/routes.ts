@@ -694,8 +694,35 @@ export async function registerRoutes(
       
       if (pdf && pdf.parsedQuestions && Array.isArray(pdf.parsedQuestions) && pdf.parsedQuestions.length > 0) {
         // SERVER-SIDE SEQUENTIAL QUESTION PICKING
-        const parsedQuestions = pdf.parsedQuestions as ParsedQuestion[];
+        let parsedQuestions = pdf.parsedQuestions as ParsedQuestion[];
         
+        // Filter out instruction-only entries (not real questions)
+        const instructionPatterns = [
+          /^choose the correct option[:\s]*$/i,
+          /^multiple choice questions[:\s]*$/i,
+          /^select the correct answer[:\s]*$/i,
+          /^answer the following[:\s]*$/i,
+          /^questions[:\s]*$/i,
+          /^mcq[:\s]*$/i,
+        ];
+        parsedQuestions = parsedQuestions.filter(q => {
+          const text = q.rawText?.trim() || '';
+          return text.length > 30 && !instructionPatterns.some(p => p.test(text));
+        });
+        
+        if (parsedQuestions.length === 0) {
+          console.log(`PDF ${pdf.id} has no valid questions after filtering, using fallback`);
+          const previousQuestions = await storage.getStudentPreviousQuestions(studentId, subject);
+          questions = await generateQuizQuestions(
+            pdf.content,
+            subject,
+            grade,
+            board,
+            10,
+            previousQuestions,
+            studentMedium
+          );
+        } else {
         // Get current question pointer for this student + PDF
         const pointer = await storage.getQuestionPointer(studentId, 'board', pdf.id);
         const startIndex = pointer ? (pointer.lastQuestionIndex + 1) % parsedQuestions.length : 0;
@@ -738,7 +765,7 @@ export async function registerRoutes(
         // Update question pointer for next quiz
         await storage.updateQuestionPointer(studentId, 'board', pdf.id, actualNewIndex);
         console.log(`Generated ${generatedQuestions.length} questions, using ${questions.length}. Updated pointer to index ${actualNewIndex} for next quiz`);
-        
+        }
       } else if (pdf) {
         // Fallback: PDF exists but no parsed questions - use full content
         console.log(`PDF ${pdf.id} has no parsed questions, using full content`);
