@@ -32,25 +32,61 @@ Preferred communication style: Simple, everyday language.
 - **Schema Location**: `shared/schema.ts` (shared between frontend/backend)
 - **Migrations**: Drizzle Kit with `migrations/` output directory
 - **Tables**:
-  - `students`: Board exam student registration (name, grade, board, location, mobile_number)
+  - `unified_students`: Unified student registration (name required; fatherName, location nullable for legacy compatibility; mobileNumber required; schoolName, dateOfBirth optional) - NEW unified auth system
+  - `student_exam_profiles`: Per-exam preferences/selections storage (studentId, examType, lastSelections JSONB)
+  - `students`: Board exam student registration (legacy, still functional)
   - `pdfs`: Uploaded PDF metadata, extracted content, and parsed questions (parsedQuestions JSONB, totalQuestions integer)
   - `quiz_sessions`: Board exam quiz attempts, generated questions, answers, and scores
-  - `cpct_students`: CPCT student registration (name, medium, location, mobile_number)
+  - `cpct_students`: CPCT student registration (legacy, still functional)
   - `cpct_quiz_sessions`: CPCT quiz attempts
-  - `navodaya_students`: Navodaya student registration (name, exam_grade, medium, location, mobile_number)
+  - `navodaya_students`: Navodaya student registration (legacy, still functional)
   - `navodaya_quiz_sessions`: Navodaya quiz attempts
   - `question_pointers`: Tracks sequential question progress (studentId, studentType, pdfId, lastQuestionIndex)
 
+### Backward Compatibility (Legacy User Migration)
+- **Legacy users don't need to re-register**: Existing students in legacy tables (students, cpctStudents, navodayaStudents, chapterPracticeStudents) can login with name + mobile
+- **Auto-migration on first login**: When a legacy user logs in, the system automatically creates a unified_students record from their legacy data
+- **Profile completion**: Legacy users may have missing fields (fatherName, location) which they can complete via the Profile page
+- **needsProfileCompletion flag**: Login response includes this flag when fatherName or location is missing
+- **ProfilePage**: Shows completion prompt and allows editing fatherName/location for migrated users; once set, these fields become immutable
+- **Implementation**: `findAndMigrateLegacyUser()` in storage.ts searches all legacy tables and creates unified record
+
 ### API Endpoints
-- `POST /api/students/register` - Register new student
+
+#### Unified Auth (NEW)
+- `POST /api/auth/register` - Register unified student (name, fatherName, location, mobileNumber, schoolName optional)
+- `POST /api/auth/login` - Login with name + mobileNumber
+- `GET /api/auth/student/:id` - Get unified student by ID
+- `GET /api/auth/student/:id/profile/:examType` - Get saved selections for exam type
+- `POST /api/auth/student/:id/profile/:examType` - Save exam selections (lastSelections JSONB)
+- `GET /api/auth/student/:id/profiles` - Get all exam profiles for student
+
+#### Legacy Student APIs (still functional)
+- `POST /api/students/register` - Register board exam student (legacy)
 - `GET /api/students/:id` - Get student by ID
-- `POST /api/admin/upload-pdf` - Upload PDF (admin only, follows {grade}_{board}_{subject}.pdf naming)
-- `GET /api/admin/pdfs` - List all uploaded PDFs
+- `POST /api/cpct/students/register` - Register CPCT student (legacy)
+- `POST /api/navodaya/students/register` - Register Navodaya student (legacy)
+
+#### Quiz APIs
 - `POST /api/quiz/generate` - Generate quiz questions for student
 - `POST /api/quiz/submit` - Submit quiz results
 - `GET /api/students/:studentId/quiz-history` - Get student's quiz history
 
-### Application Flow
+#### Admin APIs
+- `POST /api/admin/upload-pdf` - Upload PDF (admin only, follows {grade}_{board}_{subject}.pdf naming)
+- `GET /api/admin/pdfs` - List all uploaded PDFs
+
+### Application Flow (Unified Auth - NEW)
+1. User lands on homepage, clicks on any exam card (Board Exam, CPCT, Navodaya, Chapter Practice)
+2. Unified login/registration form appears:
+   - Login: name + mobile number
+   - Registration: name, father's name, location, contact (required), school name (optional)
+3. After login, exam-specific options screen shows with dropdowns for that exam type
+4. Dropdown selections are auto-saved and restored on next visit
+5. Student starts quiz -> answers questions -> sees results
+6. After quiz, returns to exam-specific options screen
+
+### Application Flow (Legacy - still functional)
 1. Student registers with personal details (name, grade, board, location, mobile)
 2. Student selects subject from available options (Math, Science, SST, Hindi, English, Physics, Chemistry, Biology)
 3. AI generates 10 MCQ questions (uses fallback questions if OpenAI quota exceeded)
@@ -75,6 +111,13 @@ Preferred communication style: Simple, everyday language.
 - **Fallback**: If no parsed questions exist, falls back to full PDF content with previous question deduplication
 - **Key Files**: `server/questionParser.ts`, `server/routes.ts`, `server/storage.ts`
 - **Benefits**: Deterministic, faster LLM calls, ensures complete question coverage, handles edge cases with cycling
+- **Instruction Filtering**: `isInstructionOrNote()` function filters out PDF instruction headers (e.g., "Choose the correct option", "सही विकल्प चुनिए") that were incorrectly parsed as questions
+
+### Language-Based Subjects
+- **Hindi and English subjects are language-specific**: Questions are rendered in the subject's language regardless of student's medium preference
+- **Implementation**: In quiz generation endpoints, if subject is "Hindi" or "English", the medium is forced to match the subject
+- **Rationale**: Hindi PDFs are in Hindi and should generate Hindi questions; English PDFs are in English and should generate English questions
+- **Affected endpoints**: `/api/quiz/generate`, `/api/chapter-practice/quiz/generate`
 
 ### CPCT Exam Prep
 - **Separate student table**: `cpctStudents` with fields (name, medium, location, mobileNumber)
@@ -100,6 +143,23 @@ Preferred communication style: Simple, everyday language.
 - **Fuzzy PDF matching**: Backend matches section names to PDF filenames using fuzzy matching
 - **Quiz history**: Students can view their Navodaya quiz history and review past questions
 - **Fallback questions**: Section-specific fallback questions when no PDF available
+
+### Chapter Practice - NCERT
+- **Separate student table**: `chapterPracticeStudents` with fields (name, schoolName, grade, board, medium, location, mobileNumber)
+- **Grades supported**: 6th, 7th, 8th, 9th, 10th (defined in CHAPTER_PRACTICE_GRADES constant)
+- **School name field**: Optional field for student's school name
+- **PDF format**: `{grade}_{board}_Chapter_Plan_{subject}.pdf` (e.g., `8th_MP_Chapter_Plan_Mathematics.pdf`)
+- **PDF storage**: Board stored as `{board}_Chapter_Plan` in database (e.g., `MP_Chapter_Plan`)
+- **Admin panel**: 
+  - Separate "Chapter Practice PDFs" section with violet theme
+  - "Chapter Practice" tab in Student Progress with grade filter (6th-10th)
+- **API Endpoints**:
+  - `POST /api/chapter-practice/students/register` - Register chapter practice student
+  - `POST /api/chapter-practice/students/login` - Login existing student
+  - `GET /api/admin/chapter-practice-students` - Admin: Get all students with progress
+  - `GET /api/admin/chapter-practice-pdfs` - Admin: Get all Chapter Practice PDFs
+- **Subjects**: Mathematics, Science, SST, Hindi, English
+- **Chapter-based learning**: Students select grade, board, subject, then chapter for practice
 
 ### Design System
 - **Typography**: Inter (primary), Poppins (headings) via Google Fonts

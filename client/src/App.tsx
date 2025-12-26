@@ -8,9 +8,16 @@ import LandingPage from "@/components/LandingPage";
 import StudentOnboardingForm, { type StudentData } from "@/components/StudentOnboardingForm";
 import CpctOnboardingForm, { type CpctStudentData } from "@/components/CpctOnboardingForm";
 import NavodayaOnboardingForm, { type NavodayaStudentData } from "@/components/NavodayaOnboardingForm";
+import ChapterPracticeOnboardingForm, { type ChapterPracticeStudentData } from "@/components/ChapterPracticeOnboardingForm";
+import UnifiedAuthForm, { type LoginData, type RegisterData } from "@/components/UnifiedAuthForm";
+import BoardExamOptions, { type BoardExamOptionsData } from "@/components/BoardExamOptions";
+import CPCTExamOptions, { type CPCTExamOptionsData } from "@/components/CPCTExamOptions";
+import NavodayaExamOptions, { type NavodayaExamOptionsData } from "@/components/NavodayaExamOptions";
+import ChapterPracticeOptions, { type ChapterPracticeOptionsData } from "@/components/ChapterPracticeOptions";
 import QuizQuestion, { type Question } from "@/components/QuizQuestion";
 import QuizResults from "@/components/QuizResults";
 import QuizHistory from "@/components/QuizHistory";
+import ProfilePage from "@/components/ProfilePage";
 import AppHeader from "@/components/AppHeader";
 import AdminPage from "@/pages/admin";
 import AboutPage from "@/pages/about";
@@ -19,13 +26,34 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
+import { Loader2, Library } from "lucide-react";
 import logoIcon from "@assets/Unklass_-_1_1765392666171.png";
 import { useToast } from "@/hooks/use-toast";
 
+type ExamType = "board_exam" | "cpct" | "navodaya" | "chapter_practice";
+
+interface UnifiedStudent {
+  id: number;
+  name: string;
+  fatherName: string | null;
+  location: string | null;
+  mobileNumber: string;
+  schoolName?: string | null;
+  dateOfBirth?: string | null;
+  needsProfileCompletion?: boolean;
+}
+
+interface ExamProfile {
+  lastSelections: Record<string, unknown> | null;
+}
+
 type AppState = "landing" | "onboarding" | "ready" | "loading" | "quiz" | "results" | "history" 
   | "cpct-onboarding" | "cpct-ready" | "cpct-loading" | "cpct-quiz" | "cpct-results" | "cpct-history"
-  | "navodaya-onboarding" | "navodaya-ready" | "navodaya-loading" | "navodaya-quiz" | "navodaya-results" | "navodaya-history";
+  | "navodaya-onboarding" | "navodaya-ready" | "navodaya-loading" | "navodaya-quiz" | "navodaya-results" | "navodaya-history"
+  | "chapter-practice-onboarding" | "chapter-practice-ready" | "chapter-practice-loading" | "chapter-practice-quiz" | "chapter-practice-results"
+  | "unified-auth" | "unified-board-options" | "unified-cpct-options" | "unified-navodaya-options" | "unified-chapter-options"
+  | "unified-board-history" | "unified-cpct-history" | "unified-navodaya-history" | "unified-chapter-history"
+  | "profile";
 
 interface QuizAnswer {
   questionId: number;
@@ -55,6 +83,16 @@ interface RegisteredNavodayaStudent {
   id: number;
   name: string;
   examGrade: string;
+  medium: string;
+  location: string;
+  mobileNumber: string;
+}
+
+interface RegisteredChapterPracticeStudent {
+  id: number;
+  name: string;
+  grade: string;
+  board: string;
   medium: string;
   location: string;
   mobileNumber: string;
@@ -140,7 +178,70 @@ function App() {
   const [navodayaSessionId, setNavodayaSessionId] = useState<number | null>(null);
   const [availableNavodayaSections, setAvailableNavodayaSections] = useState<string[]>([]);
   
+  // Chapter Practice state
+  const [chapterPracticeStudentData, setChapterPracticeStudentData] = useState<RegisteredChapterPracticeStudent | null>(null);
+  const [selectedChapterPracticeSubject, setSelectedChapterPracticeSubject] = useState<string>("");
+  const [selectedChapter, setSelectedChapter] = useState<string>("");
+  const [chapterPracticeQuestions, setChapterPracticeQuestions] = useState<Question[]>([]);
+  const [chapterPracticeCurrentQuestionIndex, setChapterPracticeCurrentQuestionIndex] = useState(0);
+  const [chapterPracticeAnswers, setChapterPracticeAnswers] = useState<QuizAnswer[]>([]);
+  const [chapterPracticeSessionId, setChapterPracticeSessionId] = useState<number | null>(null);
+  const [availableChapters, setAvailableChapters] = useState<string[]>([]);
+  const [availableChapterPracticeSubjects, setAvailableChapterPracticeSubjects] = useState<string[]>([]);
+
+  // Unified auth state - restore from localStorage if available
+  const [unifiedStudent, setUnifiedStudent] = useState<UnifiedStudent | null>(() => {
+    try {
+      const stored = localStorage.getItem("unifiedStudent");
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [selectedExamType, setSelectedExamType] = useState<ExamType | null>(() => {
+    try {
+      const stored = localStorage.getItem("selectedExamType");
+      return stored ? (stored as ExamType) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [examProfile, setExamProfile] = useState<ExamProfile | null>(null);
+
+  // Persist unified student to localStorage
+  useEffect(() => {
+    if (unifiedStudent) {
+      localStorage.setItem("unifiedStudent", JSON.stringify(unifiedStudent));
+    } else {
+      localStorage.removeItem("unifiedStudent");
+    }
+  }, [unifiedStudent]);
+
+  // Persist selected exam type to localStorage
+  useEffect(() => {
+    if (selectedExamType) {
+      localStorage.setItem("selectedExamType", selectedExamType);
+    } else {
+      localStorage.removeItem("selectedExamType");
+    }
+  }, [selectedExamType]);
+  
   const { toast } = useToast();
+
+  // Load exam profile when unified student selects an exam type
+  useEffect(() => {
+    if (unifiedStudent && selectedExamType) {
+      fetch(`/api/auth/student/${unifiedStudent.id}/profile/${selectedExamType}`)
+        .then(res => res.json())
+        .then(data => {
+          setExamProfile(data);
+        })
+        .catch(err => {
+          console.error("Failed to fetch exam profile:", err);
+          setExamProfile(null);
+        });
+    }
+  }, [unifiedStudent, selectedExamType]);
 
   // Fetch available subjects when student is ready
   useEffect(() => {
@@ -186,6 +287,37 @@ function App() {
         });
     }
   }, [navodayaStudentData, appState]);
+
+  // Fetch available subjects for chapter practice
+  useEffect(() => {
+    if (chapterPracticeStudentData && appState === "chapter-practice-ready") {
+      fetch(`/api/chapter-practice/available-subjects?grade=${encodeURIComponent(chapterPracticeStudentData.grade)}&board=${encodeURIComponent(chapterPracticeStudentData.board)}`)
+        .then(res => res.json())
+        .then(data => {
+          setAvailableChapterPracticeSubjects(data.subjects || []);
+        })
+        .catch(err => {
+          console.error("Failed to fetch available subjects:", err);
+          setAvailableChapterPracticeSubjects([]);
+        });
+    }
+  }, [chapterPracticeStudentData, appState]);
+
+  // Fetch available chapters when subject is selected
+  useEffect(() => {
+    if (chapterPracticeStudentData && selectedChapterPracticeSubject && appState === "chapter-practice-ready") {
+      fetch(`/api/chapter-practice/available-chapters?grade=${encodeURIComponent(chapterPracticeStudentData.grade)}&board=${encodeURIComponent(chapterPracticeStudentData.board)}&subject=${encodeURIComponent(selectedChapterPracticeSubject)}`)
+        .then(res => res.json())
+        .then(data => {
+          setAvailableChapters(data.chapters || []);
+          setSelectedChapter("");
+        })
+        .catch(err => {
+          console.error("Failed to fetch available chapters:", err);
+          setAvailableChapters([]);
+        });
+    }
+  }, [chapterPracticeStudentData, selectedChapterPracticeSubject, appState]);
 
   const handleOnboardingSubmit = useCallback(async (data: StudentData) => {
     try {
@@ -330,8 +462,13 @@ function App() {
     setCurrentQuestionIndex(0);
     setAnswers([]);
     setSessionId(null);
-    setAppState("ready");
-  }, []);
+    // Return to unified options if came from unified flow
+    if (unifiedStudent) {
+      setAppState("unified-board-options");
+    } else {
+      setAppState("ready");
+    }
+  }, [unifiedStudent]);
 
   // Function to start CPCT quiz with selected section
   const startCpctQuizWithSection = useCallback(async (section: string) => {
@@ -452,8 +589,13 @@ function App() {
     setCpctCurrentQuestionIndex(0);
     setCpctAnswers([]);
     setCpctSessionId(null);
-    setAppState("cpct-ready");
-  }, []);
+    // Return to unified options if came from unified flow
+    if (unifiedStudent) {
+      setAppState("unified-cpct-options");
+    } else {
+      setAppState("cpct-ready");
+    }
+  }, [unifiedStudent]);
 
   const handleCpctViewHistory = useCallback(() => {
     setAppState("cpct-history");
@@ -571,16 +713,504 @@ function App() {
   const handleNavodayaRetakeQuiz = useCallback(async () => {
     if (!navodayaStudentData) return;
     setSelectedNavodayaSection("");
-    setAppState("navodaya-ready");
-  }, [navodayaStudentData]);
+    // Return to unified options if came from unified flow
+    if (unifiedStudent) {
+      setAppState("unified-navodaya-options");
+    } else {
+      setAppState("navodaya-ready");
+    }
+  }, [navodayaStudentData, unifiedStudent]);
 
   const handleNavodayaViewHistory = useCallback(() => {
     setAppState("navodaya-history");
   }, []);
 
+  // Chapter Practice handlers
+  const handleChapterPracticeOnboardingSubmit = useCallback(async (data: ChapterPracticeStudentData) => {
+    try {
+      const response = await apiRequest("POST", "/api/chapter-practice/students/register", {
+        name: data.name,
+        schoolName: data.schoolName,
+        grade: data.grade,
+        board: data.board,
+        medium: data.medium,
+        location: data.location,
+        mobileNumber: data.mobile,
+      });
+      const student = await response.json();
+      setChapterPracticeStudentData(student);
+      setAppState("chapter-practice-ready");
+    } catch (error) {
+      console.error("Registration error:", error);
+      toast({
+        title: "Registration failed",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
+
+  const handleChapterPracticeLogin = useCallback(async (data: { name: string; mobile: string }): Promise<boolean> => {
+    try {
+      const response = await apiRequest("POST", "/api/chapter-practice/students/login", {
+        name: data.name,
+        mobileNumber: data.mobile,
+      });
+      const student = await response.json();
+      if (student && student.id) {
+        setChapterPracticeStudentData(student);
+        setAppState("chapter-practice-ready");
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Login error:", error);
+      return false;
+    }
+  }, []);
+
+  const handleChapterPracticeStartQuiz = useCallback(async () => {
+    if (!selectedChapter || !selectedChapterPracticeSubject || !chapterPracticeStudentData) return;
+    
+    setAppState("chapter-practice-loading");
+    
+    try {
+      const response = await apiRequest("POST", "/api/chapter-practice/quiz/generate", {
+        studentId: chapterPracticeStudentData.id,
+        grade: chapterPracticeStudentData.grade,
+        board: chapterPracticeStudentData.board,
+        subject: selectedChapterPracticeSubject,
+        chapter: selectedChapter,
+        medium: chapterPracticeStudentData.medium,
+      });
+      
+      const data = await response.json();
+      
+      if (data.questions && data.questions.length > 0) {
+        const formattedQuestions: Question[] = data.questions.map((q: any, idx: number) => ({
+          id: idx + 1,
+          question: q.question,
+          options: q.options,
+          correctAnswer: q.correctAnswer,
+          explanation: q.explanation || "",
+        }));
+        
+        setChapterPracticeQuestions(formattedQuestions);
+        setChapterPracticeCurrentQuestionIndex(0);
+        setChapterPracticeAnswers([]);
+        setChapterPracticeSessionId(data.sessionId);
+        setAppState("chapter-practice-quiz");
+      } else {
+        toast({
+          title: "No questions available",
+          description: "No questions found for this chapter. Please try another chapter.",
+          variant: "destructive",
+        });
+        setAppState("chapter-practice-ready");
+      }
+    } catch (error) {
+      console.error("Quiz generation error:", error);
+      toast({
+        title: "Failed to generate quiz",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+      setAppState("chapter-practice-ready");
+    }
+  }, [selectedChapter, selectedChapterPracticeSubject, chapterPracticeStudentData, toast]);
+
+  const handleChapterPracticeAnswer = useCallback((selectedOption: number, isCorrect: boolean) => {
+    const currentQuestion = chapterPracticeQuestions[chapterPracticeCurrentQuestionIndex];
+    const newAnswer: QuizAnswer = {
+      questionId: currentQuestion.id,
+      selectedOption,
+      isCorrect,
+    };
+    setChapterPracticeAnswers(prev => [...prev, newAnswer]);
+  }, [chapterPracticeQuestions, chapterPracticeCurrentQuestionIndex]);
+
+  const handleChapterPracticeNext = useCallback(async () => {
+    if (chapterPracticeCurrentQuestionIndex < chapterPracticeQuestions.length - 1) {
+      setChapterPracticeCurrentQuestionIndex(prev => prev + 1);
+    } else {
+      // Submit results
+      if (chapterPracticeSessionId) {
+        try {
+          await apiRequest("POST", "/api/chapter-practice/quiz/submit", {
+            sessionId: chapterPracticeSessionId,
+            answers: chapterPracticeAnswers,
+            score: chapterPracticeAnswers.filter(a => a.isCorrect).length,
+            totalQuestions: chapterPracticeQuestions.length,
+          });
+        } catch (error) {
+          console.error("Failed to submit quiz results:", error);
+        }
+      }
+      
+      setAppState("chapter-practice-results");
+    }
+  }, [chapterPracticeCurrentQuestionIndex, chapterPracticeQuestions.length, chapterPracticeAnswers, chapterPracticeSessionId]);
+
+  // ==================== UNIFIED AUTH HANDLERS ====================
+
+  // Handle card click from landing page - show unified auth
+  const handleUnifiedCardClick = useCallback((examType: ExamType) => {
+    setSelectedExamType(examType);
+    
+    // If user is already logged in with unified auth, go straight to options
+    if (unifiedStudent) {
+      switch (examType) {
+        case "board_exam":
+          setAppState("unified-board-options");
+          break;
+        case "cpct":
+          setAppState("unified-cpct-options");
+          break;
+        case "navodaya":
+          setAppState("unified-navodaya-options");
+          break;
+        case "chapter_practice":
+          setAppState("unified-chapter-options");
+          break;
+      }
+    } else {
+      setAppState("unified-auth");
+    }
+  }, [unifiedStudent]);
+
+  // Handle unified login
+  const handleUnifiedLogin = useCallback(async (data: LoginData): Promise<boolean> => {
+    try {
+      const response = await apiRequest("POST", "/api/auth/login", {
+        name: data.name,
+        mobileNumber: data.mobileNumber,
+      });
+      const student = await response.json();
+      if (student && student.id) {
+        setUnifiedStudent(student);
+        // If no exam type selected (login from header), go to landing page
+        if (!selectedExamType) {
+          setAppState("landing");
+          return true;
+        }
+        // Navigate to the exam-specific options
+        switch (selectedExamType) {
+          case "board_exam":
+            setAppState("unified-board-options");
+            break;
+          case "cpct":
+            setAppState("unified-cpct-options");
+            break;
+          case "navodaya":
+            setAppState("unified-navodaya-options");
+            break;
+          case "chapter_practice":
+            setAppState("unified-chapter-options");
+            break;
+        }
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Unified login error:", error);
+      return false;
+    }
+  }, [selectedExamType]);
+
+  // Handle unified registration
+  const handleUnifiedRegister = useCallback(async (data: RegisterData): Promise<boolean> => {
+    try {
+      const response = await apiRequest("POST", "/api/auth/register", {
+        name: data.name,
+        fatherName: data.fatherName,
+        location: data.location,
+        mobileNumber: data.mobileNumber,
+        schoolName: data.schoolName || null,
+      });
+      const student = await response.json();
+      if (student && student.id) {
+        setUnifiedStudent(student);
+        // If no exam type selected (signup from header), go to landing page
+        if (!selectedExamType) {
+          setAppState("landing");
+          return true;
+        }
+        // Navigate to the exam-specific options
+        switch (selectedExamType) {
+          case "board_exam":
+            setAppState("unified-board-options");
+            break;
+          case "cpct":
+            setAppState("unified-cpct-options");
+            break;
+          case "navodaya":
+            setAppState("unified-navodaya-options");
+            break;
+          case "chapter_practice":
+            setAppState("unified-chapter-options");
+            break;
+        }
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Unified registration error:", error);
+      return false;
+    }
+  }, [selectedExamType]);
+
+  // Save exam profile selections
+  const handleSaveExamProfile = useCallback(async (selections: Record<string, unknown>) => {
+    if (!unifiedStudent || !selectedExamType) return;
+    
+    try {
+      await apiRequest("POST", `/api/auth/student/${unifiedStudent.id}/profile/${selectedExamType}`, {
+        lastSelections: selections,
+      });
+      // Update local state
+      setExamProfile({ lastSelections: selections });
+    } catch (error) {
+      console.error("Failed to save exam profile:", error);
+    }
+  }, [unifiedStudent, selectedExamType]);
+
+  // Handle Board Exam submit from unified flow
+  const handleUnifiedBoardExamSubmit = useCallback(async (data: BoardExamOptionsData) => {
+    if (!unifiedStudent) return;
+    
+    // Create a compatible legacy student record for quiz generation
+    const legacyStudent: RegisteredStudent = {
+      id: unifiedStudent.id,
+      name: unifiedStudent.name,
+      grade: data.grade,
+      board: data.board,
+      medium: data.medium,
+      location: unifiedStudent.location || "",
+      mobileNumber: unifiedStudent.mobileNumber,
+    };
+    
+    setStudentData(legacyStudent);
+    setSelectedSubject(data.subject);
+    setAppState("loading");
+    
+    try {
+      const response = await apiRequest("POST", "/api/quiz/generate", {
+        studentId: unifiedStudent.id,
+        grade: data.grade,
+        board: data.board,
+        subject: data.subject,
+        medium: data.medium,
+        useUnifiedAuth: true,
+      });
+      
+      const quizData = await response.json();
+      setSessionId(quizData.sessionId);
+      setQuestions(quizData.questions);
+      setCurrentQuestionIndex(0);
+      setAnswers([]);
+      setAppState("quiz");
+    } catch (error) {
+      console.error("Quiz generation error:", error);
+      toast({
+        title: "Failed to generate quiz",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+      setAppState("unified-board-options");
+    }
+  }, [unifiedStudent, toast]);
+
+  // Handle CPCT Exam submit from unified flow
+  const handleUnifiedCPCTSubmit = useCallback(async (data: CPCTExamOptionsData) => {
+    if (!unifiedStudent) return;
+    
+    const legacyCpctStudent: RegisteredCpctStudent = {
+      id: unifiedStudent.id,
+      name: unifiedStudent.name,
+      medium: data.medium,
+      location: unifiedStudent.location || "",
+      mobileNumber: unifiedStudent.mobileNumber,
+    };
+    
+    setCpctStudentData(legacyCpctStudent);
+    setSelectedCpctSection(data.section);
+    setAppState("cpct-loading");
+    
+    try {
+      const response = await apiRequest("POST", "/api/cpct/quiz/generate", {
+        studentId: unifiedStudent.id,
+        section: data.section,
+        useUnifiedAuth: true,
+      });
+      
+      const quizData = await response.json();
+      setCpctSessionId(quizData.sessionId);
+      setCpctQuestions(quizData.questions);
+      setCpctCurrentQuestionIndex(0);
+      setCpctAnswers([]);
+      setAppState("cpct-quiz");
+    } catch (error) {
+      console.error("CPCT Quiz generation error:", error);
+      toast({
+        title: "Failed to generate quiz",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+      setAppState("unified-cpct-options");
+    }
+  }, [unifiedStudent, toast]);
+
+  // Handle Navodaya Exam submit from unified flow
+  const handleUnifiedNavodayaSubmit = useCallback(async (data: NavodayaExamOptionsData) => {
+    if (!unifiedStudent) return;
+    
+    const legacyNavodayaStudent: RegisteredNavodayaStudent = {
+      id: unifiedStudent.id,
+      name: unifiedStudent.name,
+      examGrade: data.examGrade,
+      medium: data.medium,
+      location: unifiedStudent.location || "",
+      mobileNumber: unifiedStudent.mobileNumber,
+    };
+    
+    setNavodayaStudentData(legacyNavodayaStudent);
+    setSelectedNavodayaSection(data.section);
+    setAppState("navodaya-loading");
+    
+    try {
+      const response = await apiRequest("POST", "/api/navodaya/quiz/generate", {
+        studentId: unifiedStudent.id,
+        section: data.section,
+        useUnifiedAuth: true,
+      });
+      
+      const quizData = await response.json();
+      setNavodayaSessionId(quizData.sessionId);
+      setNavodayaQuestions(quizData.questions);
+      setNavodayaCurrentQuestionIndex(0);
+      setNavodayaAnswers([]);
+      setAppState("navodaya-quiz");
+    } catch (error) {
+      console.error("Navodaya Quiz generation error:", error);
+      toast({
+        title: "Failed to generate quiz",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+      setAppState("unified-navodaya-options");
+    }
+  }, [unifiedStudent, toast]);
+
+  // Handle Chapter Practice submit from unified flow
+  const handleUnifiedChapterPracticeSubmit = useCallback(async (data: ChapterPracticeOptionsData) => {
+    if (!unifiedStudent) return;
+    
+    const legacyChapterStudent: RegisteredChapterPracticeStudent = {
+      id: unifiedStudent.id,
+      name: unifiedStudent.name,
+      grade: data.grade,
+      board: data.board,
+      medium: data.medium,
+      location: unifiedStudent.location || "",
+      mobileNumber: unifiedStudent.mobileNumber,
+    };
+    
+    setChapterPracticeStudentData(legacyChapterStudent);
+    setSelectedChapterPracticeSubject(data.subject);
+    setSelectedChapter(data.chapter);
+    setAppState("chapter-practice-loading");
+    
+    try {
+      const response = await apiRequest("POST", "/api/chapter-practice/quiz/generate", {
+        studentId: unifiedStudent.id,
+        grade: data.grade,
+        board: data.board,
+        subject: data.subject,
+        chapter: data.chapter,
+        medium: data.medium,
+      });
+      
+      const quizData = await response.json();
+      
+      if (quizData.questions && quizData.questions.length > 0) {
+        const formattedQuestions: Question[] = quizData.questions.map((q: any, idx: number) => ({
+          id: idx + 1,
+          question: q.question,
+          options: q.options,
+          correctAnswer: q.correctAnswer,
+          explanation: q.explanation || "",
+        }));
+        
+        setChapterPracticeQuestions(formattedQuestions);
+        setChapterPracticeCurrentQuestionIndex(0);
+        setChapterPracticeAnswers([]);
+        setChapterPracticeSessionId(quizData.sessionId);
+        setAppState("chapter-practice-quiz");
+      } else {
+        toast({
+          title: "No questions available",
+          description: "No questions found for this chapter.",
+          variant: "destructive",
+        });
+        setAppState("unified-chapter-options");
+      }
+    } catch (error) {
+      console.error("Chapter Practice Quiz generation error:", error);
+      toast({
+        title: "Failed to generate quiz",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+      setAppState("unified-chapter-options");
+    }
+  }, [unifiedStudent, toast]);
+
+  // Handle back to landing from unified flow
+  const handleUnifiedBackToLanding = useCallback(() => {
+    setSelectedExamType(null);
+    setExamProfile(null);
+    setAppState("landing");
+  }, []);
+
+  // Handle logout
+  const handleLogout = useCallback(() => {
+    setUnifiedStudent(null);
+    setSelectedExamType(null);
+    setExamProfile(null);
+    localStorage.removeItem("unifiedStudentId");
+    setAppState("landing");
+    toast({
+      title: "Logged out",
+      description: "You have been successfully logged out.",
+    });
+  }, [toast]);
+
+  // Handle login click from landing page (when not logged in)
+  const handleLoginClick = useCallback(() => {
+    setSelectedExamType(null);
+    setAppState("unified-auth");
+  }, []);
+
+  // Handle signup click from landing page (when not logged in)
+  const handleSignupClick = useCallback(() => {
+    setSelectedExamType(null);
+    setAppState("unified-auth");
+  }, []);
+
+  // Handle profile click
+  const handleProfileClick = useCallback(() => {
+    setAppState("profile");
+  }, []);
+
+  // Handle profile update
+  const handleProfileUpdate = useCallback((updatedStudent: UnifiedStudent) => {
+    setUnifiedStudent(updatedStudent);
+  }, []);
+
   const score = answers.filter(a => a.isCorrect).length;
   const cpctScore = cpctAnswers.filter(a => a.isCorrect).length;
   const navodayaScore = navodayaAnswers.filter(a => a.isCorrect).length;
+  const chapterPracticeScore = chapterPracticeAnswers.filter(a => a.isCorrect).length;
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -591,15 +1221,120 @@ function App() {
           <Route path="/contact" component={ContactPage} />
           <Route path="/">
             <div className="min-h-screen bg-background">
-              {appState !== "onboarding" && appState !== "landing" && appState !== "cpct-onboarding" && appState !== "navodaya-onboarding" && (
-                <AppHeader studentName={studentData?.name || cpctStudentData?.name || navodayaStudentData?.name} onLogoClick={() => setAppState("landing")} />
+              {appState !== "onboarding" && appState !== "landing" && appState !== "cpct-onboarding" && appState !== "navodaya-onboarding" && appState !== "chapter-practice-onboarding" && appState !== "unified-auth" && appState !== "unified-board-options" && appState !== "unified-cpct-options" && appState !== "unified-navodaya-options" && appState !== "unified-chapter-options" && appState !== "profile" && (
+                <AppHeader studentName={unifiedStudent?.name || studentData?.name || cpctStudentData?.name || navodayaStudentData?.name || chapterPracticeStudentData?.name} onLogoClick={() => setAppState("landing")} />
               )}
 
               {appState === "landing" && (
                 <LandingPage 
-                  onBoardExamClick={() => setAppState("onboarding")}
-                  onCPCTClick={() => setAppState("cpct-onboarding")}
-                  onNavodayaClick={() => setAppState("navodaya-onboarding")}
+                  onBoardExamClick={() => handleUnifiedCardClick("board_exam")}
+                  onCPCTClick={() => handleUnifiedCardClick("cpct")}
+                  onNavodayaClick={() => handleUnifiedCardClick("navodaya")}
+                  onChapterPracticeClick={() => handleUnifiedCardClick("chapter_practice")}
+                  unifiedStudent={unifiedStudent}
+                  onLoginClick={handleLoginClick}
+                  onSignupClick={handleSignupClick}
+                  onProfileClick={handleProfileClick}
+                  onLogout={handleLogout}
+                />
+              )}
+
+              {appState === "profile" && unifiedStudent && (
+                <ProfilePage
+                  student={unifiedStudent}
+                  onBack={handleUnifiedBackToLanding}
+                  onUpdate={handleProfileUpdate}
+                />
+              )}
+
+              {appState === "unified-auth" && (
+                <UnifiedAuthForm
+                  onLogin={handleUnifiedLogin}
+                  onRegister={handleUnifiedRegister}
+                  onBack={handleUnifiedBackToLanding}
+                />
+              )}
+
+              {appState === "unified-board-options" && unifiedStudent && (
+                <BoardExamOptions
+                  studentId={unifiedStudent.id}
+                  studentName={unifiedStudent.name}
+                  savedSelections={examProfile?.lastSelections as { grade?: string; board?: string; medium?: string; subject?: string } | null}
+                  onSubmit={handleUnifiedBoardExamSubmit}
+                  onSaveSelections={handleSaveExamProfile}
+                  onBack={handleUnifiedBackToLanding}
+                  onViewHistory={() => setAppState("unified-board-history")}
+                />
+              )}
+
+              {appState === "unified-cpct-options" && unifiedStudent && (
+                <CPCTExamOptions
+                  studentId={unifiedStudent.id}
+                  studentName={unifiedStudent.name}
+                  savedSelections={examProfile?.lastSelections as { medium?: string; section?: string } | null}
+                  onSubmit={handleUnifiedCPCTSubmit}
+                  onSaveSelections={handleSaveExamProfile}
+                  onBack={handleUnifiedBackToLanding}
+                  onViewHistory={() => setAppState("unified-cpct-history")}
+                />
+              )}
+
+              {appState === "unified-navodaya-options" && unifiedStudent && (
+                <NavodayaExamOptions
+                  studentId={unifiedStudent.id}
+                  studentName={unifiedStudent.name}
+                  savedSelections={examProfile?.lastSelections as { medium?: string; examGrade?: string; section?: string } | null}
+                  onSubmit={handleUnifiedNavodayaSubmit}
+                  onSaveSelections={handleSaveExamProfile}
+                  onBack={handleUnifiedBackToLanding}
+                  onViewHistory={() => setAppState("unified-navodaya-history")}
+                />
+              )}
+
+              {appState === "unified-chapter-options" && unifiedStudent && (
+                <ChapterPracticeOptions
+                  studentId={unifiedStudent.id}
+                  studentName={unifiedStudent.name}
+                  savedSelections={examProfile?.lastSelections as { grade?: string; board?: string; medium?: string; subject?: string; chapter?: string } | null}
+                  onSubmit={handleUnifiedChapterPracticeSubmit}
+                  onSaveSelections={handleSaveExamProfile}
+                  onBack={handleUnifiedBackToLanding}
+                  onViewHistory={() => setAppState("unified-chapter-history")}
+                />
+              )}
+
+              {appState === "unified-chapter-history" && unifiedStudent && (
+                <QuizHistory
+                  studentId={unifiedStudent.id}
+                  onBack={() => setAppState("unified-chapter-options")}
+                  historyType="chapter-practice"
+                  useUnifiedAuth={true}
+                />
+              )}
+
+              {appState === "unified-board-history" && unifiedStudent && (
+                <QuizHistory
+                  studentId={unifiedStudent.id}
+                  onBack={() => setAppState("unified-board-options")}
+                  useUnifiedAuth={true}
+                />
+              )}
+
+              {appState === "unified-cpct-history" && unifiedStudent && (
+                <QuizHistory
+                  studentId={unifiedStudent.id}
+                  onBack={() => setAppState("unified-cpct-options")}
+                  historyType="cpct"
+                  useUnifiedAuth={true}
+                />
+              )}
+
+              {appState === "unified-navodaya-history" && unifiedStudent && (
+                <QuizHistory
+                  studentId={unifiedStudent.id}
+                  onBack={() => setAppState("unified-navodaya-options")}
+                  historyType="navodaya"
+                  useUnifiedAuth={true}
                 />
               )}
 
@@ -739,7 +1474,13 @@ function App() {
                   totalQuestions={questions.length}
                   onRetakeQuiz={handleRetakeQuiz}
                   onTryAnotherSubject={handleTryAnotherSubject}
-                  onBackToHome={() => setAppState("ready")}
+                  onBackToHome={() => {
+                    if (unifiedStudent) {
+                      setAppState("unified-board-options");
+                    } else {
+                      setAppState("ready");
+                    }
+                  }}
                 />
               )}
 
@@ -880,7 +1621,11 @@ function App() {
                   onTryAnotherSubject={handleCpctTryAnotherSection}
                   onBackToHome={() => {
                     setSelectedCpctSection("");
-                    setAppState("cpct-ready");
+                    if (unifiedStudent) {
+                      setAppState("unified-cpct-options");
+                    } else {
+                      setAppState("cpct-ready");
+                    }
                   }}
                   subjectLabel="Try Another Section"
                 />
@@ -1024,7 +1769,11 @@ function App() {
                   onTryAnotherSubject={handleNavodayaViewHistory}
                   onBackToHome={() => {
                     setSelectedNavodayaSection("");
-                    setAppState("navodaya-ready");
+                    if (unifiedStudent) {
+                      setAppState("unified-navodaya-options");
+                    } else {
+                      setAppState("navodaya-ready");
+                    }
                   }}
                   subjectLabel="View Quiz History"
                 />
@@ -1035,6 +1784,196 @@ function App() {
                   studentId={navodayaStudentData.id}
                   onBack={() => setAppState("navodaya-ready")}
                   isNavodaya={true}
+                />
+              )}
+
+              {appState === "chapter-practice-onboarding" && (
+                <ChapterPracticeOnboardingForm 
+                  onSubmit={handleChapterPracticeOnboardingSubmit} 
+                  onLogin={handleChapterPracticeLogin}
+                  onBack={() => setAppState("landing")}
+                />
+              )}
+
+              {appState === "chapter-practice-ready" && chapterPracticeStudentData && (
+                <div className="min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center p-4">
+                  <Card className="w-full max-w-md">
+                    <CardContent className="p-8">
+                      <div className="text-center mb-6">
+                        <div className="w-16 h-16 mx-auto rounded-lg overflow-hidden mb-4 bg-violet-50 flex items-center justify-center">
+                          <Library className="h-8 w-8 text-violet-600" />
+                        </div>
+                        <h1 className="text-2xl font-semibold mb-2">Chapter Practice</h1>
+                        <p className="text-muted-foreground text-sm">
+                          Select a subject and chapter to practice all questions from that chapter.
+                        </p>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="chapter-practice-subject">Subject</Label>
+                          {availableChapterPracticeSubjects.length === 0 ? (
+                            <div className="p-4 text-center text-muted-foreground border rounded-md bg-muted/30">
+                              <p className="text-sm">No study materials available for {chapterPracticeStudentData.grade} {chapterPracticeStudentData.board} yet.</p>
+                              <p className="text-xs mt-1">Please check back later.</p>
+                            </div>
+                          ) : (
+                            <Select 
+                              value={selectedChapterPracticeSubject} 
+                              onValueChange={setSelectedChapterPracticeSubject}
+                            >
+                              <SelectTrigger id="chapter-practice-subject" data-testid="select-chapter-practice-subject">
+                                <SelectValue placeholder="Select a subject" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {availableChapterPracticeSubjects.map((subject) => (
+                                  <SelectItem key={subject} value={subject}>
+                                    {subject}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
+
+                        {selectedChapterPracticeSubject && (
+                          <div className="space-y-2">
+                            <Label htmlFor="chapter">Chapter</Label>
+                            {availableChapters.length === 0 ? (
+                              <div className="p-4 text-center text-muted-foreground border rounded-md bg-muted/30">
+                                <p className="text-sm">No chapters available for this subject yet.</p>
+                              </div>
+                            ) : (
+                              <Select 
+                                value={selectedChapter} 
+                                onValueChange={setSelectedChapter}
+                              >
+                                <SelectTrigger id="chapter" data-testid="select-chapter">
+                                  <SelectValue placeholder="Select a chapter" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {availableChapters.map((chapter, index) => {
+                                    const colors = [
+                                      "bg-rose-100 dark:bg-rose-900/30",
+                                      "bg-orange-100 dark:bg-orange-900/30",
+                                      "bg-amber-100 dark:bg-amber-900/30",
+                                      "bg-lime-100 dark:bg-lime-900/30",
+                                      "bg-emerald-100 dark:bg-emerald-900/30",
+                                      "bg-teal-100 dark:bg-teal-900/30",
+                                      "bg-cyan-100 dark:bg-cyan-900/30",
+                                      "bg-sky-100 dark:bg-sky-900/30",
+                                      "bg-violet-100 dark:bg-violet-900/30",
+                                      "bg-fuchsia-100 dark:bg-fuchsia-900/30",
+                                    ];
+                                    const colorClass = colors[index % colors.length];
+                                    return (
+                                      <SelectItem 
+                                        key={chapter} 
+                                        value={chapter}
+                                        className={`${colorClass} my-1 rounded-md`}
+                                      >
+                                        {chapter}
+                                      </SelectItem>
+                                    );
+                                  })}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </div>
+                        )}
+
+                        <div className="p-3 bg-muted/50 rounded-lg text-sm">
+                          <p className="text-muted-foreground">
+                            <span className="font-medium text-foreground">Grade:</span> {chapterPracticeStudentData.grade} | 
+                            <span className="font-medium text-foreground ml-2">Board:</span> {chapterPracticeStudentData.board}
+                          </p>
+                        </div>
+
+                        <Button 
+                          className="w-full bg-violet-600 hover:bg-violet-700" 
+                          onClick={handleChapterPracticeStartQuiz}
+                          disabled={!selectedChapter}
+                          data-testid="button-start-chapter-practice"
+                        >
+                          Start Practice
+                        </Button>
+
+                        <Button 
+                          variant="ghost"
+                          className="w-full" 
+                          onClick={() => {
+                            setChapterPracticeStudentData(null);
+                            setAppState("landing");
+                          }}
+                          data-testid="button-chapter-practice-back-landing"
+                        >
+                          Back to Home
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {appState === "chapter-practice-loading" && (
+                <div className="min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center p-4">
+                  <Card className="w-full max-w-md text-center">
+                    <CardContent className="p-8">
+                      <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-violet-500" />
+                      <h2 className="text-xl font-semibold mb-2">Preparing Your Practice</h2>
+                      <p className="text-muted-foreground">
+                        Loading questions from {selectedChapter}...
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {appState === "chapter-practice-quiz" && chapterPracticeQuestions.length > 0 && (
+                <QuizQuestion
+                  question={chapterPracticeQuestions[chapterPracticeCurrentQuestionIndex]}
+                  currentQuestion={chapterPracticeCurrentQuestionIndex + 1}
+                  totalQuestions={chapterPracticeQuestions.length}
+                  onAnswer={handleChapterPracticeAnswer}
+                  onNext={handleChapterPracticeNext}
+                />
+              )}
+
+              {appState === "chapter-practice-results" && (
+                <QuizResults
+                  score={chapterPracticeScore}
+                  totalQuestions={chapterPracticeQuestions.length}
+                  questions={chapterPracticeQuestions}
+                  answers={chapterPracticeAnswers}
+                  onRetakeQuiz={() => {
+                    setSelectedChapter("");
+                    setSelectedChapterPracticeSubject("");
+                    if (unifiedStudent) {
+                      setAppState("unified-chapter-options");
+                    } else {
+                      setAppState("chapter-practice-ready");
+                    }
+                  }}
+                  onTryAnotherSubject={() => {
+                    setSelectedChapter("");
+                    setSelectedChapterPracticeSubject("");
+                    if (unifiedStudent) {
+                      setAppState("unified-chapter-options");
+                    } else {
+                      setAppState("chapter-practice-ready");
+                    }
+                  }}
+                  onBackToHome={() => {
+                    setSelectedChapter("");
+                    setSelectedChapterPracticeSubject("");
+                    if (unifiedStudent) {
+                      setAppState("unified-chapter-options");
+                    } else {
+                      setAppState("chapter-practice-ready");
+                    }
+                  }}
+                  subjectLabel="Practice Another Chapter"
+                  hideRetakeButton={true}
                 />
               )}
             </div>
