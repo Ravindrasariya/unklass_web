@@ -89,7 +89,7 @@ export default function NavodayaExamOptions({
             </p>
           </div>
           <CardTitle className="flex items-center justify-center gap-2">
-            <School className="w-5 h-5 text-sky-500" />
+            <School className="w-5 h-5 text-primary" />
             Navodaya Exam Prep
           </CardTitle>
           <CardDescription className="text-base mt-2">

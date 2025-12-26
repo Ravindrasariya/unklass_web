@@ -79,7 +79,7 @@ export default function CPCTExamOptions({
             </p>
           </div>
           <CardTitle className="flex items-center justify-center gap-2">
-            <Monitor className="w-5 h-5 text-amber-500" />
+            <Monitor className="w-5 h-5 text-primary" />
             CPCT Exam Prep
           </CardTitle>
           <CardDescription className="text-base mt-2">
