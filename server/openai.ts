@@ -83,7 +83,20 @@ export async function generateQuizQuestions(
   medium: string = "English"
 ): Promise<Question[]> {
   const languageInstruction = medium === "Hindi" 
-    ? `IMPORTANT LANGUAGE INSTRUCTION: Generate ALL content in Hindi (Devanagari script). The questions, all 4 options, and explanations MUST be written in Hindi. Use proper Hindi language and Devanagari script throughout.`
+    ? `IMPORTANT LANGUAGE INSTRUCTION: Generate ALL content in Hindi (Devanagari script). The questions, all 4 options, and explanations MUST be written in Hindi. Use proper Hindi language and Devanagari script throughout.
+
+CRITICAL TEXT CLEANUP (PDF ENCODING FIX):
+The PDF text may contain GARBLED characters due to encoding issues. You MUST fix these:
+- Latin letters mixed with Hindi text indicate encoding errors
+- Examples of errors you must fix:
+  - "मुLा" → "मुंडा", "वतOमान" → "वर्तमान", "राP" → "राज्य"
+  - "पूणM" → "पूर्ण", "9:वाचक" → "प्रश्नवाचक", "िव\`यािदबोधक" → "विस्मयादिबोधक"
+  - "Tा" → "क्या", "9:" → "प्रश्न", "FGथत" → "स्थित"
+  - Any Latin letter (A-Z, 0-9) appearing WITHIN Hindi words is an encoding error
+- RECONSTRUCT the correct Hindi word by understanding context
+- ALL output must be in PURE Devanagari script with NO Latin characters mixed in
+- Remove pipe symbols "|" that appear as word separators
+- Fix any incomplete/broken Hindi characters (half-letters, wrong matras)`
     : `Generate all content in English.`;
 
   const systemPrompt = `You are an EXPERT TEACHER and educational content creator for ${grade} grade ${board} board students in India.
@@ -292,7 +305,15 @@ export async function generateCpctQuizQuestions(
   previousQuestions: string[] = []
 ): Promise<Question[]> {
   const languageInstruction = medium === "Hindi" 
-    ? `IMPORTANT: Generate ALL content (questions, options, explanations) in HINDI (Devanagari script). The entire quiz must be in Hindi language.`
+    ? `IMPORTANT: Generate ALL content (questions, options, explanations) in HINDI (Devanagari script). The entire quiz must be in Hindi language.
+
+CRITICAL TEXT CLEANUP (PDF ENCODING FIX):
+The PDF text may contain GARBLED characters due to encoding issues. You MUST fix these:
+- Latin letters mixed with Hindi text indicate encoding errors (e.g., "मुLा" → "मुंडा", "वतOमान" → "वर्तमान")
+- Any Latin letter (A-Z, 0-9) appearing WITHIN Hindi words is an encoding error - fix it
+- RECONSTRUCT the correct Hindi word by understanding context
+- ALL output must be in PURE Devanagari script with NO Latin characters mixed in
+- Remove pipe symbols "|" that appear as word separators`
     : `Generate all content in clear, simple English.`;
 
   const systemPrompt = `You are an EXPERT TEACHER and CPCT (Computer Proficiency Certification Test) exam content creator for Madhya Pradesh, India.
@@ -518,7 +539,15 @@ export async function generateNavodayaQuizQuestions(
     : "Class 9 entry level (students appearing from Class 8)";
 
   const languageInstruction = medium === "Hindi" 
-    ? `IMPORTANT: Generate ALL content (questions, options, explanations) in HINDI (Devanagari script). The entire quiz must be in Hindi language.`
+    ? `IMPORTANT: Generate ALL content (questions, options, explanations) in HINDI (Devanagari script). The entire quiz must be in Hindi language.
+
+CRITICAL TEXT CLEANUP (PDF ENCODING FIX):
+The PDF text may contain GARBLED characters due to encoding issues. You MUST fix these:
+- Latin letters mixed with Hindi text indicate encoding errors (e.g., "मुLा" → "मुंडा", "वतOमान" → "वर्तमान")
+- Any Latin letter (A-Z, 0-9) appearing WITHIN Hindi words is an encoding error - fix it
+- RECONSTRUCT the correct Hindi word by understanding context
+- ALL output must be in PURE Devanagari script with NO Latin characters mixed in
+- Remove pipe symbols "|" that appear as word separators`
     : `Generate all content in clear, simple English.`;
 
   const systemPrompt = `You are an EXPERT TEACHER and Jawahar Navodaya Vidyalaya (JNV) entrance exam content creator for India.
