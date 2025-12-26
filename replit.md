@@ -111,6 +111,13 @@ Preferred communication style: Simple, everyday language.
 - **Fallback**: If no parsed questions exist, falls back to full PDF content with previous question deduplication
 - **Key Files**: `server/questionParser.ts`, `server/routes.ts`, `server/storage.ts`
 - **Benefits**: Deterministic, faster LLM calls, ensures complete question coverage, handles edge cases with cycling
+- **Instruction Filtering**: `isInstructionOrNote()` function filters out PDF instruction headers (e.g., "Choose the correct option", "सही विकल्प चुनिए") that were incorrectly parsed as questions
+
+### Language-Based Subjects
+- **Hindi and English subjects are language-specific**: Questions are rendered in the subject's language regardless of student's medium preference
+- **Implementation**: In quiz generation endpoints, if subject is "Hindi" or "English", the medium is forced to match the subject
+- **Rationale**: Hindi PDFs are in Hindi and should generate Hindi questions; English PDFs are in English and should generate English questions
+- **Affected endpoints**: `/api/quiz/generate`, `/api/chapter-practice/quiz/generate`
 
 ### CPCT Exam Prep
 - **Separate student table**: `cpctStudents` with fields (name, medium, location, mobileNumber)
