@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Crown, Medal, Trophy, Flame, ChevronLeft, ChevronRight } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
-import { useCallback, useEffect, useState } from "react";
+import Autoplay from "embla-carousel-autoplay";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 
 interface LeaderboardEntry {
@@ -126,11 +127,16 @@ export default function WeeklyLeaderboard() {
     refetchInterval: 60000,
   });
 
+  const autoplayPlugin = useRef(
+    Autoplay({ delay: 5000, stopOnInteraction: false, stopOnMouseEnter: true })
+  );
+
   const [emblaRef, emblaApi] = useEmblaCarousel({ 
     align: 'start',
     slidesToScroll: 1,
     containScroll: 'trimSnaps',
-  });
+    loop: true,
+  }, [autoplayPlugin.current]);
   
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
