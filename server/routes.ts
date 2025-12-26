@@ -2472,7 +2472,13 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         return res.status(400).json({ error: "No questions found for this chapter" });
       }
       
-      const chapterInfo = chapters.find(c => c.name === chapter);
+      // Extract chapter name without prefix (e.g., "1. Lines and Angles" -> "Lines and Angles")
+      let chapterSearchName = chapter;
+      const numberPrefixMatch = chapter.match(/^\d+\.\s*(.+)$/);
+      if (numberPrefixMatch) {
+        chapterSearchName = numberPrefixMatch[1].trim();
+      }
+      const chapterInfo = chapters.find(c => c.chapterName === chapterSearchName);
       const chapterNumber = chapterInfo?.chapterNumber || 1;
       
       console.log(`Generating chapter practice quiz for student ${studentId}, chapter "${chapter}": ${chapterQuestions.length} questions`);
