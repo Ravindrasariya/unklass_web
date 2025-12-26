@@ -196,22 +196,22 @@ export default function WeeklyLeaderboard() {
     hasBoardExam && { 
       title: "Board Exam Prep", 
       entries: data!.boardExam, 
-      accentColor: "bg-gradient-to-r from-sky-500 to-blue-600" 
+      accentColor: "bg-gradient-to-r from-violet-500 to-violet-600" 
+    },
+    hasChapterPractice && { 
+      title: "Chapter Practice", 
+      entries: data!.chapterPractice, 
+      accentColor: "bg-gradient-to-r from-violet-500 to-violet-600" 
     },
     hasCpct && { 
       title: "CPCT Exam Prep", 
       entries: data!.cpct, 
-      accentColor: "bg-gradient-to-r from-purple-500 to-indigo-600" 
+      accentColor: "bg-gradient-to-r from-sky-500 to-sky-600" 
     },
     hasNavodaya && { 
       title: "Navodaya Prep", 
       entries: data!.navodaya, 
       accentColor: "bg-gradient-to-r from-sky-500 to-sky-600" 
-    },
-    hasChapterPractice && { 
-      title: "Chapter Practice", 
-      entries: data!.chapterPractice, 
-      accentColor: "bg-gradient-to-r from-violet-500 to-purple-600" 
     },
   ].filter(Boolean) as { title: string; entries: LeaderboardEntry[]; accentColor: string }[];
 
