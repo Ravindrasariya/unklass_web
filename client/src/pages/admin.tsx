@@ -149,6 +149,17 @@ interface Notice {
   expiresAt: string | null;
 }
 
+interface UnifiedStudent {
+  id: number;
+  name: string;
+  fatherName: string;
+  location: string;
+  mobileNumber: string;
+  schoolName: string | null;
+  dateOfBirth: string | null;
+  createdAt: string | null;
+}
+
 export default function AdminPage() {
   const { toast } = useToast();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -169,7 +180,7 @@ export default function AdminPage() {
     location: string;
     mobileNumber: string;
   }>({ name: "", grade: "", board: "", location: "", mobileNumber: "" });
-  const [studentTab, setStudentTab] = useState<"board" | "cpct" | "navodaya" | "chapterPractice">("board");
+  const [studentTab, setStudentTab] = useState<"allRegistered" | "board" | "cpct" | "navodaya" | "chapterPractice">("allRegistered");
   const [chapterPracticeGradeFilter, setChapterPracticeGradeFilter] = useState<string>("all");
   const [expandedChapterPracticeStudent, setExpandedChapterPracticeStudent] = useState<number | null>(null);
   const [expandedCpctStudent, setExpandedCpctStudent] = useState<number | null>(null);
@@ -178,7 +189,7 @@ export default function AdminPage() {
   const [noticeForm, setNoticeForm] = useState({ title: "", subtitle: "", description: "", priority: 0 });
   const [editingNotice, setEditingNotice] = useState<Notice | null>(null);
 
-  const handleTabChange = (tab: "board" | "cpct" | "navodaya" | "chapterPractice") => {
+  const handleTabChange = (tab: "allRegistered" | "board" | "cpct" | "navodaya" | "chapterPractice") => {
     setStudentTab(tab);
     setExpandedStudent(null);
     setExpandedCpctStudent(null);
@@ -215,6 +226,11 @@ export default function AdminPage() {
 
   const { data: pdfs, isLoading } = useQuery<Pdf[]>({
     queryKey: ["/api/admin/pdfs"],
+  });
+
+  const { data: unifiedStudents, isLoading: unifiedStudentsLoading } = useQuery<UnifiedStudent[]>({
+    queryKey: ["/api/admin/unified-students"],
+    enabled: isAuthenticated,
   });
 
   const { data: students, isLoading: studentsLoading } = useQuery<StudentProgress[]>({
@@ -1022,10 +1038,10 @@ export default function AdminPage() {
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5" />
-                  Student Progress
+                  Student Dashboard
                 </CardTitle>
                 <CardDescription>
-                  View student performance and download progress reports
+                  View all registered students and exam performance
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
@@ -1051,6 +1067,14 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2 mb-4 border-b pb-3 flex-wrap">
+              <Button
+                variant={studentTab === "allRegistered" ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleTabChange("allRegistered")}
+                data-testid="tab-all-registered-students"
+              >
+                All Registered ({unifiedStudents?.length || 0})
+              </Button>
               <Button
                 variant={studentTab === "board" ? "default" : "outline"}
                 size="sm"
@@ -1085,6 +1109,71 @@ export default function AdminPage() {
                 Chapter Practice ({chapterPracticeStudents?.length || 0})
               </Button>
             </div>
+
+            {studentTab === "allRegistered" && (
+              <>
+                {unifiedStudentsLoading ? (
+                  <p className="text-muted-foreground text-center py-8">Loading students...</p>
+                ) : !unifiedStudents || unifiedStudents.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">
+                    No students registered yet.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-1 gap-2">
+                      {unifiedStudents.map((student) => (
+                        <div
+                          key={student.id}
+                          className="border rounded-lg p-4"
+                          data-testid={`unified-student-row-${student.id}`}
+                        >
+                          <div className="flex items-start justify-between gap-4 flex-wrap">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap mb-1">
+                                <p className="font-medium">{student.name}</p>
+                                {student.schoolName && (
+                                  <Badge variant="secondary" className="text-xs">{student.schoolName}</Badge>
+                                )}
+                              </div>
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                                <div>
+                                  <span className="text-muted-foreground">Father:</span>{" "}
+                                  {student.fatherName}
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Mobile:</span>{" "}
+                                  {student.mobileNumber}
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Location:</span>{" "}
+                                  {student.location}
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Registered:</span>{" "}
+                                  {student.createdAt
+                                    ? new Date(student.createdAt).toLocaleDateString()
+                                    : "N/A"}
+                                </div>
+                              </div>
+                              {(student.dateOfBirth || student.schoolName) && (
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm mt-1">
+                                  {student.dateOfBirth && (
+                                    <div>
+                                      <span className="text-muted-foreground">DOB:</span>{" "}
+                                      {new Date(student.dateOfBirth).toLocaleDateString()}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
 
             {studentTab === "board" && (
               <>

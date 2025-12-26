@@ -900,6 +900,17 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     }
   });
 
+  // Admin: Get all unified registered students
+  app.get("/api/admin/unified-students", async (req, res) => {
+    try {
+      const allUnifiedStudents = await storage.getAllUnifiedStudents();
+      res.json(allUnifiedStudents);
+    } catch (error) {
+      console.error("Error fetching unified students:", error);
+      res.status(500).json({ error: "Failed to fetch unified students" });
+    }
+  });
+
   // Admin: Get all students with their progress
   app.get("/api/admin/students", async (req, res) => {
     try {
