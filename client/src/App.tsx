@@ -887,6 +887,11 @@ function App() {
       const student = await response.json();
       if (student && student.id) {
         setUnifiedStudent(student);
+        // If no exam type selected (login from header), go to landing page
+        if (!selectedExamType) {
+          setAppState("landing");
+          return true;
+        }
         // Navigate to the exam-specific options
         switch (selectedExamType) {
           case "board_exam":
@@ -924,6 +929,11 @@ function App() {
       const student = await response.json();
       if (student && student.id) {
         setUnifiedStudent(student);
+        // If no exam type selected (signup from header), go to landing page
+        if (!selectedExamType) {
+          setAppState("landing");
+          return true;
+        }
         // Navigate to the exam-specific options
         switch (selectedExamType) {
           case "board_exam":
