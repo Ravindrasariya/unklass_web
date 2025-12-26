@@ -11,6 +11,7 @@ export const unifiedStudents = pgTable("unified_students", {
   location: text("location").notNull(),
   mobileNumber: varchar("mobile_number", { length: 15 }).notNull().unique(),
   schoolName: text("school_name"), // optional
+  dateOfBirth: text("date_of_birth"), // optional, stored as YYYY-MM-DD string
   createdAt: timestamp("created_at").defaultNow(),
 });
 

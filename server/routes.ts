@@ -113,6 +113,28 @@ export async function registerRoutes(
     }
   });
 
+  // Update unified student profile (for editable fields like schoolName, dateOfBirth)
+  app.patch("/api/auth/student/:id", async (req, res) => {
+    try {
+      const studentId = parseInt(req.params.id);
+      const { schoolName, dateOfBirth } = req.body;
+      
+      const student = await storage.updateUnifiedStudent(studentId, {
+        schoolName: schoolName ?? undefined,
+        dateOfBirth: dateOfBirth ?? undefined,
+      });
+      
+      if (!student) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+      
+      res.json(student);
+    } catch (error) {
+      console.error("Error updating unified student:", error);
+      res.status(500).json({ error: "Failed to update student" });
+    }
+  });
+
   // Get student exam profile (preferences for a specific exam type)
   app.get("/api/auth/student/:id/profile/:examType", async (req, res) => {
     try {

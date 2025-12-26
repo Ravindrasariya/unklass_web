@@ -1,9 +1,16 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, BookOpen, Monitor, GraduationCap, Shield, School, Bell, Library } from "lucide-react";
+import { ChevronLeft, ChevronRight, BookOpen, Monitor, GraduationCap, Shield, School, Bell, Library, User, LogOut } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import WeeklyLeaderboard from "./WeeklyLeaderboard";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Notice {
   id: number;
@@ -13,6 +20,16 @@ interface Notice {
   isActive: boolean | null;
   priority: number | null;
   createdAt: string | null;
+}
+
+interface UnifiedStudent {
+  id: number;
+  name: string;
+  fatherName: string;
+  location: string;
+  mobileNumber: string;
+  schoolName?: string | null;
+  dateOfBirth?: string | null;
 }
 import logoImage from "@assets/Screenshot_2025-12-11_at_12.16.26_AM_1765392397522.png";
 import studentImage from "@assets/Screenshot_2025-12-17_at_6.41.41_AM_1765934337756.png";
@@ -30,6 +47,11 @@ interface LandingPageProps {
   onCPCTClick: () => void;
   onNavodayaClick: () => void;
   onChapterPracticeClick: () => void;
+  unifiedStudent?: UnifiedStudent | null;
+  onLoginClick?: () => void;
+  onSignupClick?: () => void;
+  onProfileClick?: () => void;
+  onLogout?: () => void;
 }
 
 const sliderContent = [
@@ -51,7 +73,17 @@ const sliderContent = [
   },
 ];
 
-export default function LandingPage({ onBoardExamClick, onCPCTClick, onNavodayaClick, onChapterPracticeClick }: LandingPageProps) {
+export default function LandingPage({ 
+  onBoardExamClick, 
+  onCPCTClick, 
+  onNavodayaClick, 
+  onChapterPracticeClick,
+  unifiedStudent,
+  onLoginClick,
+  onSignupClick,
+  onProfileClick,
+  onLogout
+}: LandingPageProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [currentClassroom, setCurrentClassroom] = useState(0);
 
@@ -161,6 +193,65 @@ export default function LandingPage({ onBoardExamClick, onCPCTClick, onNavodayaC
                 Contact Us
               </Button>
             </Link>
+            
+            {unifiedStudent ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    className="rounded-full bg-sky-100 text-sky-700"
+                    data-testid="button-user-menu"
+                  >
+                    <User className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <div className="px-2 py-1.5 text-sm font-medium text-gray-900">
+                    {unifiedStudent.name}
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={onProfileClick}
+                    className="cursor-pointer"
+                    data-testid="menu-profile"
+                  >
+                    <User className="mr-2 h-4 w-4" />
+                    Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={onLogout}
+                    className="cursor-pointer text-red-600 focus:text-red-600"
+                    data-testid="menu-logout"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <div className="flex items-center gap-1 sm:gap-2">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-gray-700 font-medium text-xs sm:text-sm px-2 sm:px-3"
+                  onClick={onLoginClick}
+                  data-testid="button-login"
+                >
+                  Login
+                </Button>
+                <Button 
+                  variant="default" 
+                  size="sm" 
+                  className="text-xs sm:text-sm px-2 sm:px-3"
+                  onClick={onSignupClick}
+                  data-testid="button-signup"
+                >
+                  Sign Up
+                </Button>
+              </div>
+            )}
           </nav>
         </div>
       </header>
