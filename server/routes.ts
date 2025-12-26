@@ -741,6 +741,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
       // Create quiz session
       const session = await storage.createQuizSession({
         studentId,
+        unifiedStudentId: useUnifiedAuth ? studentId : null,
         pdfId: pdf?.id || null,
         subject,
         grade,
@@ -1291,7 +1292,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
   // Generate CPCT quiz questions
   app.post("/api/cpct/quiz/generate", async (req, res) => {
     try {
-      const { studentId, section } = req.body;
+      const { studentId, section, useUnifiedAuth } = req.body;
 
       if (!studentId || !section) {
         return res.status(400).json({ error: "Missing required fields: studentId and section are required" });
@@ -1302,10 +1303,25 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         return res.status(400).json({ error: "Invalid section. Please select a valid CPCT section." });
       }
 
-      // Verify CPCT student exists
-      const student = await storage.getCpctStudent(studentId);
-      if (!student) {
-        return res.status(404).json({ error: "Student not found" });
+      // Verify student exists - check unified_students if useUnifiedAuth is true
+      let studentMedium: "Hindi" | "English" = "Hindi";
+      if (useUnifiedAuth) {
+        const unifiedStudent = await storage.getUnifiedStudent(studentId);
+        if (!unifiedStudent) {
+          return res.status(404).json({ error: "Student not found" });
+        }
+        // For unified auth, get medium from exam profile
+        const profile = await storage.getStudentExamProfile(studentId, "cpct");
+        if (profile?.lastSelections && typeof profile.lastSelections === 'object' && 'medium' in profile.lastSelections) {
+          studentMedium = (profile.lastSelections as { medium?: string }).medium as "Hindi" | "English" || "Hindi";
+        }
+      } else {
+        // Verify legacy CPCT student exists
+        const student = await storage.getCpctStudent(studentId);
+        if (!student) {
+          return res.status(404).json({ error: "Student not found" });
+        }
+        studentMedium = student.medium as "Hindi" | "English";
       }
 
       // Get all available CPCT PDFs (only active, not archived)
@@ -1317,7 +1333,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
       let usedYear = "2024"; // Default year for reference
       let usedPdfId: number | null = null;
       let questions: Question[];
-      const medium = student.medium as "Hindi" | "English";
+      const medium = studentMedium;
       
       console.log(`CPCT Quiz generation - Section: ${section}, Student: ${studentId}`);
       
@@ -1410,10 +1426,11 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
       // Create CPCT quiz session
       const session = await storage.createCpctQuizSession({
         studentId,
+        unifiedStudentId: useUnifiedAuth ? studentId : null,
         pdfId: usedPdfId,
         year: usedYear,
         section: section,
-        medium: student.medium,
+        medium: studentMedium,
         questions,
         totalQuestions: questions.length, // Use actual count of generated questions
       });
@@ -1811,26 +1828,46 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
   // Generate Navodaya quiz questions
   app.post("/api/navodaya/quiz/generate", async (req, res) => {
     try {
-      const { studentId, section } = req.body;
+      const { studentId, section, useUnifiedAuth } = req.body;
 
       if (!studentId || !section) {
         return res.status(400).json({ error: "Missing required fields: studentId and section are required" });
       }
 
-      // Verify student exists
-      const student = await storage.getNavodayaStudent(studentId);
-      if (!student) {
-        return res.status(404).json({ error: "Student not found" });
+      // Verify student exists - check unified_students if useUnifiedAuth is true
+      let studentMedium: "Hindi" | "English" = "Hindi";
+      let studentExamGrade: "6th" | "9th" = "6th";
+      
+      if (useUnifiedAuth) {
+        const unifiedStudent = await storage.getUnifiedStudent(studentId);
+        if (!unifiedStudent) {
+          return res.status(404).json({ error: "Student not found" });
+        }
+        // For unified auth, get settings from exam profile
+        const profile = await storage.getStudentExamProfile(studentId, "navodaya");
+        if (profile?.lastSelections && typeof profile.lastSelections === 'object') {
+          const selections = profile.lastSelections as { medium?: string; examGrade?: string };
+          studentMedium = (selections.medium as "Hindi" | "English") || "Hindi";
+          studentExamGrade = (selections.examGrade as "6th" | "9th") || "6th";
+        }
+      } else {
+        // Verify legacy Navodaya student exists
+        const student = await storage.getNavodayaStudent(studentId);
+        if (!student) {
+          return res.status(404).json({ error: "Student not found" });
+        }
+        studentMedium = student.medium as "Hindi" | "English";
+        studentExamGrade = student.examGrade as "6th" | "9th";
       }
 
       // Validate section based on grade
-      const validSections: readonly string[] = student.examGrade === "6th" 
+      const validSections: readonly string[] = studentExamGrade === "6th" 
         ? NAVODAYA_SECTIONS_6TH 
         : NAVODAYA_SECTIONS_9TH;
       
       if (!validSections.includes(section)) {
         return res.status(400).json({ 
-          error: `Invalid section for ${student.examGrade} grade. Valid sections: ${validSections.join(", ")}` 
+          error: `Invalid section for ${studentExamGrade} grade. Valid sections: ${validSections.join(", ")}` 
         });
       }
 
@@ -1842,21 +1879,21 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
       );
       
       // Try to find section-specific PDF
-      let pdf = findNavodayaPdfForSection(navodayaPdfs, student.examGrade, section);
+      let pdf = findNavodayaPdfForSection(navodayaPdfs, studentExamGrade, section);
       
       // Fallback to general grade PDF if no section-specific PDF
       if (!pdf) {
-        pdf = await storage.getNavodayaPdf(student.examGrade);
+        pdf = await storage.getNavodayaPdf(studentExamGrade);
       }
       
-      console.log(`Looking for PDF for examGrade: ${student.examGrade}, section: ${section}, Found: ${pdf ? pdf.filename : 'NO PDF FOUND'}`);
+      console.log(`Looking for PDF for examGrade: ${studentExamGrade}, section: ${section}, Found: ${pdf ? pdf.filename : 'NO PDF FOUND'}`);
       if (pdf) {
         console.log(`PDF content length: ${pdf.content.length}, First 200 chars: ${pdf.content.substring(0, 200)}`);
       }
       
       let questions: Question[];
-      const medium = student.medium as "Hindi" | "English";
-      const examGrade = student.examGrade as "6th" | "9th";
+      const medium = studentMedium;
+      const examGrade = studentExamGrade;
       
       if (pdf && pdf.parsedQuestions && Array.isArray(pdf.parsedQuestions) && pdf.parsedQuestions.length > 0) {
         // SERVER-SIDE SEQUENTIAL QUESTION PICKING
@@ -1964,10 +2001,11 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
       // Create Navodaya quiz session with section
       const session = await storage.createNavodayaQuizSession({
         studentId,
+        unifiedStudentId: useUnifiedAuth ? studentId : null,
         pdfId: pdf?.id || null,
-        examGrade: student.examGrade,
+        examGrade: studentExamGrade,
         section,
-        medium: student.medium,
+        medium: studentMedium,
         questions,
         totalQuestions: questions.length, // Use actual count of generated questions
       });

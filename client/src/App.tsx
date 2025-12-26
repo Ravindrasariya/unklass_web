@@ -1026,6 +1026,7 @@ function App() {
       const response = await apiRequest("POST", "/api/cpct/quiz/generate", {
         studentId: unifiedStudent.id,
         section: data.section,
+        useUnifiedAuth: true,
       });
       
       const quizData = await response.json();
@@ -1066,6 +1067,7 @@ function App() {
       const response = await apiRequest("POST", "/api/navodaya/quiz/generate", {
         studentId: unifiedStudent.id,
         section: data.section,
+        useUnifiedAuth: true,
       });
       
       const quizData = await response.json();
