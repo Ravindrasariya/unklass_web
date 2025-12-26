@@ -2358,10 +2358,10 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
       const { parseQuestionsWithChapters } = await import("./questionParser");
       const { chapters } = parseQuestionsWithChapters(pdf.content);
       
-      // Format chapter names with index (0-based) and chapter name
+      // Format chapter names with index (1-based) and chapter name
       const chapterNames = chapters
         .filter(c => c.questionCount > 0)
-        .map((c, index) => `${index}. ${c.chapterName}`);
+        .map((c, index) => `${index + 1}. ${c.chapterName}`);
       
       res.json({ 
         chapters: chapterNames,
@@ -2390,10 +2390,10 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
       const { parseQuestionsWithChapters } = await import("./questionParser");
       const { chapters } = parseQuestionsWithChapters(pdf.content);
       
-      // Format chapter names with index (0-based) and chapter name
+      // Format chapter names with index (1-based) and chapter name
       const chapterNames = chapters
         .filter(c => c.questionCount > 0)
-        .map((c, index) => `${index}. ${c.chapterName}`);
+        .map((c, index) => `${index + 1}. ${c.chapterName}`);
       
       res.json({ 
         chapters: chapterNames,
