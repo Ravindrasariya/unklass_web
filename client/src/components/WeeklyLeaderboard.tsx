@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Crown, Medal, Trophy, Flame, ChevronLeft, ChevronRight } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
-import Autoplay from "embla-carousel-autoplay";
 import { useCallback, useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -127,16 +126,30 @@ export default function WeeklyLeaderboard() {
     refetchInterval: 60000,
   });
 
-  const autoplayPlugin = useRef(
-    Autoplay({ delay: 5000, stopOnInteraction: false, stopOnMouseEnter: true })
-  );
-
   const [emblaRef, emblaApi] = useEmblaCarousel({ 
     align: 'start',
     slidesToScroll: 1,
     containScroll: 'trimSnaps',
     loop: true,
-  }, [autoplayPlugin.current]);
+  });
+  
+  const autoplayIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
+  
+  // Custom autoplay implementation
+  useEffect(() => {
+    if (!emblaApi || isPaused) return;
+    
+    autoplayIntervalRef.current = setInterval(() => {
+      emblaApi.scrollNext();
+    }, 5000);
+    
+    return () => {
+      if (autoplayIntervalRef.current) {
+        clearInterval(autoplayIntervalRef.current);
+      }
+    };
+  }, [emblaApi, isPaused]);
   
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
