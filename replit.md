@@ -32,7 +32,7 @@ Preferred communication style: Simple, everyday language.
 - **Schema Location**: `shared/schema.ts` (shared between frontend/backend)
 - **Migrations**: Drizzle Kit with `migrations/` output directory
 - **Tables**:
-  - `unified_students`: Unified student registration (name, fatherName, location, mobileNumber, schoolName optional) - NEW unified auth system
+  - `unified_students`: Unified student registration (name required; fatherName, location nullable for legacy compatibility; mobileNumber required; schoolName, dateOfBirth optional) - NEW unified auth system
   - `student_exam_profiles`: Per-exam preferences/selections storage (studentId, examType, lastSelections JSONB)
   - `students`: Board exam student registration (legacy, still functional)
   - `pdfs`: Uploaded PDF metadata, extracted content, and parsed questions (parsedQuestions JSONB, totalQuestions integer)
@@ -42,6 +42,14 @@ Preferred communication style: Simple, everyday language.
   - `navodaya_students`: Navodaya student registration (legacy, still functional)
   - `navodaya_quiz_sessions`: Navodaya quiz attempts
   - `question_pointers`: Tracks sequential question progress (studentId, studentType, pdfId, lastQuestionIndex)
+
+### Backward Compatibility (Legacy User Migration)
+- **Legacy users don't need to re-register**: Existing students in legacy tables (students, cpctStudents, navodayaStudents, chapterPracticeStudents) can login with name + mobile
+- **Auto-migration on first login**: When a legacy user logs in, the system automatically creates a unified_students record from their legacy data
+- **Profile completion**: Legacy users may have missing fields (fatherName, location) which they can complete via the Profile page
+- **needsProfileCompletion flag**: Login response includes this flag when fatherName or location is missing
+- **ProfilePage**: Shows completion prompt and allows editing fatherName/location for migrated users; once set, these fields become immutable
+- **Implementation**: `findAndMigrateLegacyUser()` in storage.ts searches all legacy tables and creates unified record
 
 ### API Endpoints
 
