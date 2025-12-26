@@ -2554,10 +2554,12 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
       
       const generatedQuestions = await generateQuizQuestions(
         questionsToSend,
-        medium || student.medium || "English",
-        grade || student.grade,
         subject,
-        chapterQuestions.length
+        grade || student.grade,
+        board || student.board,
+        chapterQuestions.length,
+        [],
+        medium || student.medium || "English"
       );
       
       // Shuffle options to randomize correct answer positions
