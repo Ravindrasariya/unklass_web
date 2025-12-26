@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowRight, Loader2, School, History } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import logoImage from "@assets/Screenshot_2025-12-11_at_12.16.26_AM_1765392397522.png";
 
 const NAVODAYA_SECTIONS_6TH = [
@@ -62,6 +63,11 @@ export default function NavodayaExamOptions({
 
   const selectedExamGrade = form.watch("examGrade");
   const sections = selectedExamGrade === "6th" ? NAVODAYA_SECTIONS_6TH : NAVODAYA_SECTIONS_9TH;
+
+  const { data: availableSections } = useQuery<{ sections: string[]; grade: string }>({
+    queryKey: ["/api/navodaya/available-sections", selectedExamGrade],
+    enabled: !!selectedExamGrade,
+  });
 
   const handleSubmit = async (data: NavodayaExamOptionsData) => {
     setIsSubmitting(true);
@@ -163,9 +169,19 @@ export default function NavodayaExamOptions({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {sections.map((section) => (
-                            <SelectItem key={section} value={section}>{section}</SelectItem>
-                          ))}
+                          {sections.map((section) => {
+                            const isAvailable = !availableSections?.sections || availableSections.sections.includes(section);
+                            return (
+                              <SelectItem 
+                                key={section} 
+                                value={section}
+                                disabled={!isAvailable}
+                                className={!isAvailable ? "opacity-50" : ""}
+                              >
+                                {section}{!isAvailable ? " (Not Available)" : ""}
+                              </SelectItem>
+                            );
+                          })}
                         </SelectContent>
                       </Select>
                       <FormMessage />

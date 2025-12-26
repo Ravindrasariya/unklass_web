@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowRight, Loader2, Monitor, History } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import logoImage from "@assets/Screenshot_2025-12-11_at_12.16.26_AM_1765392397522.png";
 
 const CPCT_SECTIONS = [
@@ -51,6 +52,10 @@ export default function CPCTExamOptions({
       medium: savedSelections?.medium || "",
       section: savedSelections?.section || "",
     },
+  });
+
+  const { data: availableSections } = useQuery<{ sections: string[] }>({
+    queryKey: ["/api/cpct/available-sections"],
   });
 
   const handleSubmit = async (data: CPCTExamOptionsData) => {
@@ -124,9 +129,19 @@ export default function CPCTExamOptions({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {CPCT_SECTIONS.map((section) => (
-                          <SelectItem key={section} value={section}>{section}</SelectItem>
-                        ))}
+                        {CPCT_SECTIONS.map((section) => {
+                          const isAvailable = !availableSections?.sections || availableSections.sections.includes(section);
+                          return (
+                            <SelectItem 
+                              key={section} 
+                              value={section}
+                              disabled={!isAvailable}
+                              className={!isAvailable ? "opacity-50" : ""}
+                            >
+                              {section}{!isAvailable ? " (Not Available)" : ""}
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                     <FormMessage />

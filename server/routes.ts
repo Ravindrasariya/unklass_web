@@ -1825,6 +1825,37 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     }
   });
 
+  // Get available Navodaya sections - path based version for frontend query key compatibility
+  app.get("/api/navodaya/available-sections/:grade", async (req, res) => {
+    try {
+      const { grade } = req.params;
+      
+      if (!grade || (grade !== "6th" && grade !== "9th")) {
+        return res.status(400).json({ error: "Valid grade (6th or 9th) is required" });
+      }
+      
+      const allSections = grade === "6th" 
+        ? [...NAVODAYA_SECTIONS_6TH] 
+        : [...NAVODAYA_SECTIONS_9TH];
+      
+      const allPdfs = await storage.getActivePdfs();
+      const navodayaPdfs = allPdfs.filter(pdf => 
+        pdf.filename.toLowerCase().includes('navodaya') && 
+        pdf.filename.endsWith(".pdf")
+      );
+      
+      const availableSections = allSections.filter(section => {
+        const matchingPdf = findNavodayaPdfForSection(navodayaPdfs, grade as string, section);
+        return matchingPdf !== null;
+      });
+      
+      res.json({ sections: availableSections, grade });
+    } catch (error) {
+      console.error("Error fetching available Navodaya sections:", error);
+      res.status(500).json({ error: "Failed to fetch available sections" });
+    }
+  });
+
   // Generate Navodaya quiz questions
   app.post("/api/navodaya/quiz/generate", async (req, res) => {
     try {
