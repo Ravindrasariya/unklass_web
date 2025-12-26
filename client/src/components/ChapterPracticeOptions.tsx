@@ -78,7 +78,7 @@ export default function ChapterPracticeOptions({
   });
 
   const { data: availableSubjects } = useQuery<{ subjects: string[] }>({
-    queryKey: ["/api/chapter-practice/available-subjects", selectedGrade, selectedBoard],
+    queryKey: [`/api/chapter-practice/available-subjects/${selectedGrade}/${selectedBoard}`],
     enabled: !!selectedGrade && !!selectedBoard,
   });
 
@@ -119,19 +119,6 @@ export default function ChapterPracticeOptions({
             <Library className="w-5 h-5 text-primary" />
             <span className="font-semibold">Chapter Practice - NCERT</span>
           </div>
-          {onViewHistory && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onViewHistory}
-              className="mx-auto"
-              data-testid="button-chapter-view-history"
-            >
-              <History className="w-4 h-4 mr-2" />
-              View History
-            </Button>
-          )}
           <CardDescription className="text-base">
             Welcome, {studentName}! Select your practice details
           </CardDescription>
@@ -152,11 +139,11 @@ export default function ChapterPracticeOptions({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="6th">6th Grade</SelectItem>
-                        <SelectItem value="7th">7th Grade</SelectItem>
-                        <SelectItem value="8th">8th Grade</SelectItem>
-                        <SelectItem value="9th">9th Grade</SelectItem>
-                        <SelectItem value="10th">10th Grade</SelectItem>
+                        <SelectItem value="6th">6th</SelectItem>
+                        <SelectItem value="7th">7th</SelectItem>
+                        <SelectItem value="8th">8th</SelectItem>
+                        <SelectItem value="9th">9th</SelectItem>
+                        <SelectItem value="10th">10th</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -222,7 +209,8 @@ export default function ChapterPracticeOptions({
                       </FormControl>
                       <SelectContent>
                         {CHAPTER_PRACTICE_SUBJECTS.map((subject) => {
-                          const isAvailable = !availableSubjects?.subjects || availableSubjects.subjects.includes(subject);
+                          const isAvailable = availableSubjects === undefined || 
+                            (availableSubjects.subjects && availableSubjects.subjects.includes(subject));
                           return (
                             <SelectItem 
                               key={subject} 
@@ -285,6 +273,19 @@ export default function ChapterPracticeOptions({
                 Start Practice
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
+
+              {onViewHistory && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={onViewHistory}
+                  data-testid="button-chapter-view-history"
+                >
+                  <History className="w-4 h-4 mr-2" />
+                  View History
+                </Button>
+              )}
 
               <Button 
                 type="button"

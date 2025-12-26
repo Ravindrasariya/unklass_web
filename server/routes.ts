@@ -2284,6 +2284,33 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
   });
 
   // Get available subjects for chapter practice
+  app.get("/api/chapter-practice/available-subjects/:grade/:board", async (req, res) => {
+    try {
+      const { grade, board } = req.params;
+      
+      const allPdfs = await storage.getActivePdfs();
+      const normalizedGrade = grade.toLowerCase();
+      const normalizedBoard = board.toUpperCase();
+      
+      const subjects = new Set<string>();
+      
+      for (const pdf of allPdfs) {
+        const lowerFilename = pdf.filename.toLowerCase();
+        if (lowerFilename.includes('chapter_plan') &&
+            pdf.grade.toLowerCase() === normalizedGrade && 
+            pdf.board.toUpperCase() === normalizedBoard && 
+            !pdf.isArchived) {
+          subjects.add(pdf.subject);
+        }
+      }
+      
+      res.json({ subjects: Array.from(subjects) });
+    } catch (error) {
+      console.error("Error fetching available subjects:", error);
+      res.status(500).json({ error: "Failed to fetch available subjects" });
+    }
+  });
+
   app.get("/api/chapter-practice/available-subjects", async (req, res) => {
     try {
       const { grade, board } = req.query;
