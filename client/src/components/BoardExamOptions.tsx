@@ -28,7 +28,7 @@ interface BoardExamOptionsProps {
   onBack: () => void;
 }
 
-const SUBJECTS = ["Mathematics", "Science", "SST", "Hindi", "English", "Physics", "Chemistry", "Biology"];
+const SUBJECTS = ["Mathematics", "Science", "SST", "Hindi", "English"];
 
 export default function BoardExamOptions({ 
   studentId, 
@@ -107,8 +107,8 @@ export default function BoardExamOptions({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="8th">8th Grade</SelectItem>
-                        <SelectItem value="10th">10th Grade</SelectItem>
+                        <SelectItem value="8th">8th</SelectItem>
+                        <SelectItem value="10th">10th</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -173,9 +173,19 @@ export default function BoardExamOptions({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {(availableSubjects?.subjects || SUBJECTS).map((subject) => (
-                          <SelectItem key={subject} value={subject}>{subject}</SelectItem>
-                        ))}
+                        {SUBJECTS.map((subject) => {
+                          const isAvailable = !availableSubjects?.subjects || availableSubjects.subjects.includes(subject);
+                          return (
+                            <SelectItem 
+                              key={subject} 
+                              value={subject}
+                              disabled={!isAvailable}
+                              className={!isAvailable ? "opacity-50" : ""}
+                            >
+                              {subject}{!isAvailable ? " (Not Available)" : ""}
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                     <FormMessage />

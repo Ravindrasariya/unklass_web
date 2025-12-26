@@ -554,20 +554,26 @@ export async function registerRoutes(
   // Generate quiz questions
   app.post("/api/quiz/generate", async (req, res) => {
     try {
-      const { studentId, grade, board, subject, medium } = req.body;
+      const { studentId, grade, board, subject, medium, useUnifiedAuth } = req.body;
 
       if (!studentId || !grade || !board || !subject) {
         return res.status(400).json({ error: "Missing required fields" });
       }
 
-      // Verify student exists
-      const student = await storage.getStudent(studentId);
-      if (!student) {
-        return res.status(404).json({ error: "Student not found" });
+      // Verify student exists - check unified_students if useUnifiedAuth is true
+      let studentMedium = medium || "English";
+      if (useUnifiedAuth) {
+        const unifiedStudent = await storage.getUnifiedStudent(studentId);
+        if (!unifiedStudent) {
+          return res.status(404).json({ error: "Student not found" });
+        }
+      } else {
+        const student = await storage.getStudent(studentId);
+        if (!student) {
+          return res.status(404).json({ error: "Student not found" });
+        }
+        studentMedium = medium || student.medium || "English";
       }
-
-      // Use student's medium preference or default to English
-      const studentMedium = medium || student.medium || "English";
 
       // Find the PDF for this grade/board/subject
       const pdf = await storage.getPdfByGradeBoardSubject(grade, board.toUpperCase(), subject);

@@ -985,6 +985,7 @@ function App() {
         board: data.board,
         subject: data.subject,
         medium: data.medium,
+        useUnifiedAuth: true,
       });
       
       const quizData = await response.json();
