@@ -49,6 +49,7 @@ export interface IStorage {
   replacePdf(id: number, content: string, grade: string, board: string, subject: string): Promise<Pdf | undefined>;
   getAllPdfs(): Promise<Pdf[]>;
   getActivePdfs(): Promise<Pdf[]>;
+  getActiveBoardExamPdfs(): Promise<Pdf[]>;
   deletePdf(id: number): Promise<boolean>;
   restorePdf(id: number): Promise<boolean>;
   cleanupOldArchivedPdfs(): Promise<number>;
@@ -294,11 +295,19 @@ export class DatabaseStorage implements IStorage {
   
   async getActivePdfs(): Promise<Pdf[]> {
     // Get only non-archived PDFs for quiz generation
-    // Exclude Chapter Practice PDFs (they have their own dedicated section)
+    // Returns ALL active PDFs (including Chapter Practice) - filtering for admin UI is done at API level
+    return await db.select().from(pdfs).where(eq(pdfs.isArchived, false));
+  }
+  
+  async getActiveBoardExamPdfs(): Promise<Pdf[]> {
+    // Get only Board Exam PDFs (excludes Chapter Practice, CPCT, Navodaya)
+    // Used for admin panel to show Board Exam PDFs in their dedicated section
     return await db.select().from(pdfs).where(
       and(
         eq(pdfs.isArchived, false),
-        sql`${pdfs.filename} NOT ILIKE '%chapter_plan%'`
+        sql`${pdfs.filename} NOT ILIKE '%chapter_plan%'`,
+        sql`${pdfs.filename} NOT ILIKE 'cpct_%'`,
+        sql`${pdfs.filename} NOT ILIKE '%_navodaya_%'`
       )
     );
   }

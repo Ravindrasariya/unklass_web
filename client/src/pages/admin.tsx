@@ -227,6 +227,14 @@ export default function AdminPage() {
   const { data: pdfs, isLoading } = useQuery<Pdf[]>({
     queryKey: ["/api/admin/pdfs"],
   });
+  
+  // Filter out Chapter Practice, CPCT, and Navodaya PDFs for the Board Exam section
+  const boardExamPdfs = pdfs?.filter(pdf => {
+    const filename = pdf.filename.toLowerCase();
+    return !filename.includes('chapter_plan') && 
+           !filename.startsWith('cpct_') && 
+           !filename.includes('_navodaya_');
+  });
 
   const { data: unifiedStudents, isLoading: unifiedStudentsLoading } = useQuery<UnifiedStudent[]>({
     queryKey: ["/api/admin/unified-students"],
@@ -836,7 +844,7 @@ export default function AdminPage() {
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <CardTitle className="flex items-center gap-2">
                 <FileText className="h-5 w-5" />
-                Uploaded PDFs
+                Board Exam PDFs
               </CardTitle>
               <Button
                 variant="outline"
@@ -856,17 +864,17 @@ export default function AdminPage() {
           <CardContent>
             {isLoading ? (
               <p className="text-muted-foreground text-center py-8">Loading...</p>
-            ) : !pdfs || pdfs.length === 0 ? (
+            ) : !boardExamPdfs || boardExamPdfs.length === 0 ? (
               <p className="text-muted-foreground text-center py-8">
-                No PDFs uploaded yet. Upload your first PDF above.
+                No Board Exam PDFs uploaded yet. Upload your first PDF above.
               </p>
             ) : (
               <div className="space-y-4">
                 {/* Active PDFs */}
-                {pdfs.filter(p => !p.isArchived).length > 0 && (
+                {boardExamPdfs.filter(p => !p.isArchived).length > 0 && (
                   <div className="space-y-3">
                     <p className="text-sm font-medium text-muted-foreground">Active PDFs</p>
-                    {pdfs.filter(p => !p.isArchived).map((pdf) => (
+                    {boardExamPdfs.filter(p => !p.isArchived).map((pdf) => (
                       <div
                         key={pdf.id}
                         className="flex items-center gap-3 p-3 bg-muted rounded-lg"
@@ -914,10 +922,10 @@ export default function AdminPage() {
                 )}
                 
                 {/* Archived PDFs */}
-                {pdfs.filter(p => p.isArchived).length > 0 && (
+                {boardExamPdfs.filter(p => p.isArchived).length > 0 && (
                   <div className="space-y-3">
                     <p className="text-sm font-medium text-muted-foreground">Archived PDFs</p>
-                    {pdfs.filter(p => p.isArchived).map((pdf) => (
+                    {boardExamPdfs.filter(p => p.isArchived).map((pdf) => (
                       <div
                         key={pdf.id}
                         className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg opacity-70"
