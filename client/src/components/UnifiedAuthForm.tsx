@@ -27,7 +27,7 @@ export type RegisterData = z.infer<typeof registerSchema>;
 
 interface UnifiedAuthFormProps {
   onLogin: (data: LoginData) => Promise<boolean>;
-  onRegister: (data: RegisterData) => Promise<boolean>;
+  onRegister: (data: RegisterData) => Promise<boolean | string>;
   onBack: () => void;
 }
 
@@ -73,9 +73,13 @@ export default function UnifiedAuthForm({ onLogin, onRegister, onBack }: Unified
     setRegisterError(null);
     setIsSubmitting(true);
     try {
-      const success = await onRegister(data);
-      if (!success) {
-        setRegisterError("Registration failed. This mobile number may already be registered.");
+      const result = await onRegister(data);
+      if (result !== true) {
+        // result is either false or an error message string
+        const errorMessage = typeof result === 'string' 
+          ? result 
+          : "Registration failed. This mobile number may already be registered.";
+        setRegisterError(errorMessage);
       }
     } finally {
       setIsSubmitting(false);

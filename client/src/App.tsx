@@ -918,7 +918,7 @@ function App() {
   }, [selectedExamType]);
 
   // Handle unified registration
-  const handleUnifiedRegister = useCallback(async (data: RegisterData): Promise<boolean> => {
+  const handleUnifiedRegister = useCallback(async (data: RegisterData): Promise<boolean | string> => {
     try {
       const response = await apiRequest("POST", "/api/auth/register", {
         name: data.name,
@@ -952,10 +952,18 @@ function App() {
         }
         return true;
       }
-      return false;
-    } catch (error) {
+      // Return error message if present
+      if (student && student.error) {
+        return student.error;
+      }
+      return "Registration failed. Please try again.";
+    } catch (error: unknown) {
       console.error("Unified registration error:", error);
-      return false;
+      // Try to extract error message
+      if (error instanceof Error) {
+        return error.message;
+      }
+      return "Registration failed. Please check your details and try again.";
     }
   }, [selectedExamType]);
 
