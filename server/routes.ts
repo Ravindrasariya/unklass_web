@@ -882,9 +882,18 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         return res.status(400).json({ error: "Missing required fields" });
       }
 
+      // Get the session first to validate score doesn't exceed total questions
+      const existingSession = await storage.getQuizSession(sessionId);
+      if (!existingSession) {
+        return res.status(404).json({ error: "Quiz session not found" });
+      }
+      
+      // Cap score at totalQuestions to prevent invalid data
+      const validatedScore = Math.min(score, existingSession.totalQuestions || 10);
+
       const session = await storage.updateQuizSession(sessionId, {
         answers,
-        score,
+        score: validatedScore,
         completedAt: new Date(),
       });
 
@@ -894,7 +903,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
 
       res.json({
         message: "Quiz completed",
-        score,
+        score: validatedScore,
         totalQuestions: session.totalQuestions,
       });
     } catch (error: unknown) {
@@ -1558,9 +1567,18 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         return res.status(400).json({ error: "Missing required fields" });
       }
 
+      // Get the session first to validate score doesn't exceed total questions
+      const existingSession = await storage.getCpctQuizSession(sessionId);
+      if (!existingSession) {
+        return res.status(404).json({ error: "Quiz session not found" });
+      }
+      
+      // Cap score at totalQuestions to prevent invalid data
+      const validatedScore = Math.min(score, existingSession.totalQuestions || 10);
+
       const session = await storage.updateCpctQuizSession(sessionId, {
         answers,
-        score,
+        score: validatedScore,
         completedAt: new Date(),
       });
 
@@ -1570,7 +1588,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
 
       res.json({
         message: "Quiz completed",
-        score,
+        score: validatedScore,
         totalQuestions: session.totalQuestions,
       });
     } catch (error: unknown) {
@@ -2167,9 +2185,18 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         return res.status(400).json({ error: "Missing required fields" });
       }
 
+      // Get the session first to validate score doesn't exceed total questions
+      const existingSession = await storage.getNavodayaQuizSession(sessionId);
+      if (!existingSession) {
+        return res.status(404).json({ error: "Quiz session not found" });
+      }
+      
+      // Cap score at totalQuestions to prevent invalid data
+      const validatedScore = Math.min(score, existingSession.totalQuestions || 10);
+
       const session = await storage.updateNavodayaQuizSession(sessionId, {
         answers,
-        score,
+        score: validatedScore,
         completedAt: new Date(),
       });
 
@@ -2179,7 +2206,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
 
       res.json({
         message: "Quiz completed",
-        score,
+        score: validatedScore,
         totalQuestions: session.totalQuestions,
       });
     } catch (error: unknown) {
@@ -2631,15 +2658,18 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         return res.status(404).json({ error: "Quiz session not found" });
       }
       
+      // Cap score at totalQuestions to prevent invalid data
+      const validatedScore = Math.min(score, session.totalQuestions || 10);
+      
       const updatedSession = await storage.updateChapterPracticeQuizSession(sessionId, {
         answers,
-        score,
+        score: validatedScore,
         completedAt: new Date(),
       });
       
       res.json({
         success: true,
-        score,
+        score: validatedScore,
         totalQuestions: session.totalQuestions,
       });
     } catch (error) {
