@@ -3,12 +3,17 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardDescription } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, ArrowLeft, Library } from "lucide-react";
-import logoIcon from "@assets/Unklass_-_1_1765392666171.png";
+import { ArrowRight, UserPlus } from "lucide-react";
+import logoImage from "@assets/Screenshot_2025-12-11_at_12.16.26_AM_1765392397522.png";
+
+const loginSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  mobile: z.string().regex(/^[0-9]{10}$/, "Please enter a valid 10-digit mobile number"),
+});
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -21,6 +26,7 @@ const formSchema = z.object({
 });
 
 export type ChapterPracticeStudentData = z.infer<typeof formSchema>;
+type LoginData = z.infer<typeof loginSchema>;
 
 interface ChapterPracticeOnboardingFormProps {
   onSubmit: (data: ChapterPracticeStudentData) => Promise<void>;
@@ -29,8 +35,17 @@ interface ChapterPracticeOnboardingFormProps {
 }
 
 export default function ChapterPracticeOnboardingForm({ onSubmit, onLogin, onBack }: ChapterPracticeOnboardingFormProps) {
+  const [isNewStudent, setIsNewStudent] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isReturningStudent, setIsReturningStudent] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+
+  const loginForm = useForm<LoginData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      name: "",
+      mobile: "",
+    },
+  });
 
   const form = useForm<ChapterPracticeStudentData>({
     resolver: zodResolver(formSchema),
@@ -45,9 +60,18 @@ export default function ChapterPracticeOnboardingForm({ onSubmit, onLogin, onBac
     },
   });
 
-  const loginForm = useForm<{ name: string; mobile: string }>({
-    defaultValues: { name: "", mobile: "" },
-  });
+  const handleLogin = async (data: LoginData) => {
+    setLoginError(null);
+    setIsSubmitting(true);
+    try {
+      const found = await onLogin(data);
+      if (!found) {
+        setLoginError("Student not found. Please register as a new student.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleSubmit = async (data: ChapterPracticeStudentData) => {
     setIsSubmitting(true);
@@ -58,72 +82,111 @@ export default function ChapterPracticeOnboardingForm({ onSubmit, onLogin, onBac
     }
   };
 
-  const handleLogin = async (data: { name: string; mobile: string }) => {
-    setIsSubmitting(true);
-    try {
-      const success = await onLogin(data);
-      if (!success) {
-        loginForm.setError("mobile", { message: "Student not found. Please register first." });
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  if (isReturningStudent) {
+  if (!isNewStudent) {
     return (
-      <div className="min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center p-4 bg-background">
         <Card className="w-full max-w-md">
-          <CardHeader className="text-center pb-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="absolute left-4 top-4"
-              onClick={() => setIsReturningStudent(false)}
-              data-testid="button-back-register"
-            >
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              Back
-            </Button>
-            <div className="w-16 h-16 mx-auto rounded-lg overflow-hidden mb-4 bg-violet-50 flex items-center justify-center">
-              <Library className="h-8 w-8 text-violet-600" />
+          <CardHeader className="text-center space-y-3">
+            <div className="flex flex-col items-center gap-1 mb-2">
+              <img 
+                src={logoImage} 
+                alt="UNKLASS" 
+                className="h-10 dark:invert" 
+                data-testid="img-chapter-practice-logo"
+              />
+              <p className="text-sm text-muted-foreground" data-testid="text-chapter-practice-tagline">
+                Learning Beyond Classroom
+              </p>
             </div>
-            <CardTitle className="text-xl">Welcome Back!</CardTitle>
-            <p className="text-muted-foreground text-sm mt-2">
+            <CardDescription className="text-base">
               Enter your details to continue practicing
-            </p>
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Name</label>
-                <Input
-                  {...loginForm.register("name", { required: "Name is required" })}
-                  placeholder="Enter your name"
-                  data-testid="input-login-name"
+            <Form {...loginForm} key="chapter-practice-login-form">
+              <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
+                <FormField
+                  control={loginForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Full Name</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Enter your full name" 
+                          data-testid="input-chapter-practice-name"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Mobile Number</label>
-                <Input
-                  {...loginForm.register("mobile", { required: "Mobile is required" })}
-                  placeholder="Enter your 10-digit mobile"
-                  data-testid="input-login-mobile"
+
+                <FormField
+                  control={loginForm.control}
+                  name="mobile"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Mobile Number</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Enter 10-digit mobile number" 
+                          type="tel"
+                          maxLength={10}
+                          data-testid="input-chapter-practice-mobile"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-                {loginForm.formState.errors.mobile && (
-                  <p className="text-sm text-destructive">{loginForm.formState.errors.mobile.message}</p>
+
+                {loginError && (
+                  <p className="text-sm text-destructive" data-testid="text-chapter-practice-login-error">{loginError}</p>
                 )}
-              </div>
-              <Button
-                type="submit"
-                className="w-full bg-violet-600 hover:bg-violet-700"
-                disabled={isSubmitting}
-                data-testid="button-login-submit"
-              >
-                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                Continue
-              </Button>
-            </form>
+
+                <Button 
+                  type="submit" 
+                  className="w-full mt-6 bg-gradient-to-r from-violet-500 to-violet-600" 
+                  disabled={isSubmitting}
+                  data-testid="button-chapter-practice-continue"
+                >
+                  Continue
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+
+                <div className="text-center pt-4 border-t">
+                  <p className="text-sm text-muted-foreground mb-2">New to Chapter Practice?</p>
+                  <Button 
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      const loginValues = loginForm.getValues();
+                      form.setValue("name", loginValues.name);
+                      form.setValue("mobile", loginValues.mobile);
+                      setIsNewStudent(true);
+                    }}
+                    data-testid="button-chapter-practice-new-student"
+                  >
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Register for Chapter Practice
+                  </Button>
+                </div>
+
+                <Button 
+                  type="button"
+                  variant="ghost"
+                  className="w-full"
+                  onClick={onBack}
+                  data-testid="button-chapter-practice-back"
+                >
+                  Back to Home
+                </Button>
+              </form>
+            </Form>
           </CardContent>
         </Card>
       </div>
@@ -131,38 +194,39 @@ export default function ChapterPracticeOnboardingForm({ onSubmit, onLogin, onBac
   }
 
   return (
-    <div className="min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center pb-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="absolute left-4 top-4"
-            onClick={onBack}
-            data-testid="button-back-landing"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back
-          </Button>
-          <div className="w-16 h-16 mx-auto rounded-lg overflow-hidden mb-4 bg-violet-50 flex items-center justify-center">
-            <Library className="h-8 w-8 text-violet-600" />
+        <CardHeader className="text-center space-y-3">
+          <div className="flex flex-col items-center gap-1 mb-2">
+            <img 
+              src={logoImage} 
+              alt="UNKLASS" 
+              className="h-10 dark:invert" 
+              data-testid="img-chapter-practice-logo"
+            />
+            <p className="text-sm text-muted-foreground" data-testid="text-chapter-practice-tagline">
+              Learning Beyond Classroom
+            </p>
           </div>
-          <CardTitle className="text-xl">Chapter Practice - NCERT</CardTitle>
-          <p className="text-muted-foreground text-sm mt-2">
-            Practice chapter-wise questions from NCERT textbooks
-          </p>
+          <CardDescription className="text-base">
+            Register to start your chapter-wise practice
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <Form {...form}>
+          <Form {...form} key="chapter-practice-registration-form">
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Name</FormLabel>
+                    <FormLabel>Full Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter your full name" {...field} data-testid="input-name" />
+                      <Input 
+                        placeholder="Enter your full name" 
+                        data-testid="input-chapter-practice-reg-name"
+                        {...field} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -176,7 +240,11 @@ export default function ChapterPracticeOnboardingForm({ onSubmit, onLogin, onBac
                   <FormItem>
                     <FormLabel>School Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter your school name" {...field} data-testid="input-school-name" />
+                      <Input 
+                        placeholder="Enter your school name" 
+                        data-testid="input-chapter-practice-school"
+                        {...field} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -191,7 +259,7 @@ export default function ChapterPracticeOnboardingForm({ onSubmit, onLogin, onBac
                     <FormLabel>Grade</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <SelectTrigger data-testid="select-grade">
+                        <SelectTrigger data-testid="select-chapter-practice-grade">
                           <SelectValue placeholder="Select your grade" />
                         </SelectTrigger>
                       </FormControl>
@@ -216,7 +284,7 @@ export default function ChapterPracticeOnboardingForm({ onSubmit, onLogin, onBac
                     <FormLabel>Board</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <SelectTrigger data-testid="select-board">
+                        <SelectTrigger data-testid="select-chapter-practice-board">
                           <SelectValue placeholder="Select your board" />
                         </SelectTrigger>
                       </FormControl>
@@ -238,7 +306,7 @@ export default function ChapterPracticeOnboardingForm({ onSubmit, onLogin, onBac
                     <FormLabel>Medium</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <SelectTrigger data-testid="select-medium">
+                        <SelectTrigger data-testid="select-chapter-practice-medium">
                           <SelectValue placeholder="Select your medium" />
                         </SelectTrigger>
                       </FormControl>
@@ -259,7 +327,11 @@ export default function ChapterPracticeOnboardingForm({ onSubmit, onLogin, onBac
                   <FormItem>
                     <FormLabel>Location</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter your city/village" {...field} data-testid="input-location" />
+                      <Input 
+                        placeholder="Enter your city/town" 
+                        data-testid="input-chapter-practice-location"
+                        {...field} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -273,35 +345,53 @@ export default function ChapterPracticeOnboardingForm({ onSubmit, onLogin, onBac
                   <FormItem>
                     <FormLabel>Mobile Number</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter your 10-digit mobile" {...field} data-testid="input-mobile" />
+                      <Input 
+                        placeholder="Enter 10-digit mobile number" 
+                        type="tel"
+                        maxLength={10}
+                        data-testid="input-chapter-practice-reg-mobile"
+                        {...field} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <Button
-                type="submit"
-                className="w-full bg-violet-600 hover:bg-violet-700"
+              <Button 
+                type="submit" 
+                className="w-full mt-6 bg-gradient-to-r from-violet-500 to-violet-600" 
                 disabled={isSubmitting}
-                data-testid="button-register-submit"
+                data-testid="button-chapter-practice-submit"
               >
-                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                Start Practicing
+                Start Chapter Practice
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+
+              <div className="text-center pt-4 border-t">
+                <p className="text-sm text-muted-foreground mb-2">Already registered?</p>
+                <Button 
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setIsNewStudent(false)}
+                  data-testid="button-chapter-practice-existing-student"
+                >
+                  Login with Mobile Number
+                </Button>
+              </div>
+
+              <Button 
+                type="button"
+                variant="ghost"
+                className="w-full"
+                onClick={onBack}
+                data-testid="button-chapter-practice-back-reg"
+              >
+                Back to Home
               </Button>
             </form>
           </Form>
-
-          <div className="mt-4 text-center">
-            <button
-              type="button"
-              className="text-sm text-violet-600 hover:underline"
-              onClick={() => setIsReturningStudent(true)}
-              data-testid="link-returning-student"
-            >
-              Already registered? Click here to continue
-            </button>
-          </div>
         </CardContent>
       </Card>
     </div>
