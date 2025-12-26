@@ -2344,6 +2344,35 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
   });
 
   // Get available chapters for a subject
+  // Path-based route for available chapters (for React Query compatibility)
+  app.get("/api/chapter-practice/available-chapters/:grade/:board/:subject", async (req, res) => {
+    try {
+      const { grade, board, subject } = req.params;
+      
+      const pdf = await storage.getChapterPracticePdf(grade, board, subject);
+      
+      if (!pdf) {
+        return res.json({ chapters: [], pdfId: null });
+      }
+      
+      const { parseQuestionsWithChapters } = await import("./questionParser");
+      const { chapters } = parseQuestionsWithChapters(pdf.content);
+      
+      // Format chapter names with index (0-based) and chapter name
+      const chapterNames = chapters
+        .filter(c => c.questionCount > 0)
+        .map((c, index) => `${index}. ${c.chapterName}`);
+      
+      res.json({ 
+        chapters: chapterNames,
+        pdfId: pdf.id
+      });
+    } catch (error) {
+      console.error("Error fetching available chapters:", error);
+      res.status(500).json({ error: "Failed to fetch chapters" });
+    }
+  });
+
   app.get("/api/chapter-practice/available-chapters", async (req, res) => {
     try {
       const { grade, board, subject } = req.query;
@@ -2361,10 +2390,10 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
       const { parseQuestionsWithChapters } = await import("./questionParser");
       const { chapters } = parseQuestionsWithChapters(pdf.content);
       
-      // Format chapter names with chapter numbers (e.g., "Chapter 1: Patterns in Mathematics")
+      // Format chapter names with index (0-based) and chapter name
       const chapterNames = chapters
         .filter(c => c.questionCount > 0)
-        .map(c => `Chapter ${c.chapterNumber}: ${c.chapterName}`);
+        .map((c, index) => `${index}. ${c.chapterName}`);
       
       res.json({ 
         chapters: chapterNames,

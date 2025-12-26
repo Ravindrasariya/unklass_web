@@ -73,7 +73,7 @@ export default function ChapterPracticeOptions({
   const selectedSubject = form.watch("subject");
 
   const { data: chapters, isLoading: chaptersLoading } = useQuery<{ chapters: string[] }>({
-    queryKey: ["/api/chapter-practice/available-chapters", selectedGrade, selectedBoard, selectedSubject],
+    queryKey: [`/api/chapter-practice/available-chapters/${selectedGrade}/${selectedBoard}/${selectedSubject}`],
     enabled: !!selectedGrade && !!selectedBoard && !!selectedSubject,
   });
 
@@ -249,7 +249,7 @@ export default function ChapterPracticeOptions({
                               value={chapter}
                               className={`${CHAPTER_COLORS[index % CHAPTER_COLORS.length]} my-1 rounded`}
                             >
-                              {index + 1}. {chapter}
+                              {chapter}
                             </SelectItem>
                           ))}
                           {!chaptersLoading && (!chapters?.chapters || chapters.chapters.length === 0) && (
