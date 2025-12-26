@@ -45,7 +45,7 @@ interface QuizHistoryProps {
   onBack: () => void;
   isCpct?: boolean;
   isNavodaya?: boolean;
-  historyType?: "board" | "cpct" | "navodaya";
+  historyType?: "board" | "cpct" | "navodaya" | "chapter-practice";
   useUnifiedAuth?: boolean;
 }
 
@@ -53,6 +53,7 @@ interface QuizHistoryProps {
 export default function QuizHistory({ studentId, onBack, isCpct = false, isNavodaya = false, historyType, useUnifiedAuth = false }: QuizHistoryProps) {
   const effectiveIsCpct = isCpct || historyType === "cpct";
   const effectiveIsNavodaya = isNavodaya || historyType === "navodaya";
+  const effectiveIsChapterPractice = historyType === "chapter-practice";
   const [sessions, setSessions] = useState<QuizSession[]>([]);
   const [selectedSession, setSelectedSession] = useState<QuizReview | null>(null);
   const [loading, setLoading] = useState(true);
@@ -61,7 +62,9 @@ export default function QuizHistory({ studentId, onBack, isCpct = false, isNavod
   useEffect(() => {
     let endpoint: string;
     if (useUnifiedAuth) {
-      if (effectiveIsNavodaya) {
+      if (effectiveIsChapterPractice) {
+        endpoint = `/api/unified/students/${studentId}/chapter-practice-quiz-history`;
+      } else if (effectiveIsNavodaya) {
         endpoint = `/api/unified/students/${studentId}/navodaya-quiz-history`;
       } else if (effectiveIsCpct) {
         endpoint = `/api/unified/students/${studentId}/cpct-quiz-history`;
@@ -69,7 +72,9 @@ export default function QuizHistory({ studentId, onBack, isCpct = false, isNavod
         endpoint = `/api/unified/students/${studentId}/quiz-history`;
       }
     } else {
-      if (effectiveIsNavodaya) {
+      if (effectiveIsChapterPractice) {
+        endpoint = `/api/chapter-practice/students/${studentId}/quiz-history`;
+      } else if (effectiveIsNavodaya) {
         endpoint = `/api/navodaya/students/${studentId}/quiz-history`;
       } else if (effectiveIsCpct) {
         endpoint = `/api/cpct/students/${studentId}/quiz-history`;
@@ -88,13 +93,15 @@ export default function QuizHistory({ studentId, onBack, isCpct = false, isNavod
         console.error("Failed to fetch quiz history:", err);
         setLoading(false);
       });
-  }, [studentId, effectiveIsCpct, effectiveIsNavodaya, useUnifiedAuth]);
+  }, [studentId, effectiveIsCpct, effectiveIsNavodaya, effectiveIsChapterPractice, useUnifiedAuth]);
 
   const handleReview = async (sessionId: number) => {
     setReviewLoading(true);
     try {
       let endpoint: string;
-      if (effectiveIsNavodaya) {
+      if (effectiveIsChapterPractice) {
+        endpoint = `/api/chapter-practice/quiz/${sessionId}/review`;
+      } else if (effectiveIsNavodaya) {
         endpoint = `/api/navodaya/quiz/${sessionId}/review`;
       } else if (effectiveIsCpct) {
         endpoint = `/api/cpct/quiz/${sessionId}/review`;

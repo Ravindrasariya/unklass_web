@@ -1009,6 +1009,10 @@ export class DatabaseStorage implements IStorage {
       return await db.select().from(navodayaQuizSessions)
         .where(eq(navodayaQuizSessions.unifiedStudentId, studentId))
         .orderBy(desc(navodayaQuizSessions.completedAt));
+    } else if (examType === "chapter-practice") {
+      return await db.select().from(chapterPracticeQuizSessions)
+        .where(eq(chapterPracticeQuizSessions.unifiedStudentId, studentId))
+        .orderBy(desc(chapterPracticeQuizSessions.createdAt));
     }
     return [];
   }

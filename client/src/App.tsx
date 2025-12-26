@@ -1237,6 +1237,16 @@ function App() {
                   onSubmit={handleUnifiedChapterPracticeSubmit}
                   onSaveSelections={handleSaveExamProfile}
                   onBack={handleUnifiedBackToLanding}
+                  onViewHistory={() => setAppState("unified-chapter-history")}
+                />
+              )}
+
+              {appState === "unified-chapter-history" && unifiedStudent && (
+                <QuizHistory
+                  studentId={unifiedStudent.id}
+                  onBack={() => setAppState("unified-chapter-options")}
+                  historyType="chapter-practice"
+                  useUnifiedAuth={true}
                 />
               )}
 

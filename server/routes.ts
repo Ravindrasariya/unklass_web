@@ -190,6 +190,18 @@ export async function registerRoutes(
     }
   });
 
+  // Get unified student quiz history (Chapter Practice)
+  app.get("/api/unified/students/:studentId/chapter-practice-quiz-history", async (req, res) => {
+    try {
+      const studentId = parseInt(req.params.studentId);
+      const sessions = await storage.getUnifiedStudentQuizHistory(studentId, "chapter-practice");
+      res.json(sessions);
+    } catch (error) {
+      console.error("Error fetching unified Chapter Practice quiz history:", error);
+      res.status(500).json({ error: "Failed to fetch Chapter Practice quiz history" });
+    }
+  });
+
   // ==================== LEGACY STUDENT ROUTES ====================
 
   // Student registration
@@ -2499,6 +2511,33 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     } catch (error) {
       console.error("Error fetching chapter practice quiz history:", error);
       res.status(500).json({ error: "Failed to fetch quiz history" });
+    }
+  });
+
+  // Get detailed Chapter Practice quiz session for review
+  app.get("/api/chapter-practice/quiz/:sessionId/review", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      const session = await storage.getChapterPracticeQuizSession(sessionId);
+      
+      if (!session) {
+        return res.status(404).json({ error: "Quiz session not found" });
+      }
+      
+      res.json({
+        id: session.id,
+        subject: session.subject,
+        chapterNumber: session.chapterNumber,
+        chapterName: session.chapterName,
+        score: session.score,
+        totalQuestions: session.totalQuestions,
+        questions: session.questions,
+        answers: session.answers,
+        completedAt: session.completedAt,
+      });
+    } catch (error) {
+      console.error("Error fetching Chapter Practice quiz for review:", error);
+      res.status(500).json({ error: "Failed to fetch quiz details" });
     }
   });
 

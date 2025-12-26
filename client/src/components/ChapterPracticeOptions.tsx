@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardDescription } from "@/components/ui/
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowRight, Loader2, Library } from "lucide-react";
+import { ArrowRight, Loader2, Library, History } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import logoImage from "@assets/Screenshot_2025-12-11_at_12.16.26_AM_1765392397522.png";
 
@@ -42,6 +42,7 @@ interface ChapterPracticeOptionsProps {
   onSubmit: (data: ChapterPracticeOptionsData) => Promise<void>;
   onSaveSelections: (selections: Partial<ChapterPracticeOptionsData>) => void;
   onBack: () => void;
+  onViewHistory?: () => void;
 }
 
 export default function ChapterPracticeOptions({ 
@@ -50,7 +51,8 @@ export default function ChapterPracticeOptions({
   savedSelections, 
   onSubmit, 
   onSaveSelections,
-  onBack 
+  onBack,
+  onViewHistory
 }: ChapterPracticeOptionsProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isFirstRender = useRef(true);
@@ -73,6 +75,11 @@ export default function ChapterPracticeOptions({
   const { data: chapters, isLoading: chaptersLoading } = useQuery<{ chapters: string[] }>({
     queryKey: ["/api/chapter-practice/available-chapters", selectedGrade, selectedBoard, selectedSubject],
     enabled: !!selectedGrade && !!selectedBoard && !!selectedSubject,
+  });
+
+  const { data: availableSubjects } = useQuery<{ subjects: string[] }>({
+    queryKey: ["/api/chapter-practice/available-subjects", selectedGrade, selectedBoard],
+    enabled: !!selectedGrade && !!selectedBoard,
   });
 
   useEffect(() => {
@@ -109,9 +116,22 @@ export default function ChapterPracticeOptions({
             </p>
           </div>
           <div className="flex items-center justify-center gap-2">
-            <Library className="w-5 h-5 text-violet-500" />
+            <Library className="w-5 h-5 text-primary" />
             <span className="font-semibold">Chapter Practice - NCERT</span>
           </div>
+          {onViewHistory && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onViewHistory}
+              className="mx-auto"
+              data-testid="button-chapter-view-history"
+            >
+              <History className="w-4 h-4 mr-2" />
+              View History
+            </Button>
+          )}
           <CardDescription className="text-base">
             Welcome, {studentName}! Select your practice details
           </CardDescription>
@@ -201,9 +221,19 @@ export default function ChapterPracticeOptions({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {CHAPTER_PRACTICE_SUBJECTS.map((subject) => (
-                          <SelectItem key={subject} value={subject}>{subject}</SelectItem>
-                        ))}
+                        {CHAPTER_PRACTICE_SUBJECTS.map((subject) => {
+                          const isAvailable = !availableSubjects?.subjects || availableSubjects.subjects.includes(subject);
+                          return (
+                            <SelectItem 
+                              key={subject} 
+                              value={subject}
+                              disabled={!isAvailable}
+                              className={!isAvailable ? "opacity-50" : ""}
+                            >
+                              {subject}{!isAvailable ? " (Not Available)" : ""}
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -231,7 +261,7 @@ export default function ChapterPracticeOptions({
                               value={chapter}
                               className={`${CHAPTER_COLORS[index % CHAPTER_COLORS.length]} my-1 rounded`}
                             >
-                              {chapter}
+                              {index + 1}. {chapter}
                             </SelectItem>
                           ))}
                           {!chaptersLoading && (!chapters?.chapters || chapters.chapters.length === 0) && (
@@ -247,7 +277,7 @@ export default function ChapterPracticeOptions({
 
               <Button 
                 type="submit" 
-                className="w-full mt-6 bg-gradient-to-r from-violet-500 to-violet-600" 
+                className="w-full mt-6" 
                 disabled={isSubmitting}
                 data-testid="button-chapter-start"
               >
