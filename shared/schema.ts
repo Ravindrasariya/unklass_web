@@ -7,8 +7,8 @@ import { z } from "zod";
 export const unifiedStudents = pgTable("unified_students", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  fatherName: text("father_name").notNull(),
-  location: text("location").notNull(),
+  fatherName: text("father_name"), // nullable for legacy users
+  location: text("location"), // nullable for legacy users
   mobileNumber: varchar("mobile_number", { length: 15 }).notNull().unique(),
   schoolName: text("school_name"), // optional
   dateOfBirth: text("date_of_birth"), // optional, stored as YYYY-MM-DD string
