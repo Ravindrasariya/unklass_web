@@ -237,6 +237,23 @@ export async function registerRoutes(
     }
   });
 
+  // Get available subjects with path params (for frontend query key compatibility)
+  app.get("/api/available-subjects/:grade/:board", async (req, res) => {
+    try {
+      const { grade, board } = req.params;
+      
+      const allPdfs = await storage.getActivePdfs();
+      const availableSubjects = allPdfs
+        .filter(pdf => pdf.grade === grade && pdf.board === board.toUpperCase())
+        .map(pdf => pdf.subject);
+      
+      res.json({ subjects: availableSubjects });
+    } catch (error) {
+      console.error("Error fetching available subjects:", error);
+      res.status(500).json({ error: "Failed to fetch available subjects" });
+    }
+  });
+
   // Admin: Upload PDF
   app.post("/api/admin/upload-pdf", upload.single("pdf"), async (req, res) => {
     try {
