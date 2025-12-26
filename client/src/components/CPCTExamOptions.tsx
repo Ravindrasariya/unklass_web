@@ -27,7 +27,7 @@ export type CPCTExamOptionsData = z.infer<typeof optionsSchema>;
 interface CPCTExamOptionsProps {
   studentId: number;
   studentName: string;
-  savedSelections?: { medium?: string } | null;
+  savedSelections?: { medium?: string; section?: string } | null;
   onSubmit: (data: CPCTExamOptionsData) => Promise<void>;
   onSaveSelections: (selections: Partial<CPCTExamOptionsData>) => void;
   onBack: () => void;
@@ -47,14 +47,14 @@ export default function CPCTExamOptions({
     resolver: zodResolver(optionsSchema),
     defaultValues: {
       medium: savedSelections?.medium || "",
-      section: "",
+      section: savedSelections?.section || "",
     },
   });
 
   const handleSubmit = async (data: CPCTExamOptionsData) => {
     setIsSubmitting(true);
     try {
-      onSaveSelections({ medium: data.medium });
+      onSaveSelections({ medium: data.medium, section: data.section });
       await onSubmit(data);
     } finally {
       setIsSubmitting(false);

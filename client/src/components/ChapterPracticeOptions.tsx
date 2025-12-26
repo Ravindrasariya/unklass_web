@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -38,7 +38,7 @@ export type ChapterPracticeOptionsData = z.infer<typeof optionsSchema>;
 interface ChapterPracticeOptionsProps {
   studentId: number;
   studentName: string;
-  savedSelections?: { grade?: string; board?: string; medium?: string } | null;
+  savedSelections?: { grade?: string; board?: string; medium?: string; subject?: string; chapter?: string } | null;
   onSubmit: (data: ChapterPracticeOptionsData) => Promise<void>;
   onSaveSelections: (selections: Partial<ChapterPracticeOptionsData>) => void;
   onBack: () => void;
@@ -53,6 +53,7 @@ export default function ChapterPracticeOptions({
   onBack 
 }: ChapterPracticeOptionsProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isFirstRender = useRef(true);
 
   const form = useForm<ChapterPracticeOptionsData>({
     resolver: zodResolver(optionsSchema),
@@ -60,8 +61,8 @@ export default function ChapterPracticeOptions({
       grade: savedSelections?.grade || "",
       board: savedSelections?.board || "",
       medium: savedSelections?.medium || "English",
-      subject: "",
-      chapter: "",
+      subject: savedSelections?.subject || "",
+      chapter: savedSelections?.chapter || "",
     },
   });
 
@@ -75,13 +76,17 @@ export default function ChapterPracticeOptions({
   });
 
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     form.setValue("chapter", "");
   }, [selectedSubject]);
 
   const handleSubmit = async (data: ChapterPracticeOptionsData) => {
     setIsSubmitting(true);
     try {
-      onSaveSelections({ grade: data.grade, board: data.board, medium: data.medium });
+      onSaveSelections({ grade: data.grade, board: data.board, medium: data.medium, subject: data.subject, chapter: data.chapter });
       await onSubmit(data);
     } finally {
       setIsSubmitting(false);

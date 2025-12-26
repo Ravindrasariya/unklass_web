@@ -22,7 +22,7 @@ export type BoardExamOptionsData = z.infer<typeof optionsSchema>;
 interface BoardExamOptionsProps {
   studentId: number;
   studentName: string;
-  savedSelections?: { grade?: string; board?: string; medium?: string } | null;
+  savedSelections?: { grade?: string; board?: string; medium?: string; subject?: string } | null;
   onSubmit: (data: BoardExamOptionsData) => Promise<void>;
   onSaveSelections: (selections: Partial<BoardExamOptionsData>) => void;
   onBack: () => void;
@@ -46,7 +46,7 @@ export default function BoardExamOptions({
       grade: savedSelections?.grade || "",
       board: savedSelections?.board || "",
       medium: savedSelections?.medium || "English",
-      subject: "",
+      subject: savedSelections?.subject || "",
     },
   });
 
@@ -61,7 +61,7 @@ export default function BoardExamOptions({
   const handleSubmit = async (data: BoardExamOptionsData) => {
     setIsSubmitting(true);
     try {
-      onSaveSelections({ grade: data.grade, board: data.board, medium: data.medium });
+      onSaveSelections({ grade: data.grade, board: data.board, medium: data.medium, subject: data.subject });
       await onSubmit(data);
     } finally {
       setIsSubmitting(false);

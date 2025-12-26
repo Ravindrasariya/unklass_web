@@ -184,10 +184,42 @@ function App() {
   const [availableChapters, setAvailableChapters] = useState<string[]>([]);
   const [availableChapterPracticeSubjects, setAvailableChapterPracticeSubjects] = useState<string[]>([]);
 
-  // Unified auth state
-  const [unifiedStudent, setUnifiedStudent] = useState<UnifiedStudent | null>(null);
-  const [selectedExamType, setSelectedExamType] = useState<ExamType | null>(null);
+  // Unified auth state - restore from localStorage if available
+  const [unifiedStudent, setUnifiedStudent] = useState<UnifiedStudent | null>(() => {
+    try {
+      const stored = localStorage.getItem("unifiedStudent");
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [selectedExamType, setSelectedExamType] = useState<ExamType | null>(() => {
+    try {
+      const stored = localStorage.getItem("selectedExamType");
+      return stored ? (stored as ExamType) : null;
+    } catch {
+      return null;
+    }
+  });
   const [examProfile, setExamProfile] = useState<ExamProfile | null>(null);
+
+  // Persist unified student to localStorage
+  useEffect(() => {
+    if (unifiedStudent) {
+      localStorage.setItem("unifiedStudent", JSON.stringify(unifiedStudent));
+    } else {
+      localStorage.removeItem("unifiedStudent");
+    }
+  }, [unifiedStudent]);
+
+  // Persist selected exam type to localStorage
+  useEffect(() => {
+    if (selectedExamType) {
+      localStorage.setItem("selectedExamType", selectedExamType);
+    } else {
+      localStorage.removeItem("selectedExamType");
+    }
+  }, [selectedExamType]);
   
   const { toast } = useToast();
 
@@ -425,8 +457,13 @@ function App() {
     setCurrentQuestionIndex(0);
     setAnswers([]);
     setSessionId(null);
-    setAppState("ready");
-  }, []);
+    // Return to unified options if came from unified flow
+    if (unifiedStudent) {
+      setAppState("unified-board-options");
+    } else {
+      setAppState("ready");
+    }
+  }, [unifiedStudent]);
 
   // Function to start CPCT quiz with selected section
   const startCpctQuizWithSection = useCallback(async (section: string) => {
@@ -547,8 +584,13 @@ function App() {
     setCpctCurrentQuestionIndex(0);
     setCpctAnswers([]);
     setCpctSessionId(null);
-    setAppState("cpct-ready");
-  }, []);
+    // Return to unified options if came from unified flow
+    if (unifiedStudent) {
+      setAppState("unified-cpct-options");
+    } else {
+      setAppState("cpct-ready");
+    }
+  }, [unifiedStudent]);
 
   const handleCpctViewHistory = useCallback(() => {
     setAppState("cpct-history");
@@ -666,8 +708,13 @@ function App() {
   const handleNavodayaRetakeQuiz = useCallback(async () => {
     if (!navodayaStudentData) return;
     setSelectedNavodayaSection("");
-    setAppState("navodaya-ready");
-  }, [navodayaStudentData]);
+    // Return to unified options if came from unified flow
+    if (unifiedStudent) {
+      setAppState("unified-navodaya-options");
+    } else {
+      setAppState("navodaya-ready");
+    }
+  }, [navodayaStudentData, unifiedStudent]);
 
   const handleNavodayaViewHistory = useCallback(() => {
     setAppState("navodaya-history");
@@ -1146,7 +1193,7 @@ function App() {
                 <BoardExamOptions
                   studentId={unifiedStudent.id}
                   studentName={unifiedStudent.name}
-                  savedSelections={examProfile?.lastSelections as { grade?: string; board?: string; medium?: string } | null}
+                  savedSelections={examProfile?.lastSelections as { grade?: string; board?: string; medium?: string; subject?: string } | null}
                   onSubmit={handleUnifiedBoardExamSubmit}
                   onSaveSelections={handleSaveExamProfile}
                   onBack={handleUnifiedBackToLanding}
@@ -1157,7 +1204,7 @@ function App() {
                 <CPCTExamOptions
                   studentId={unifiedStudent.id}
                   studentName={unifiedStudent.name}
-                  savedSelections={examProfile?.lastSelections as { medium?: string } | null}
+                  savedSelections={examProfile?.lastSelections as { medium?: string; section?: string } | null}
                   onSubmit={handleUnifiedCPCTSubmit}
                   onSaveSelections={handleSaveExamProfile}
                   onBack={handleUnifiedBackToLanding}
@@ -1168,7 +1215,7 @@ function App() {
                 <NavodayaExamOptions
                   studentId={unifiedStudent.id}
                   studentName={unifiedStudent.name}
-                  savedSelections={examProfile?.lastSelections as { medium?: string; examGrade?: string } | null}
+                  savedSelections={examProfile?.lastSelections as { medium?: string; examGrade?: string; section?: string } | null}
                   onSubmit={handleUnifiedNavodayaSubmit}
                   onSaveSelections={handleSaveExamProfile}
                   onBack={handleUnifiedBackToLanding}
@@ -1179,7 +1226,7 @@ function App() {
                 <ChapterPracticeOptions
                   studentId={unifiedStudent.id}
                   studentName={unifiedStudent.name}
-                  savedSelections={examProfile?.lastSelections as { grade?: string; board?: string; medium?: string } | null}
+                  savedSelections={examProfile?.lastSelections as { grade?: string; board?: string; medium?: string; subject?: string; chapter?: string } | null}
                   onSubmit={handleUnifiedChapterPracticeSubmit}
                   onSaveSelections={handleSaveExamProfile}
                   onBack={handleUnifiedBackToLanding}
@@ -1322,7 +1369,13 @@ function App() {
                   totalQuestions={questions.length}
                   onRetakeQuiz={handleRetakeQuiz}
                   onTryAnotherSubject={handleTryAnotherSubject}
-                  onBackToHome={() => setAppState("ready")}
+                  onBackToHome={() => {
+                    if (unifiedStudent) {
+                      setAppState("unified-board-options");
+                    } else {
+                      setAppState("ready");
+                    }
+                  }}
                 />
               )}
 
@@ -1463,7 +1516,11 @@ function App() {
                   onTryAnotherSubject={handleCpctTryAnotherSection}
                   onBackToHome={() => {
                     setSelectedCpctSection("");
-                    setAppState("cpct-ready");
+                    if (unifiedStudent) {
+                      setAppState("unified-cpct-options");
+                    } else {
+                      setAppState("cpct-ready");
+                    }
                   }}
                   subjectLabel="Try Another Section"
                 />
@@ -1607,7 +1664,11 @@ function App() {
                   onTryAnotherSubject={handleNavodayaViewHistory}
                   onBackToHome={() => {
                     setSelectedNavodayaSection("");
-                    setAppState("navodaya-ready");
+                    if (unifiedStudent) {
+                      setAppState("unified-navodaya-options");
+                    } else {
+                      setAppState("navodaya-ready");
+                    }
                   }}
                   subjectLabel="View Quiz History"
                 />
@@ -1782,17 +1843,29 @@ function App() {
                   onRetakeQuiz={() => {
                     setSelectedChapter("");
                     setSelectedChapterPracticeSubject("");
-                    setAppState("chapter-practice-ready");
+                    if (unifiedStudent) {
+                      setAppState("unified-chapter-options");
+                    } else {
+                      setAppState("chapter-practice-ready");
+                    }
                   }}
                   onTryAnotherSubject={() => {
                     setSelectedChapter("");
                     setSelectedChapterPracticeSubject("");
-                    setAppState("chapter-practice-ready");
+                    if (unifiedStudent) {
+                      setAppState("unified-chapter-options");
+                    } else {
+                      setAppState("chapter-practice-ready");
+                    }
                   }}
                   onBackToHome={() => {
                     setSelectedChapter("");
                     setSelectedChapterPracticeSubject("");
-                    setAppState("chapter-practice-ready");
+                    if (unifiedStudent) {
+                      setAppState("unified-chapter-options");
+                    } else {
+                      setAppState("chapter-practice-ready");
+                    }
                   }}
                   subjectLabel="Practice Another Chapter"
                   hideRetakeButton={true}

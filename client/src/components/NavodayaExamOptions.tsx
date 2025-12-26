@@ -33,7 +33,7 @@ export type NavodayaExamOptionsData = z.infer<typeof optionsSchema>;
 interface NavodayaExamOptionsProps {
   studentId: number;
   studentName: string;
-  savedSelections?: { medium?: string; examGrade?: string } | null;
+  savedSelections?: { medium?: string; examGrade?: string; section?: string } | null;
   onSubmit: (data: NavodayaExamOptionsData) => Promise<void>;
   onSaveSelections: (selections: Partial<NavodayaExamOptionsData>) => void;
   onBack: () => void;
@@ -54,7 +54,7 @@ export default function NavodayaExamOptions({
     defaultValues: {
       medium: savedSelections?.medium || "",
       examGrade: savedSelections?.examGrade || "",
-      section: "",
+      section: savedSelections?.section || "",
     },
   });
 
@@ -64,7 +64,7 @@ export default function NavodayaExamOptions({
   const handleSubmit = async (data: NavodayaExamOptionsData) => {
     setIsSubmitting(true);
     try {
-      onSaveSelections({ medium: data.medium, examGrade: data.examGrade });
+      onSaveSelections({ medium: data.medium, examGrade: data.examGrade, section: data.section });
       await onSubmit(data);
     } finally {
       setIsSubmitting(false);

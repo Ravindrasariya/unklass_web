@@ -32,25 +32,53 @@ Preferred communication style: Simple, everyday language.
 - **Schema Location**: `shared/schema.ts` (shared between frontend/backend)
 - **Migrations**: Drizzle Kit with `migrations/` output directory
 - **Tables**:
-  - `students`: Board exam student registration (name, grade, board, location, mobile_number)
+  - `unified_students`: Unified student registration (name, fatherName, location, mobileNumber, schoolName optional) - NEW unified auth system
+  - `student_exam_profiles`: Per-exam preferences/selections storage (studentId, examType, lastSelections JSONB)
+  - `students`: Board exam student registration (legacy, still functional)
   - `pdfs`: Uploaded PDF metadata, extracted content, and parsed questions (parsedQuestions JSONB, totalQuestions integer)
   - `quiz_sessions`: Board exam quiz attempts, generated questions, answers, and scores
-  - `cpct_students`: CPCT student registration (name, medium, location, mobile_number)
+  - `cpct_students`: CPCT student registration (legacy, still functional)
   - `cpct_quiz_sessions`: CPCT quiz attempts
-  - `navodaya_students`: Navodaya student registration (name, exam_grade, medium, location, mobile_number)
+  - `navodaya_students`: Navodaya student registration (legacy, still functional)
   - `navodaya_quiz_sessions`: Navodaya quiz attempts
   - `question_pointers`: Tracks sequential question progress (studentId, studentType, pdfId, lastQuestionIndex)
 
 ### API Endpoints
-- `POST /api/students/register` - Register new student
+
+#### Unified Auth (NEW)
+- `POST /api/auth/register` - Register unified student (name, fatherName, location, mobileNumber, schoolName optional)
+- `POST /api/auth/login` - Login with name + mobileNumber
+- `GET /api/auth/student/:id` - Get unified student by ID
+- `GET /api/auth/student/:id/profile/:examType` - Get saved selections for exam type
+- `POST /api/auth/student/:id/profile/:examType` - Save exam selections (lastSelections JSONB)
+- `GET /api/auth/student/:id/profiles` - Get all exam profiles for student
+
+#### Legacy Student APIs (still functional)
+- `POST /api/students/register` - Register board exam student (legacy)
 - `GET /api/students/:id` - Get student by ID
-- `POST /api/admin/upload-pdf` - Upload PDF (admin only, follows {grade}_{board}_{subject}.pdf naming)
-- `GET /api/admin/pdfs` - List all uploaded PDFs
+- `POST /api/cpct/students/register` - Register CPCT student (legacy)
+- `POST /api/navodaya/students/register` - Register Navodaya student (legacy)
+
+#### Quiz APIs
 - `POST /api/quiz/generate` - Generate quiz questions for student
 - `POST /api/quiz/submit` - Submit quiz results
 - `GET /api/students/:studentId/quiz-history` - Get student's quiz history
 
-### Application Flow
+#### Admin APIs
+- `POST /api/admin/upload-pdf` - Upload PDF (admin only, follows {grade}_{board}_{subject}.pdf naming)
+- `GET /api/admin/pdfs` - List all uploaded PDFs
+
+### Application Flow (Unified Auth - NEW)
+1. User lands on homepage, clicks on any exam card (Board Exam, CPCT, Navodaya, Chapter Practice)
+2. Unified login/registration form appears:
+   - Login: name + mobile number
+   - Registration: name, father's name, location, contact (required), school name (optional)
+3. After login, exam-specific options screen shows with dropdowns for that exam type
+4. Dropdown selections are auto-saved and restored on next visit
+5. Student starts quiz -> answers questions -> sees results
+6. After quiz, returns to exam-specific options screen
+
+### Application Flow (Legacy - still functional)
 1. Student registers with personal details (name, grade, board, location, mobile)
 2. Student selects subject from available options (Math, Science, SST, Hindi, English, Physics, Chemistry, Biology)
 3. AI generates 10 MCQ questions (uses fallback questions if OpenAI quota exceeded)
