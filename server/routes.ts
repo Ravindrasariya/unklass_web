@@ -2418,18 +2418,16 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     try {
       const { grade, board } = req.params;
       
-      const allPdfs = await storage.getActivePdfs();
+      // Use getChapterPracticePdfs() which specifically returns Chapter Practice PDFs
+      const chapterPdfs = await storage.getChapterPracticePdfs();
       const normalizedGrade = grade.toLowerCase();
       const normalizedBoard = board.toUpperCase();
       
       const subjects = new Set<string>();
       
-      for (const pdf of allPdfs) {
-        const lowerFilename = pdf.filename.toLowerCase();
-        if (lowerFilename.includes('chapter_plan') &&
-            pdf.grade.toLowerCase() === normalizedGrade && 
-            pdf.board.toUpperCase() === normalizedBoard && 
-            !pdf.isArchived) {
+      for (const pdf of chapterPdfs) {
+        if (pdf.grade.toLowerCase() === normalizedGrade && 
+            pdf.board.toUpperCase() === normalizedBoard) {
           subjects.add(pdf.subject);
         }
       }
@@ -2449,19 +2447,16 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         return res.status(400).json({ error: "Grade and board are required" });
       }
       
-      const allPdfs = await storage.getActivePdfs();
+      // Use getChapterPracticePdfs() which specifically returns Chapter Practice PDFs
+      const chapterPdfs = await storage.getChapterPracticePdfs();
       const normalizedGrade = (grade as string).toLowerCase();
       const normalizedBoard = (board as string).toUpperCase();
       
       const subjects = new Set<string>();
       
-      // Check for Chapter Practice PDFs by filename pattern: contains "chapter_plan"
-      for (const pdf of allPdfs) {
-        const lowerFilename = pdf.filename.toLowerCase();
-        if (lowerFilename.includes('chapter_plan') &&
-            pdf.grade.toLowerCase() === normalizedGrade && 
-            pdf.board.toUpperCase() === normalizedBoard && 
-            !pdf.isArchived) {
+      for (const pdf of chapterPdfs) {
+        if (pdf.grade.toLowerCase() === normalizedGrade && 
+            pdf.board.toUpperCase() === normalizedBoard) {
           subjects.add(pdf.subject);
         }
       }
