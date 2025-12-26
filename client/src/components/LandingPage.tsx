@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, BookOpen, Monitor, GraduationCap, Shield, School, Bell, Library, User, LogOut } from "lucide-react";
+import { ChevronLeft, ChevronRight, BookOpen, Monitor, GraduationCap, Shield, School, Bell, Library, User, LogOut, Award } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import WeeklyLeaderboard from "./WeeklyLeaderboard";
@@ -616,6 +616,37 @@ export default function LandingPage({
                     data-testid="button-chapter-practice"
                   >
                     Start Practice
+                  </Button>
+                </div>
+              </div>
+
+              <div 
+                className="bg-white border border-amber-200 rounded-2xl p-6 text-center relative overflow-hidden flex flex-col opacity-75"
+                data-testid="card-olympiad"
+              >
+                <div className="absolute top-3 right-3 bg-amber-100 text-amber-700 text-xs font-semibold px-3 py-1 rounded-full z-20">
+                  Coming Soon
+                </div>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-100 to-transparent rounded-full -translate-y-1/2 translate-x-1/2"></div>
+                <div className="relative z-10 flex flex-col flex-1">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-amber-100 to-amber-50 rounded-2xl flex items-center justify-center shadow-sm">
+                    <Award className="w-8 h-8 text-amber-600" />
+                  </div>
+                  <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-1">
+                    UNKLASS Olympiad Exam Prep
+                  </h3>
+                  <p className="text-amber-600 text-xs font-medium mb-2">
+                    3rd to 12th Grade
+                  </p>
+                  <p className="text-gray-600 text-sm mb-4 flex-1">
+                    Prepare for Science, Math & other Olympiad competitions
+                  </p>
+                  <Button 
+                    className="w-full bg-gray-300 text-gray-500 font-medium py-5 rounded-xl cursor-not-allowed mt-auto"
+                    disabled
+                    data-testid="button-olympiad"
+                  >
+                    Coming Soon
                   </Button>
                 </div>
               </div>
