@@ -223,9 +223,11 @@ ${pdfContent.substring(0, 150000)}`;
       throw new Error("OpenAI response missing required question fields");
     }
 
-    console.log(`Generated ${validQuestions.length} valid questions from PDF content`);
+    // Ensure we don't return more questions than requested
+    const limitedQuestions = validQuestions.slice(0, numQuestions);
+    console.log(`Generated ${validQuestions.length} valid questions from PDF content, returning ${limitedQuestions.length}`);
 
-    return validQuestions.map((q: any, index: number) => ({
+    return limitedQuestions.map((q: any, index: number) => ({
       id: index + 1,
       question: q.question,
       options: q.options,
@@ -420,9 +422,11 @@ ${pdfContent.substring(0, 150000)}`;
       throw new Error("OpenAI response missing required question fields");
     }
 
-    console.log(`Generated ${validQuestions.length} CPCT questions in ${medium}`);
+    // Ensure we don't return more questions than requested
+    const limitedQuestions = validQuestions.slice(0, numQuestions);
+    console.log(`Generated ${validQuestions.length} CPCT questions in ${medium}, returning ${limitedQuestions.length}`);
 
-    return validQuestions.map((q: any, index: number) => ({
+    return limitedQuestions.map((q: any, index: number) => ({
       id: index + 1,
       question: q.question,
       options: q.options,
@@ -641,9 +645,11 @@ ${pdfContent.substring(0, 150000)}`;
       throw new Error("OpenAI response missing required question fields");
     }
 
-    console.log(`Generated ${validQuestions.length} Navodaya questions for ${examGrade} in ${medium}`);
+    // Ensure we don't return more questions than requested
+    const limitedQuestions = validQuestions.slice(0, numQuestions);
+    console.log(`Generated ${validQuestions.length} Navodaya questions for ${examGrade} in ${medium}, returning ${limitedQuestions.length}`);
 
-    return validQuestions.map((q: any, index: number) => ({
+    return limitedQuestions.map((q: any, index: number) => ({
       id: index + 1,
       question: q.question,
       options: q.options,

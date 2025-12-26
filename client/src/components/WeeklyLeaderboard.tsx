@@ -17,6 +17,7 @@ interface LeaderboardData {
   boardExam: LeaderboardEntry[];
   cpct: LeaderboardEntry[];
   navodaya: LeaderboardEntry[];
+  chapterPractice: LeaderboardEntry[];
 }
 
 function getRankIcon(rank: number) {
@@ -99,6 +100,7 @@ export default function WeeklyLeaderboard() {
   const hasBoardExam = data?.boardExam && data.boardExam.length > 0;
   const hasCpct = data?.cpct && data.cpct.length > 0;
   const hasNavodaya = data?.navodaya && data.navodaya.length > 0;
+  const hasChapterPractice = data?.chapterPractice && data.chapterPractice.length > 0;
   
   if (isLoading) {
     return (
@@ -117,11 +119,11 @@ export default function WeeklyLeaderboard() {
     );
   }
 
-  if (!hasBoardExam && !hasCpct && !hasNavodaya) {
+  if (!hasBoardExam && !hasCpct && !hasNavodaya && !hasChapterPractice) {
     return null;
   }
   
-  const activeCount = [hasBoardExam, hasCpct, hasNavodaya].filter(Boolean).length;
+  const activeCount = [hasBoardExam, hasCpct, hasNavodaya, hasChapterPractice].filter(Boolean).length;
 
   return (
     <section className="bg-gradient-to-b from-white to-gray-50 py-14 md:py-18 relative overflow-hidden" data-testid="section-weekly-leaderboard">
@@ -142,7 +144,7 @@ export default function WeeklyLeaderboard() {
           </p>
         </div>
 
-        <div className={`grid gap-6 ${activeCount === 3 ? 'md:grid-cols-3' : activeCount === 2 ? 'md:grid-cols-2' : 'max-w-lg mx-auto'}`}>
+        <div className={`grid gap-6 ${activeCount >= 4 ? 'md:grid-cols-2 lg:grid-cols-4' : activeCount === 3 ? 'md:grid-cols-3' : activeCount === 2 ? 'md:grid-cols-2' : 'max-w-lg mx-auto'}`}>
           {hasBoardExam && (
             <LeaderboardCard 
               title="Board Exam Prep" 
@@ -165,6 +167,14 @@ export default function WeeklyLeaderboard() {
               entries={data!.navodaya} 
               icon={Trophy}
               accentColor="bg-gradient-to-r from-sky-500 to-sky-600"
+            />
+          )}
+          {hasChapterPractice && (
+            <LeaderboardCard 
+              title="Chapter Practice" 
+              entries={data!.chapterPractice} 
+              icon={Trophy}
+              accentColor="bg-gradient-to-r from-violet-500 to-purple-600"
             />
           )}
         </div>

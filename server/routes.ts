@@ -2785,6 +2785,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         boardExam: leaderboard.boardExam,
         cpct: leaderboard.cpct,
         navodaya: leaderboard.navodaya,
+        chapterPractice: leaderboard.chapterPractice,
       });
     } catch (error) {
       console.error("Error fetching weekly leaderboard:", error);

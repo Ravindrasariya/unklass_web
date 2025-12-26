@@ -106,6 +106,8 @@ export interface IStorage {
   getWeeklyLeaderboard(weekStartUtc: Date, weekEndUtc: Date): Promise<{
     boardExam: LeaderboardEntry[];
     cpct: LeaderboardEntry[];
+    navodaya: LeaderboardEntry[];
+    chapterPractice: LeaderboardEntry[];
   }>;
 
   // Question Pointers (for sequential question picking)
@@ -632,6 +634,7 @@ export class DatabaseStorage implements IStorage {
     boardExam: LeaderboardEntry[];
     cpct: LeaderboardEntry[];
     navodaya: LeaderboardEntry[];
+    chapterPractice: LeaderboardEntry[];
   }> {
     // Board Exam Leaderboard (top 3)
     const boardExamResults = await db
@@ -735,7 +738,41 @@ export class DatabaseStorage implements IStorage {
       testsCompleted: Number(row.testsCompleted),
     }));
 
-    return { boardExam, cpct, navodaya };
+    // Chapter Practice Leaderboard (top 3)
+    const chapterPracticeResults = await db
+      .select({
+        studentId: chapterPracticeQuizSessions.studentId,
+        studentName: chapterPracticeStudents.name,
+        totalScore: sql<number>`COALESCE(SUM(${chapterPracticeQuizSessions.score}), 0)`,
+        totalQuestions: sql<number>`COALESCE(SUM(${chapterPracticeQuizSessions.totalQuestions}), 0)`,
+        testsCompleted: sql<number>`COUNT(*)`,
+      })
+      .from(chapterPracticeQuizSessions)
+      .innerJoin(chapterPracticeStudents, eq(chapterPracticeQuizSessions.studentId, chapterPracticeStudents.id))
+      .where(
+        and(
+          isNotNull(chapterPracticeQuizSessions.score),
+          isNotNull(chapterPracticeQuizSessions.completedAt),
+          sql`${chapterPracticeQuizSessions.totalQuestions} > 0`,
+          gte(chapterPracticeQuizSessions.completedAt, weekStartUtc),
+          lte(chapterPracticeQuizSessions.completedAt, weekEndUtc)
+        )
+      )
+      .groupBy(chapterPracticeQuizSessions.studentId, chapterPracticeStudents.name)
+      .orderBy(sql`(COALESCE(SUM(${chapterPracticeQuizSessions.score}), 0)::float / NULLIF(SUM(${chapterPracticeQuizSessions.totalQuestions}), 0)) DESC NULLS LAST`)
+      .limit(3);
+
+    const chapterPractice: LeaderboardEntry[] = chapterPracticeResults.map((row, index) => ({
+      rank: index + 1,
+      studentId: row.studentId,
+      studentName: row.studentName,
+      totalScore: Number(row.totalScore),
+      totalQuestions: Number(row.totalQuestions),
+      accuracy: row.totalQuestions > 0 ? Math.round((Number(row.totalScore) / Number(row.totalQuestions)) * 100) : 0,
+      testsCompleted: Number(row.testsCompleted),
+    }));
+
+    return { boardExam, cpct, navodaya, chapterPractice };
   }
 
   // Question Pointers (for sequential question picking)
