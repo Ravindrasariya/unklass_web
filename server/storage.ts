@@ -294,7 +294,13 @@ export class DatabaseStorage implements IStorage {
   
   async getActivePdfs(): Promise<Pdf[]> {
     // Get only non-archived PDFs for quiz generation
-    return await db.select().from(pdfs).where(eq(pdfs.isArchived, false));
+    // Exclude Chapter Practice PDFs (they have their own dedicated section)
+    return await db.select().from(pdfs).where(
+      and(
+        eq(pdfs.isArchived, false),
+        sql`${pdfs.filename} NOT ILIKE '%chapter_plan%'`
+      )
+    );
   }
   
   async restorePdf(id: number): Promise<boolean> {
