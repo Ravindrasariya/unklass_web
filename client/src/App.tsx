@@ -17,6 +17,7 @@ import ChapterPracticeOptions, { type ChapterPracticeOptionsData } from "@/compo
 import QuizQuestion, { type Question } from "@/components/QuizQuestion";
 import QuizResults from "@/components/QuizResults";
 import QuizHistory from "@/components/QuizHistory";
+import ProfilePage from "@/components/ProfilePage";
 import AppHeader from "@/components/AppHeader";
 import AdminPage from "@/pages/admin";
 import AboutPage from "@/pages/about";
@@ -38,6 +39,7 @@ interface UnifiedStudent {
   location: string;
   mobileNumber: string;
   schoolName?: string | null;
+  dateOfBirth?: string | null;
 }
 
 interface ExamProfile {
@@ -49,7 +51,8 @@ type AppState = "landing" | "onboarding" | "ready" | "loading" | "quiz" | "resul
   | "navodaya-onboarding" | "navodaya-ready" | "navodaya-loading" | "navodaya-quiz" | "navodaya-results" | "navodaya-history"
   | "chapter-practice-onboarding" | "chapter-practice-ready" | "chapter-practice-loading" | "chapter-practice-quiz" | "chapter-practice-results"
   | "unified-auth" | "unified-board-options" | "unified-cpct-options" | "unified-navodaya-options" | "unified-chapter-options"
-  | "unified-board-history" | "unified-cpct-history" | "unified-navodaya-history" | "unified-chapter-history";
+  | "unified-board-history" | "unified-cpct-history" | "unified-navodaya-history" | "unified-chapter-history"
+  | "profile";
 
 interface QuizAnswer {
   questionId: number;
@@ -1158,6 +1161,41 @@ function App() {
     setAppState("landing");
   }, []);
 
+  // Handle logout
+  const handleLogout = useCallback(() => {
+    setUnifiedStudent(null);
+    setSelectedExamType(null);
+    setExamProfile(null);
+    localStorage.removeItem("unifiedStudentId");
+    setAppState("landing");
+    toast({
+      title: "Logged out",
+      description: "You have been successfully logged out.",
+    });
+  }, [toast]);
+
+  // Handle login click from landing page (when not logged in)
+  const handleLoginClick = useCallback(() => {
+    setSelectedExamType(null);
+    setAppState("unified-auth");
+  }, []);
+
+  // Handle signup click from landing page (when not logged in)
+  const handleSignupClick = useCallback(() => {
+    setSelectedExamType(null);
+    setAppState("unified-auth");
+  }, []);
+
+  // Handle profile click
+  const handleProfileClick = useCallback(() => {
+    setAppState("profile");
+  }, []);
+
+  // Handle profile update
+  const handleProfileUpdate = useCallback((updatedStudent: UnifiedStudent) => {
+    setUnifiedStudent(updatedStudent);
+  }, []);
+
   const score = answers.filter(a => a.isCorrect).length;
   const cpctScore = cpctAnswers.filter(a => a.isCorrect).length;
   const navodayaScore = navodayaAnswers.filter(a => a.isCorrect).length;
@@ -1172,7 +1210,7 @@ function App() {
           <Route path="/contact" component={ContactPage} />
           <Route path="/">
             <div className="min-h-screen bg-background">
-              {appState !== "onboarding" && appState !== "landing" && appState !== "cpct-onboarding" && appState !== "navodaya-onboarding" && appState !== "chapter-practice-onboarding" && appState !== "unified-auth" && appState !== "unified-board-options" && appState !== "unified-cpct-options" && appState !== "unified-navodaya-options" && appState !== "unified-chapter-options" && (
+              {appState !== "onboarding" && appState !== "landing" && appState !== "cpct-onboarding" && appState !== "navodaya-onboarding" && appState !== "chapter-practice-onboarding" && appState !== "unified-auth" && appState !== "unified-board-options" && appState !== "unified-cpct-options" && appState !== "unified-navodaya-options" && appState !== "unified-chapter-options" && appState !== "profile" && (
                 <AppHeader studentName={unifiedStudent?.name || studentData?.name || cpctStudentData?.name || navodayaStudentData?.name || chapterPracticeStudentData?.name} onLogoClick={() => setAppState("landing")} />
               )}
 
@@ -1182,6 +1220,19 @@ function App() {
                   onCPCTClick={() => handleUnifiedCardClick("cpct")}
                   onNavodayaClick={() => handleUnifiedCardClick("navodaya")}
                   onChapterPracticeClick={() => handleUnifiedCardClick("chapter_practice")}
+                  unifiedStudent={unifiedStudent}
+                  onLoginClick={handleLoginClick}
+                  onSignupClick={handleSignupClick}
+                  onProfileClick={handleProfileClick}
+                  onLogout={handleLogout}
+                />
+              )}
+
+              {appState === "profile" && unifiedStudent && (
+                <ProfilePage
+                  student={unifiedStudent}
+                  onBack={handleUnifiedBackToLanding}
+                  onUpdate={handleProfileUpdate}
                 />
               )}
 
