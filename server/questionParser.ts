@@ -249,6 +249,62 @@ function extractAnswerFromText(text: string): { questionText: string; answer: st
   return { questionText: text, answer: undefined };
 }
 
+// Filter out instruction-like or notes entries that aren't real questions
+// IMPORTANT: Only use explicit pattern matching - avoid length-based filtering that may drop valid short questions
+function isInstructionOrNote(text: string): boolean {
+  const trimmed = text.trim();
+  
+  // Common instruction/header patterns (English) - ONLY filter if text STARTS with these patterns
+  const instructionPatterns = [
+    /^choose the correct (?:option|answer)\s*[:.\-]?\s*$/i,
+    /^select the (?:correct|right) (?:option|answer)\s*[:.\-]?\s*$/i,
+    /^multiple choice questions?\s*[:.\-]?\s*$/i,
+    /^answer the following\s*[:.\-]?\s*$/i,
+    /^questions?\s*:?\s*$/i,
+    /^mcq\s*:?\s*$/i,
+    /^instructions?\s*:?\s*$/i,
+    /^directions?\s*:?\s*$/i,
+    /^note\s*:?\s*$/i,
+    /^notes?\s*:?\s*$/i,
+    /^objective (?:type )?questions?\s*[:.\-]?\s*$/i,
+    /^section\s*[-:]\s*[a-z]\s*$/i,
+    /^part\s*[-:]\s*[a-z]\s*$/i,
+    /^each question carries\s+\d+\s*marks?\s*\.?\s*$/i,
+    /^attempt all questions\s*\.?\s*$/i,
+    /^answer any \d+\s*questions?\s*\.?\s*$/i,
+    /^time allowed\s*[:.\-]/i,
+    /^maximum marks\s*[:.\-]/i,
+    /^general instructions\s*[:.\-]?\s*$/i,
+    /^read the (?:passage|following|text) (?:carefully|and answer)\s*[:.\-]?\s*$/i,
+  ];
+  
+  // Common instruction/header patterns (Hindi) - ONLY filter if text matches these patterns
+  const hindiInstructionPatterns = [
+    /^सही विकल्प चुन(?:िए|ें|ो)\s*[:\-।]?\s*$/i,
+    /^निम्नलिखित में से सही विकल्प चुन(?:िए|ें|ो)\s*[:\-।]?\s*$/i,
+    /^प्रश्न\s*:?\s*$/i,
+    /^प्रश्नों के उत्तर (?:लिखिए|दीजिए)\s*[:\-।]?\s*$/i,
+    /^निर्देश\s*[:।]?\s*$/i,
+    /^टिप्पणी\s*[:।]?\s*$/i,
+    /^नोट\s*[:।]?\s*$/i,
+    /^वस्तुनिष्ठ प्रश्न\s*[:।]?\s*$/i,
+    /^खंड\s*[-:।]\s*[अआ]\s*$/i,
+    /^भाग\s*[-:।]\s*[अआ]\s*$/i,
+    /^प्रत्येक प्रश्न\s+\d+\s*अंक\s*(?:का है)?[।]?\s*$/i,
+    /^सभी प्रश्न (?:करें|अनिवार्य हैं)\s*[।]?\s*$/i,
+    /^समय\s*[-:।]\s*\d+/i,
+    /^पूर्णांक\s*[-:।]\s*\d+/i,
+    /^सामान्य निर्देश\s*[:।]?\s*$/i,
+  ];
+  
+  // Check against all patterns
+  for (const pattern of [...instructionPatterns, ...hindiInstructionPatterns]) {
+    if (pattern.test(trimmed)) return true;
+  }
+  
+  return false;
+}
+
 export function parseQuestionsFromPdfContent(content: string): ParsedQuestion[] {
   const normalizedContent = normalizeContent(content);
   
@@ -274,9 +330,14 @@ export function parseQuestionsFromPdfContent(content: string): ParsedQuestion[] 
     bestQuestions = originalLineMatches;
   }
 
+  // Filter out instructions/notes before processing
+  bestQuestions = bestQuestions.filter(q => !isInstructionOrNote(q.text));
+
   if (bestQuestions.length < 5) {
     const chunks = splitContentIntoChunks(normalizedContent, 150);
-    return chunks.map((chunk, i) => ({
+    // Also filter chunks that look like instructions
+    const validChunks = chunks.filter(chunk => !isInstructionOrNote(chunk));
+    return validChunks.map((chunk, i) => ({
       index: i,
       rawText: chunk,
       questionText: undefined,

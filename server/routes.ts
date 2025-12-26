@@ -686,6 +686,15 @@ export async function registerRoutes(
         }
         studentMedium = medium || student.medium || "English";
       }
+      
+      // IMPORTANT: Language-based subjects must be rendered in their native language
+      // Hindi subject PDFs are in Hindi - render questions in Hindi regardless of student's medium
+      // English subject PDFs are in English - render questions in English regardless of student's medium
+      const LANGUAGE_BASED_SUBJECTS = ["Hindi", "English"];
+      if (LANGUAGE_BASED_SUBJECTS.includes(subject)) {
+        studentMedium = subject; // Hindi subject -> Hindi medium, English subject -> English medium
+        console.log(`Language-based subject detected: ${subject} - forcing medium to ${studentMedium}`);
+      }
 
       // Find the PDF for this grade/board/subject
       const pdf = await storage.getPdfByGradeBoardSubject(grade, board.toUpperCase(), subject);
@@ -2575,6 +2584,14 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         return res.status(404).json({ error: "Student not found" });
       }
       
+      // IMPORTANT: Language-based subjects must be rendered in their native language
+      let effectiveMedium = medium || student.medium || "English";
+      const LANGUAGE_BASED_SUBJECTS = ["Hindi", "English"];
+      if (LANGUAGE_BASED_SUBJECTS.includes(subject)) {
+        effectiveMedium = subject;
+        console.log(`Chapter Practice: Language-based subject "${subject}" - forcing medium to ${effectiveMedium}`);
+      }
+      
       const pdf = await storage.getChapterPracticePdf(
         grade || student.grade, 
         board || student.board, 
@@ -2613,7 +2630,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         board || student.board,
         chapterQuestions.length,
         [],
-        medium || student.medium || "English"
+        effectiveMedium
       );
       
       // Shuffle options to randomize correct answer positions
@@ -2627,7 +2644,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         chapterName: chapter,
         grade: grade || student.grade,
         board: board || student.board,
-        medium: medium || student.medium || "English",
+        medium: effectiveMedium,
         totalQuestions: shuffledQuestions.length,
         questions: shuffledQuestions,
       });
