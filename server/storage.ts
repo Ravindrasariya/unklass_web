@@ -2,6 +2,7 @@ import {
   students, pdfs, quizSessions, cpctStudents, cpctQuizSessions,
   navodayaStudents, navodayaQuizSessions, chapterPracticeStudents, chapterPracticeQuizSessions,
   contactSubmissions, visitorStats, uniqueVisitors, questionPointers, notices,
+  unifiedStudents, studentExamProfiles,
   type Student, type InsertStudent,
   type Pdf, type InsertPdf,
   type QuizSession, type InsertQuizSession,
@@ -14,7 +15,10 @@ import {
   type ContactSubmission, type InsertContactSubmission,
   type VisitorStats,
   type QuestionPointer, type ParsedQuestion, type ChapterMetadata,
-  type Notice, type InsertNotice
+  type Notice, type InsertNotice,
+  type UnifiedStudent, type InsertUnifiedStudent,
+  type StudentExamProfile, type InsertStudentExamProfile,
+  type ExamType
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, like, sql, desc, gte, lte, lt, isNotNull, or } from "drizzle-orm";
@@ -136,6 +140,19 @@ export interface IStorage {
   getChapterPracticePdf(grade: string, board: string, subject: string): Promise<Pdf | undefined>;
   getChapterPracticePdfs(): Promise<Pdf[]>;
   getChapterPracticePdfsForSubject(subject: string): Promise<Pdf[]>;
+
+  // Unified Students (new auth system)
+  getUnifiedStudent(id: number): Promise<UnifiedStudent | undefined>;
+  getUnifiedStudentByMobile(mobileNumber: string): Promise<UnifiedStudent | undefined>;
+  getUnifiedStudentByNameAndMobile(name: string, mobileNumber: string): Promise<UnifiedStudent | undefined>;
+  createUnifiedStudent(student: InsertUnifiedStudent): Promise<UnifiedStudent>;
+  updateUnifiedStudent(id: number, updates: Partial<InsertUnifiedStudent>): Promise<UnifiedStudent | undefined>;
+  getAllUnifiedStudents(): Promise<UnifiedStudent[]>;
+
+  // Student Exam Profiles (preferences per exam type)
+  getStudentExamProfile(studentId: number, examType: string): Promise<StudentExamProfile | undefined>;
+  upsertStudentExamProfile(studentId: number, examType: string, lastSelections: any): Promise<StudentExamProfile>;
+  getStudentAllExamProfiles(studentId: number): Promise<StudentExamProfile[]>;
 }
 
 export interface LeaderboardEntry {
@@ -901,6 +918,79 @@ export class DatabaseStorage implements IStorage {
         eq(pdfs.isArchived, false)
       )
     );
+  }
+
+  // Unified Students (new auth system)
+  async getUnifiedStudent(id: number): Promise<UnifiedStudent | undefined> {
+    const [student] = await db.select().from(unifiedStudents).where(eq(unifiedStudents.id, id));
+    return student || undefined;
+  }
+
+  async getUnifiedStudentByMobile(mobileNumber: string): Promise<UnifiedStudent | undefined> {
+    const [student] = await db.select().from(unifiedStudents).where(eq(unifiedStudents.mobileNumber, mobileNumber));
+    return student || undefined;
+  }
+
+  async getUnifiedStudentByNameAndMobile(name: string, mobileNumber: string): Promise<UnifiedStudent | undefined> {
+    const [student] = await db.select().from(unifiedStudents).where(
+      and(
+        sql`LOWER(${unifiedStudents.name}) = LOWER(${name})`,
+        eq(unifiedStudents.mobileNumber, mobileNumber)
+      )
+    );
+    return student || undefined;
+  }
+
+  async createUnifiedStudent(insertStudent: InsertUnifiedStudent): Promise<UnifiedStudent> {
+    const [student] = await db.insert(unifiedStudents).values(insertStudent).returning();
+    return student;
+  }
+
+  async updateUnifiedStudent(id: number, updates: Partial<InsertUnifiedStudent>): Promise<UnifiedStudent | undefined> {
+    const [student] = await db
+      .update(unifiedStudents)
+      .set(updates)
+      .where(eq(unifiedStudents.id, id))
+      .returning();
+    return student || undefined;
+  }
+
+  async getAllUnifiedStudents(): Promise<UnifiedStudent[]> {
+    return await db.select().from(unifiedStudents).orderBy(desc(unifiedStudents.createdAt));
+  }
+
+  // Student Exam Profiles (preferences per exam type)
+  async getStudentExamProfile(studentId: number, examType: string): Promise<StudentExamProfile | undefined> {
+    const [profile] = await db.select().from(studentExamProfiles).where(
+      and(
+        eq(studentExamProfiles.studentId, studentId),
+        eq(studentExamProfiles.examType, examType)
+      )
+    );
+    return profile || undefined;
+  }
+
+  async upsertStudentExamProfile(studentId: number, examType: string, lastSelections: any): Promise<StudentExamProfile> {
+    const existing = await this.getStudentExamProfile(studentId, examType);
+    
+    if (existing) {
+      const [updated] = await db
+        .update(studentExamProfiles)
+        .set({ lastSelections, updatedAt: new Date() })
+        .where(eq(studentExamProfiles.id, existing.id))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(studentExamProfiles)
+        .values({ studentId, examType, lastSelections })
+        .returning();
+      return created;
+    }
+  }
+
+  async getStudentAllExamProfiles(studentId: number): Promise<StudentExamProfile[]> {
+    return await db.select().from(studentExamProfiles).where(eq(studentExamProfiles.studentId, studentId));
   }
 }
 

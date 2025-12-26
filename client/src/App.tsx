@@ -9,6 +9,11 @@ import StudentOnboardingForm, { type StudentData } from "@/components/StudentOnb
 import CpctOnboardingForm, { type CpctStudentData } from "@/components/CpctOnboardingForm";
 import NavodayaOnboardingForm, { type NavodayaStudentData } from "@/components/NavodayaOnboardingForm";
 import ChapterPracticeOnboardingForm, { type ChapterPracticeStudentData } from "@/components/ChapterPracticeOnboardingForm";
+import UnifiedAuthForm, { type LoginData, type RegisterData } from "@/components/UnifiedAuthForm";
+import BoardExamOptions, { type BoardExamOptionsData } from "@/components/BoardExamOptions";
+import CPCTExamOptions, { type CPCTExamOptionsData } from "@/components/CPCTExamOptions";
+import NavodayaExamOptions, { type NavodayaExamOptionsData } from "@/components/NavodayaExamOptions";
+import ChapterPracticeOptions, { type ChapterPracticeOptionsData } from "@/components/ChapterPracticeOptions";
 import QuizQuestion, { type Question } from "@/components/QuizQuestion";
 import QuizResults from "@/components/QuizResults";
 import QuizHistory from "@/components/QuizHistory";
@@ -24,10 +29,26 @@ import { Loader2, Library } from "lucide-react";
 import logoIcon from "@assets/Unklass_-_1_1765392666171.png";
 import { useToast } from "@/hooks/use-toast";
 
+type ExamType = "board_exam" | "cpct" | "navodaya" | "chapter_practice";
+
+interface UnifiedStudent {
+  id: number;
+  name: string;
+  fatherName: string;
+  location: string;
+  mobileNumber: string;
+  schoolName?: string | null;
+}
+
+interface ExamProfile {
+  lastSelections: Record<string, unknown> | null;
+}
+
 type AppState = "landing" | "onboarding" | "ready" | "loading" | "quiz" | "results" | "history" 
   | "cpct-onboarding" | "cpct-ready" | "cpct-loading" | "cpct-quiz" | "cpct-results" | "cpct-history"
   | "navodaya-onboarding" | "navodaya-ready" | "navodaya-loading" | "navodaya-quiz" | "navodaya-results" | "navodaya-history"
-  | "chapter-practice-onboarding" | "chapter-practice-ready" | "chapter-practice-loading" | "chapter-practice-quiz" | "chapter-practice-results";
+  | "chapter-practice-onboarding" | "chapter-practice-ready" | "chapter-practice-loading" | "chapter-practice-quiz" | "chapter-practice-results"
+  | "unified-auth" | "unified-board-options" | "unified-cpct-options" | "unified-navodaya-options" | "unified-chapter-options";
 
 interface QuizAnswer {
   questionId: number;
@@ -162,8 +183,28 @@ function App() {
   const [chapterPracticeSessionId, setChapterPracticeSessionId] = useState<number | null>(null);
   const [availableChapters, setAvailableChapters] = useState<string[]>([]);
   const [availableChapterPracticeSubjects, setAvailableChapterPracticeSubjects] = useState<string[]>([]);
+
+  // Unified auth state
+  const [unifiedStudent, setUnifiedStudent] = useState<UnifiedStudent | null>(null);
+  const [selectedExamType, setSelectedExamType] = useState<ExamType | null>(null);
+  const [examProfile, setExamProfile] = useState<ExamProfile | null>(null);
   
   const { toast } = useToast();
+
+  // Load exam profile when unified student selects an exam type
+  useEffect(() => {
+    if (unifiedStudent && selectedExamType) {
+      fetch(`/api/auth/student/${unifiedStudent.id}/profile/${selectedExamType}`)
+        .then(res => res.json())
+        .then(data => {
+          setExamProfile(data);
+        })
+        .catch(err => {
+          console.error("Failed to fetch exam profile:", err);
+          setExamProfile(null);
+        });
+    }
+  }, [unifiedStudent, selectedExamType]);
 
   // Fetch available subjects when student is ready
   useEffect(() => {
@@ -758,6 +799,314 @@ function App() {
     }
   }, [chapterPracticeCurrentQuestionIndex, chapterPracticeQuestions.length, chapterPracticeAnswers, chapterPracticeSessionId]);
 
+  // ==================== UNIFIED AUTH HANDLERS ====================
+
+  // Handle card click from landing page - show unified auth
+  const handleUnifiedCardClick = useCallback((examType: ExamType) => {
+    setSelectedExamType(examType);
+    
+    // If user is already logged in with unified auth, go straight to options
+    if (unifiedStudent) {
+      switch (examType) {
+        case "board_exam":
+          setAppState("unified-board-options");
+          break;
+        case "cpct":
+          setAppState("unified-cpct-options");
+          break;
+        case "navodaya":
+          setAppState("unified-navodaya-options");
+          break;
+        case "chapter_practice":
+          setAppState("unified-chapter-options");
+          break;
+      }
+    } else {
+      setAppState("unified-auth");
+    }
+  }, [unifiedStudent]);
+
+  // Handle unified login
+  const handleUnifiedLogin = useCallback(async (data: LoginData): Promise<boolean> => {
+    try {
+      const response = await apiRequest("POST", "/api/auth/login", {
+        name: data.name,
+        mobileNumber: data.mobileNumber,
+      });
+      const student = await response.json();
+      if (student && student.id) {
+        setUnifiedStudent(student);
+        // Navigate to the exam-specific options
+        switch (selectedExamType) {
+          case "board_exam":
+            setAppState("unified-board-options");
+            break;
+          case "cpct":
+            setAppState("unified-cpct-options");
+            break;
+          case "navodaya":
+            setAppState("unified-navodaya-options");
+            break;
+          case "chapter_practice":
+            setAppState("unified-chapter-options");
+            break;
+        }
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Unified login error:", error);
+      return false;
+    }
+  }, [selectedExamType]);
+
+  // Handle unified registration
+  const handleUnifiedRegister = useCallback(async (data: RegisterData): Promise<boolean> => {
+    try {
+      const response = await apiRequest("POST", "/api/auth/register", {
+        name: data.name,
+        fatherName: data.fatherName,
+        location: data.location,
+        mobileNumber: data.mobileNumber,
+        schoolName: data.schoolName || null,
+      });
+      const student = await response.json();
+      if (student && student.id) {
+        setUnifiedStudent(student);
+        // Navigate to the exam-specific options
+        switch (selectedExamType) {
+          case "board_exam":
+            setAppState("unified-board-options");
+            break;
+          case "cpct":
+            setAppState("unified-cpct-options");
+            break;
+          case "navodaya":
+            setAppState("unified-navodaya-options");
+            break;
+          case "chapter_practice":
+            setAppState("unified-chapter-options");
+            break;
+        }
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Unified registration error:", error);
+      return false;
+    }
+  }, [selectedExamType]);
+
+  // Save exam profile selections
+  const handleSaveExamProfile = useCallback(async (selections: Record<string, unknown>) => {
+    if (!unifiedStudent || !selectedExamType) return;
+    
+    try {
+      await apiRequest("POST", `/api/auth/student/${unifiedStudent.id}/profile/${selectedExamType}`, {
+        lastSelections: selections,
+      });
+      // Update local state
+      setExamProfile({ lastSelections: selections });
+    } catch (error) {
+      console.error("Failed to save exam profile:", error);
+    }
+  }, [unifiedStudent, selectedExamType]);
+
+  // Handle Board Exam submit from unified flow
+  const handleUnifiedBoardExamSubmit = useCallback(async (data: BoardExamOptionsData) => {
+    if (!unifiedStudent) return;
+    
+    // Create a compatible legacy student record for quiz generation
+    const legacyStudent: RegisteredStudent = {
+      id: unifiedStudent.id,
+      name: unifiedStudent.name,
+      grade: data.grade,
+      board: data.board,
+      medium: data.medium,
+      location: unifiedStudent.location,
+      mobileNumber: unifiedStudent.mobileNumber,
+    };
+    
+    setStudentData(legacyStudent);
+    setSelectedSubject(data.subject);
+    setAppState("loading");
+    
+    try {
+      const response = await apiRequest("POST", "/api/quiz/generate", {
+        studentId: unifiedStudent.id,
+        grade: data.grade,
+        board: data.board,
+        subject: data.subject,
+        medium: data.medium,
+      });
+      
+      const quizData = await response.json();
+      setSessionId(quizData.sessionId);
+      setQuestions(quizData.questions);
+      setCurrentQuestionIndex(0);
+      setAnswers([]);
+      setAppState("quiz");
+    } catch (error) {
+      console.error("Quiz generation error:", error);
+      toast({
+        title: "Failed to generate quiz",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+      setAppState("unified-board-options");
+    }
+  }, [unifiedStudent, toast]);
+
+  // Handle CPCT Exam submit from unified flow
+  const handleUnifiedCPCTSubmit = useCallback(async (data: CPCTExamOptionsData) => {
+    if (!unifiedStudent) return;
+    
+    const legacyCpctStudent: RegisteredCpctStudent = {
+      id: unifiedStudent.id,
+      name: unifiedStudent.name,
+      medium: data.medium,
+      location: unifiedStudent.location,
+      mobileNumber: unifiedStudent.mobileNumber,
+    };
+    
+    setCpctStudentData(legacyCpctStudent);
+    setSelectedCpctSection(data.section);
+    setAppState("cpct-loading");
+    
+    try {
+      const response = await apiRequest("POST", "/api/cpct/quiz/generate", {
+        studentId: unifiedStudent.id,
+        section: data.section,
+      });
+      
+      const quizData = await response.json();
+      setCpctSessionId(quizData.sessionId);
+      setCpctQuestions(quizData.questions);
+      setCpctCurrentQuestionIndex(0);
+      setCpctAnswers([]);
+      setAppState("cpct-quiz");
+    } catch (error) {
+      console.error("CPCT Quiz generation error:", error);
+      toast({
+        title: "Failed to generate quiz",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+      setAppState("unified-cpct-options");
+    }
+  }, [unifiedStudent, toast]);
+
+  // Handle Navodaya Exam submit from unified flow
+  const handleUnifiedNavodayaSubmit = useCallback(async (data: NavodayaExamOptionsData) => {
+    if (!unifiedStudent) return;
+    
+    const legacyNavodayaStudent: RegisteredNavodayaStudent = {
+      id: unifiedStudent.id,
+      name: unifiedStudent.name,
+      examGrade: data.examGrade,
+      medium: data.medium,
+      location: unifiedStudent.location,
+      mobileNumber: unifiedStudent.mobileNumber,
+    };
+    
+    setNavodayaStudentData(legacyNavodayaStudent);
+    setSelectedNavodayaSection(data.section);
+    setAppState("navodaya-loading");
+    
+    try {
+      const response = await apiRequest("POST", "/api/navodaya/quiz/generate", {
+        studentId: unifiedStudent.id,
+        section: data.section,
+      });
+      
+      const quizData = await response.json();
+      setNavodayaSessionId(quizData.sessionId);
+      setNavodayaQuestions(quizData.questions);
+      setNavodayaCurrentQuestionIndex(0);
+      setNavodayaAnswers([]);
+      setAppState("navodaya-quiz");
+    } catch (error) {
+      console.error("Navodaya Quiz generation error:", error);
+      toast({
+        title: "Failed to generate quiz",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+      setAppState("unified-navodaya-options");
+    }
+  }, [unifiedStudent, toast]);
+
+  // Handle Chapter Practice submit from unified flow
+  const handleUnifiedChapterPracticeSubmit = useCallback(async (data: ChapterPracticeOptionsData) => {
+    if (!unifiedStudent) return;
+    
+    const legacyChapterStudent: RegisteredChapterPracticeStudent = {
+      id: unifiedStudent.id,
+      name: unifiedStudent.name,
+      grade: data.grade,
+      board: data.board,
+      medium: data.medium,
+      location: unifiedStudent.location,
+      mobileNumber: unifiedStudent.mobileNumber,
+    };
+    
+    setChapterPracticeStudentData(legacyChapterStudent);
+    setSelectedChapterPracticeSubject(data.subject);
+    setSelectedChapter(data.chapter);
+    setAppState("chapter-practice-loading");
+    
+    try {
+      const response = await apiRequest("POST", "/api/chapter-practice/quiz/generate", {
+        studentId: unifiedStudent.id,
+        grade: data.grade,
+        board: data.board,
+        subject: data.subject,
+        chapter: data.chapter,
+        medium: data.medium,
+      });
+      
+      const quizData = await response.json();
+      
+      if (quizData.questions && quizData.questions.length > 0) {
+        const formattedQuestions: Question[] = quizData.questions.map((q: any, idx: number) => ({
+          id: idx + 1,
+          question: q.question,
+          options: q.options,
+          correctAnswer: q.correctAnswer,
+          explanation: q.explanation || "",
+        }));
+        
+        setChapterPracticeQuestions(formattedQuestions);
+        setChapterPracticeCurrentQuestionIndex(0);
+        setChapterPracticeAnswers([]);
+        setChapterPracticeSessionId(quizData.sessionId);
+        setAppState("chapter-practice-quiz");
+      } else {
+        toast({
+          title: "No questions available",
+          description: "No questions found for this chapter.",
+          variant: "destructive",
+        });
+        setAppState("unified-chapter-options");
+      }
+    } catch (error) {
+      console.error("Chapter Practice Quiz generation error:", error);
+      toast({
+        title: "Failed to generate quiz",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+      setAppState("unified-chapter-options");
+    }
+  }, [unifiedStudent, toast]);
+
+  // Handle back to landing from unified flow
+  const handleUnifiedBackToLanding = useCallback(() => {
+    setSelectedExamType(null);
+    setExamProfile(null);
+    setAppState("landing");
+  }, []);
+
   const score = answers.filter(a => a.isCorrect).length;
   const cpctScore = cpctAnswers.filter(a => a.isCorrect).length;
   const navodayaScore = navodayaAnswers.filter(a => a.isCorrect).length;
@@ -772,16 +1121,68 @@ function App() {
           <Route path="/contact" component={ContactPage} />
           <Route path="/">
             <div className="min-h-screen bg-background">
-              {appState !== "onboarding" && appState !== "landing" && appState !== "cpct-onboarding" && appState !== "navodaya-onboarding" && appState !== "chapter-practice-onboarding" && (
-                <AppHeader studentName={studentData?.name || cpctStudentData?.name || navodayaStudentData?.name || chapterPracticeStudentData?.name} onLogoClick={() => setAppState("landing")} />
+              {appState !== "onboarding" && appState !== "landing" && appState !== "cpct-onboarding" && appState !== "navodaya-onboarding" && appState !== "chapter-practice-onboarding" && appState !== "unified-auth" && appState !== "unified-board-options" && appState !== "unified-cpct-options" && appState !== "unified-navodaya-options" && appState !== "unified-chapter-options" && (
+                <AppHeader studentName={unifiedStudent?.name || studentData?.name || cpctStudentData?.name || navodayaStudentData?.name || chapterPracticeStudentData?.name} onLogoClick={() => setAppState("landing")} />
               )}
 
               {appState === "landing" && (
                 <LandingPage 
-                  onBoardExamClick={() => setAppState("onboarding")}
-                  onCPCTClick={() => setAppState("cpct-onboarding")}
-                  onNavodayaClick={() => setAppState("navodaya-onboarding")}
-                  onChapterPracticeClick={() => setAppState("chapter-practice-onboarding")}
+                  onBoardExamClick={() => handleUnifiedCardClick("board_exam")}
+                  onCPCTClick={() => handleUnifiedCardClick("cpct")}
+                  onNavodayaClick={() => handleUnifiedCardClick("navodaya")}
+                  onChapterPracticeClick={() => handleUnifiedCardClick("chapter_practice")}
+                />
+              )}
+
+              {appState === "unified-auth" && (
+                <UnifiedAuthForm
+                  onLogin={handleUnifiedLogin}
+                  onRegister={handleUnifiedRegister}
+                  onBack={handleUnifiedBackToLanding}
+                />
+              )}
+
+              {appState === "unified-board-options" && unifiedStudent && (
+                <BoardExamOptions
+                  studentId={unifiedStudent.id}
+                  studentName={unifiedStudent.name}
+                  savedSelections={examProfile?.lastSelections as { grade?: string; board?: string; medium?: string } | null}
+                  onSubmit={handleUnifiedBoardExamSubmit}
+                  onSaveSelections={handleSaveExamProfile}
+                  onBack={handleUnifiedBackToLanding}
+                />
+              )}
+
+              {appState === "unified-cpct-options" && unifiedStudent && (
+                <CPCTExamOptions
+                  studentId={unifiedStudent.id}
+                  studentName={unifiedStudent.name}
+                  savedSelections={examProfile?.lastSelections as { medium?: string } | null}
+                  onSubmit={handleUnifiedCPCTSubmit}
+                  onSaveSelections={handleSaveExamProfile}
+                  onBack={handleUnifiedBackToLanding}
+                />
+              )}
+
+              {appState === "unified-navodaya-options" && unifiedStudent && (
+                <NavodayaExamOptions
+                  studentId={unifiedStudent.id}
+                  studentName={unifiedStudent.name}
+                  savedSelections={examProfile?.lastSelections as { medium?: string; examGrade?: string } | null}
+                  onSubmit={handleUnifiedNavodayaSubmit}
+                  onSaveSelections={handleSaveExamProfile}
+                  onBack={handleUnifiedBackToLanding}
+                />
+              )}
+
+              {appState === "unified-chapter-options" && unifiedStudent && (
+                <ChapterPracticeOptions
+                  studentId={unifiedStudent.id}
+                  studentName={unifiedStudent.name}
+                  savedSelections={examProfile?.lastSelections as { grade?: string; board?: string; medium?: string } | null}
+                  onSubmit={handleUnifiedChapterPracticeSubmit}
+                  onSaveSelections={handleSaveExamProfile}
+                  onBack={handleUnifiedBackToLanding}
                 />
               )}
 

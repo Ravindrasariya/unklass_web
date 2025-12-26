@@ -1,10 +1,11 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertStudentSchema, insertCpctStudentSchema, insertNavodayaStudentSchema, insertContactSubmissionSchema, insertNoticeSchema, NAVODAYA_SECTIONS_6TH, NAVODAYA_SECTIONS_9TH, type Question, type ParsedQuestion } from "@shared/schema";
+import { insertStudentSchema, insertCpctStudentSchema, insertNavodayaStudentSchema, insertContactSubmissionSchema, insertNoticeSchema, insertUnifiedStudentSchema, NAVODAYA_SECTIONS_6TH, NAVODAYA_SECTIONS_9TH, type Question, type ParsedQuestion, type ExamType } from "@shared/schema";
 import { generateQuizQuestions, generateAnswerFeedback, generateCpctQuizQuestions, generateNavodayaQuizQuestions } from "./openai";
 import { parseQuestionsFromPdfContent, getSequentialQuestions } from "./questionParser";
 import multer from "multer";
+import { z } from "zod";
 
 async function parsePdf(buffer: Buffer): Promise<string> {
   // Use dynamic import to handle both ESM and bundled CJS environments
@@ -54,6 +55,106 @@ export async function registerRoutes(
       res.status(500).json({ success: false, error: "Authentication failed" });
     }
   });
+
+  // ==================== UNIFIED AUTH SYSTEM ====================
+
+  // Unified student registration
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const validatedData = insertUnifiedStudentSchema.parse(req.body);
+      
+      // Check if student already exists by mobile number
+      const existingStudent = await storage.getUnifiedStudentByMobile(validatedData.mobileNumber);
+      if (existingStudent) {
+        return res.status(400).json({ error: "A student with this mobile number is already registered. Please login instead." });
+      }
+      
+      const student = await storage.createUnifiedStudent(validatedData);
+      res.json(student);
+    } catch (error: unknown) {
+      console.error("Error registering unified student:", error);
+      const message = error instanceof Error ? error.message : "Failed to register student";
+      res.status(400).json({ error: message });
+    }
+  });
+
+  // Unified student login
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { name, mobileNumber } = req.body;
+      
+      if (!name || !mobileNumber) {
+        return res.status(400).json({ error: "Name and mobile number are required" });
+      }
+      
+      const student = await storage.getUnifiedStudentByNameAndMobile(name, mobileNumber);
+      if (!student) {
+        return res.status(404).json({ error: "Student not found. Please check your name and mobile number, or register if you're new." });
+      }
+      
+      res.json(student);
+    } catch (error) {
+      console.error("Error logging in unified student:", error);
+      res.status(500).json({ error: "Failed to login" });
+    }
+  });
+
+  // Get unified student by ID
+  app.get("/api/auth/student/:id", async (req, res) => {
+    try {
+      const student = await storage.getUnifiedStudent(parseInt(req.params.id));
+      if (!student) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+      res.json(student);
+    } catch (error) {
+      console.error("Error fetching unified student:", error);
+      res.status(500).json({ error: "Failed to fetch student" });
+    }
+  });
+
+  // Get student exam profile (preferences for a specific exam type)
+  app.get("/api/auth/student/:id/profile/:examType", async (req, res) => {
+    try {
+      const studentId = parseInt(req.params.id);
+      const examType = req.params.examType;
+      
+      const profile = await storage.getStudentExamProfile(studentId, examType);
+      res.json(profile || { lastSelections: null });
+    } catch (error) {
+      console.error("Error fetching exam profile:", error);
+      res.status(500).json({ error: "Failed to fetch exam profile" });
+    }
+  });
+
+  // Update student exam profile (save preferences for a specific exam type)
+  app.post("/api/auth/student/:id/profile/:examType", async (req, res) => {
+    try {
+      const studentId = parseInt(req.params.id);
+      const examType = req.params.examType;
+      const { lastSelections } = req.body;
+      
+      const profile = await storage.upsertStudentExamProfile(studentId, examType, lastSelections);
+      res.json(profile);
+    } catch (error) {
+      console.error("Error updating exam profile:", error);
+      res.status(500).json({ error: "Failed to update exam profile" });
+    }
+  });
+
+  // Get all exam profiles for a student
+  app.get("/api/auth/student/:id/profiles", async (req, res) => {
+    try {
+      const studentId = parseInt(req.params.id);
+      const profiles = await storage.getStudentAllExamProfiles(studentId);
+      res.json(profiles);
+    } catch (error) {
+      console.error("Error fetching all exam profiles:", error);
+      res.status(500).json({ error: "Failed to fetch exam profiles" });
+    }
+  });
+
+  // ==================== LEGACY STUDENT ROUTES ====================
 
   // Student registration
   app.post("/api/students/register", async (req, res) => {
