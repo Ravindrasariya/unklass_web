@@ -922,9 +922,10 @@ export class DatabaseStorage implements IStorage {
     const gradeVariants = normalizeGrade(grade);
     
     // Look for PDFs with "chapter_plan" in filename that match grade, board, and subject
+    // Use ILIKE for case-insensitive matching (handles Chapter_Plan, chapter_plan, etc.)
     const allChapterPdfs = await db.select().from(pdfs).where(
       and(
-        like(pdfs.filename, '%chapter_plan%'),
+        sql`${pdfs.filename} ILIKE '%chapter_plan%'`,
         eq(pdfs.isArchived, false)
       )
     );
@@ -944,9 +945,10 @@ export class DatabaseStorage implements IStorage {
   // Get all Chapter Practice PDFs (for admin section)
   async getChapterPracticePdfs(): Promise<Pdf[]> {
     // Chapter Practice PDFs have "chapter_plan" in their filename
+    // Use ILIKE for case-insensitive matching (handles Chapter_Plan, chapter_plan, etc.)
     return await db.select().from(pdfs).where(
       and(
-        like(pdfs.filename, '%chapter_plan%'),
+        sql`${pdfs.filename} ILIKE '%chapter_plan%'`,
         eq(pdfs.isArchived, false)
       )
     );
@@ -954,9 +956,10 @@ export class DatabaseStorage implements IStorage {
 
   async getChapterPracticePdfsForSubject(subject: string): Promise<Pdf[]> {
     // Get all active Chapter Practice PDFs for a subject
+    // Use ILIKE for case-insensitive matching
     return await db.select().from(pdfs).where(
       and(
-        like(pdfs.filename, '%chapter_plan%'),
+        sql`${pdfs.filename} ILIKE '%chapter_plan%'`,
         eq(pdfs.subject, subject),
         eq(pdfs.isArchived, false)
       )
