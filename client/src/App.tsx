@@ -35,11 +35,12 @@ type ExamType = "board_exam" | "cpct" | "navodaya" | "chapter_practice";
 interface UnifiedStudent {
   id: number;
   name: string;
-  fatherName: string;
-  location: string;
+  fatherName: string | null;
+  location: string | null;
   mobileNumber: string;
   schoolName?: string | null;
   dateOfBirth?: string | null;
+  needsProfileCompletion?: boolean;
 }
 
 interface ExamProfile {
@@ -984,7 +985,7 @@ function App() {
       grade: data.grade,
       board: data.board,
       medium: data.medium,
-      location: unifiedStudent.location,
+      location: unifiedStudent.location || "",
       mobileNumber: unifiedStudent.mobileNumber,
     };
     
@@ -1027,7 +1028,7 @@ function App() {
       id: unifiedStudent.id,
       name: unifiedStudent.name,
       medium: data.medium,
-      location: unifiedStudent.location,
+      location: unifiedStudent.location || "",
       mobileNumber: unifiedStudent.mobileNumber,
     };
     
@@ -1068,7 +1069,7 @@ function App() {
       name: unifiedStudent.name,
       examGrade: data.examGrade,
       medium: data.medium,
-      location: unifiedStudent.location,
+      location: unifiedStudent.location || "",
       mobileNumber: unifiedStudent.mobileNumber,
     };
     
@@ -1110,7 +1111,7 @@ function App() {
       grade: data.grade,
       board: data.board,
       medium: data.medium,
-      location: unifiedStudent.location,
+      location: unifiedStudent.location || "",
       mobileNumber: unifiedStudent.mobileNumber,
     };
     
