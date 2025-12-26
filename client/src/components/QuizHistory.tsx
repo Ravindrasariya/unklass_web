@@ -45,15 +45,10 @@ interface QuizHistoryProps {
   onBack: () => void;
   isCpct?: boolean;
   isNavodaya?: boolean;
-  historyType?: "board" | "cpct" | "navodaya" | "chapter-practice";
-  useUnifiedAuth?: boolean;
 }
 
 
-export default function QuizHistory({ studentId, onBack, isCpct = false, isNavodaya = false, historyType, useUnifiedAuth = false }: QuizHistoryProps) {
-  const effectiveIsCpct = isCpct || historyType === "cpct";
-  const effectiveIsNavodaya = isNavodaya || historyType === "navodaya";
-  const effectiveIsChapterPractice = historyType === "chapter-practice";
+export default function QuizHistory({ studentId, onBack, isCpct = false, isNavodaya = false }: QuizHistoryProps) {
   const [sessions, setSessions] = useState<QuizSession[]>([]);
   const [selectedSession, setSelectedSession] = useState<QuizReview | null>(null);
   const [loading, setLoading] = useState(true);
@@ -61,26 +56,12 @@ export default function QuizHistory({ studentId, onBack, isCpct = false, isNavod
 
   useEffect(() => {
     let endpoint: string;
-    if (useUnifiedAuth) {
-      if (effectiveIsChapterPractice) {
-        endpoint = `/api/unified/students/${studentId}/chapter-practice-quiz-history`;
-      } else if (effectiveIsNavodaya) {
-        endpoint = `/api/unified/students/${studentId}/navodaya-quiz-history`;
-      } else if (effectiveIsCpct) {
-        endpoint = `/api/unified/students/${studentId}/cpct-quiz-history`;
-      } else {
-        endpoint = `/api/unified/students/${studentId}/quiz-history`;
-      }
+    if (isNavodaya) {
+      endpoint = `/api/navodaya/students/${studentId}/quiz-history`;
+    } else if (isCpct) {
+      endpoint = `/api/cpct/students/${studentId}/quiz-history`;
     } else {
-      if (effectiveIsChapterPractice) {
-        endpoint = `/api/chapter-practice/students/${studentId}/quiz-history`;
-      } else if (effectiveIsNavodaya) {
-        endpoint = `/api/navodaya/students/${studentId}/quiz-history`;
-      } else if (effectiveIsCpct) {
-        endpoint = `/api/cpct/students/${studentId}/quiz-history`;
-      } else {
-        endpoint = `/api/students/${studentId}/quiz-history`;
-      }
+      endpoint = `/api/students/${studentId}/quiz-history`;
     }
     
     fetch(endpoint)
@@ -93,17 +74,15 @@ export default function QuizHistory({ studentId, onBack, isCpct = false, isNavod
         console.error("Failed to fetch quiz history:", err);
         setLoading(false);
       });
-  }, [studentId, effectiveIsCpct, effectiveIsNavodaya, effectiveIsChapterPractice, useUnifiedAuth]);
+  }, [studentId, isCpct, isNavodaya]);
 
   const handleReview = async (sessionId: number) => {
     setReviewLoading(true);
     try {
       let endpoint: string;
-      if (effectiveIsChapterPractice) {
-        endpoint = `/api/chapter-practice/quiz/${sessionId}/review`;
-      } else if (effectiveIsNavodaya) {
+      if (isNavodaya) {
         endpoint = `/api/navodaya/quiz/${sessionId}/review`;
-      } else if (effectiveIsCpct) {
+      } else if (isCpct) {
         endpoint = `/api/cpct/quiz/${sessionId}/review`;
       } else {
         endpoint = `/api/quiz/${sessionId}/review`;
@@ -143,9 +122,9 @@ export default function QuizHistory({ studentId, onBack, isCpct = false, isNavod
             <CardHeader>
               <div className="flex items-center justify-between gap-4 flex-wrap">
                 <CardTitle className="text-xl">
-                  {effectiveIsNavodaya 
+                  {isNavodaya 
                     ? `Navodaya ${selectedSession.examGrade} - Review`
-                    : effectiveIsCpct 
+                    : isCpct 
                       ? `CPCT ${selectedSession.year} - Review`
                       : `${selectedSession.subject} - Review`
                   }
@@ -155,9 +134,9 @@ export default function QuizHistory({ studentId, onBack, isCpct = false, isNavod
                 </Badge>
               </div>
               <p className="text-sm text-muted-foreground">
-                {effectiveIsNavodaya
+                {isNavodaya
                   ? `Grade: ${selectedSession.examGrade} | Medium: ${selectedSession.medium} | Completed: ${new Date(selectedSession.completedAt).toLocaleDateString()}`
-                  : effectiveIsCpct 
+                  : isCpct 
                     ? `Medium: ${selectedSession.medium} | Completed: ${new Date(selectedSession.completedAt).toLocaleDateString()}`
                     : `${selectedSession.grade} | ${selectedSession.board} | Completed: ${new Date(selectedSession.completedAt).toLocaleDateString()}`
                 }
@@ -256,14 +235,14 @@ export default function QuizHistory({ studentId, onBack, isCpct = false, isNavod
           data-testid="button-back-to-subjects"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          {effectiveIsNavodaya ? "Back to Navodaya" : effectiveIsCpct ? "Back to CPCT" : "Back to Options"}
+          {isNavodaya ? "Back to Navodaya" : isCpct ? "Back to CPCT" : "Back to Subjects"}
         </Button>
 
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BookOpen className="w-5 h-5" />
-              {effectiveIsNavodaya ? "Navodaya Quiz History" : effectiveIsCpct ? "CPCT Quiz History" : "Quiz History"}
+              {isNavodaya ? "Navodaya Quiz History" : isCpct ? "CPCT Quiz History" : "Quiz History"}
             </CardTitle>
             <p className="text-sm text-muted-foreground">
               Review your past quizzes to revise questions
@@ -286,16 +265,16 @@ export default function QuizHistory({ studentId, onBack, isCpct = false, isNavod
                   >
                     <div className="flex-1">
                       <p className="font-medium">
-                        {effectiveIsNavodaya 
+                        {isNavodaya 
                           ? `Navodaya ${session.examGrade}` 
-                          : effectiveIsCpct 
+                          : isCpct 
                             ? `CPCT ${session.year}` 
                             : session.subject}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {effectiveIsNavodaya
+                        {isNavodaya
                           ? `Medium: ${session.medium}`
-                          : effectiveIsCpct 
+                          : isCpct 
                             ? `Medium: ${session.medium}`
                             : `${session.grade} | ${session.board}`
                         }

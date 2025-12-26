@@ -5,34 +5,6 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Fisher-Yates shuffle algorithm for randomizing options
-function shuffleArray<T>(array: T[]): T[] {
-  const shuffled = [...array];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
-}
-
-// Shuffle question options and update correctAnswer index
-export function shuffleQuestionOptions(question: Question): Question {
-  const correctOption = question.options[question.correctAnswer];
-  const shuffledOptions = shuffleArray(question.options);
-  const newCorrectIndex = shuffledOptions.indexOf(correctOption);
-  
-  return {
-    ...question,
-    options: shuffledOptions,
-    correctAnswer: newCorrectIndex,
-  };
-}
-
-// Shuffle options for an array of questions
-export function shuffleAllQuestionOptions(questions: Question[]): Question[] {
-  return questions.map(q => shuffleQuestionOptions(q));
-}
-
 // Fallback questions when OpenAI is unavailable
 const FALLBACK_QUESTIONS: Record<string, Question[]> = {
   Mathematics: [
@@ -83,20 +55,7 @@ export async function generateQuizQuestions(
   medium: string = "English"
 ): Promise<Question[]> {
   const languageInstruction = medium === "Hindi" 
-    ? `IMPORTANT LANGUAGE INSTRUCTION: Generate ALL content in Hindi (Devanagari script). The questions, all 4 options, and explanations MUST be written in Hindi. Use proper Hindi language and Devanagari script throughout.
-
-CRITICAL TEXT CLEANUP (PDF ENCODING FIX):
-The PDF text may contain GARBLED characters due to encoding issues. You MUST fix these:
-- Latin letters mixed with Hindi text indicate encoding errors
-- Examples of errors you must fix:
-  - "मुLा" → "मुंडा", "वतOमान" → "वर्तमान", "राP" → "राज्य"
-  - "पूणM" → "पूर्ण", "9:वाचक" → "प्रश्नवाचक", "िव\`यािदबोधक" → "विस्मयादिबोधक"
-  - "Tा" → "क्या", "9:" → "प्रश्न", "FGथत" → "स्थित"
-  - Any Latin letter (A-Z, 0-9) appearing WITHIN Hindi words is an encoding error
-- RECONSTRUCT the correct Hindi word by understanding context
-- ALL output must be in PURE Devanagari script with NO Latin characters mixed in
-- Remove pipe symbols "|" that appear as word separators
-- Fix any incomplete/broken Hindi characters (half-letters, wrong matras)`
+    ? `IMPORTANT LANGUAGE INSTRUCTION: Generate ALL content in Hindi (Devanagari script). The questions, all 4 options, and explanations MUST be written in Hindi. Use proper Hindi language and Devanagari script throughout.`
     : `Generate all content in English.`;
 
   const systemPrompt = `You are an EXPERT TEACHER and educational content creator for ${grade} grade ${board} board students in India.
@@ -236,11 +195,9 @@ ${pdfContent.substring(0, 150000)}`;
       throw new Error("OpenAI response missing required question fields");
     }
 
-    // Ensure we don't return more questions than requested
-    const limitedQuestions = validQuestions.slice(0, numQuestions);
-    console.log(`Generated ${validQuestions.length} valid questions from PDF content, returning ${limitedQuestions.length}`);
+    console.log(`Generated ${validQuestions.length} valid questions from PDF content`);
 
-    return limitedQuestions.map((q: any, index: number) => ({
+    return validQuestions.map((q: any, index: number) => ({
       id: index + 1,
       question: q.question,
       options: q.options,
@@ -305,15 +262,7 @@ export async function generateCpctQuizQuestions(
   previousQuestions: string[] = []
 ): Promise<Question[]> {
   const languageInstruction = medium === "Hindi" 
-    ? `IMPORTANT: Generate ALL content (questions, options, explanations) in HINDI (Devanagari script). The entire quiz must be in Hindi language.
-
-CRITICAL TEXT CLEANUP (PDF ENCODING FIX):
-The PDF text may contain GARBLED characters due to encoding issues. You MUST fix these:
-- Latin letters mixed with Hindi text indicate encoding errors (e.g., "मुLा" → "मुंडा", "वतOमान" → "वर्तमान")
-- Any Latin letter (A-Z, 0-9) appearing WITHIN Hindi words is an encoding error - fix it
-- RECONSTRUCT the correct Hindi word by understanding context
-- ALL output must be in PURE Devanagari script with NO Latin characters mixed in
-- Remove pipe symbols "|" that appear as word separators`
+    ? `IMPORTANT: Generate ALL content (questions, options, explanations) in HINDI (Devanagari script). The entire quiz must be in Hindi language.`
     : `Generate all content in clear, simple English.`;
 
   const systemPrompt = `You are an EXPERT TEACHER and CPCT (Computer Proficiency Certification Test) exam content creator for Madhya Pradesh, India.
@@ -443,11 +392,9 @@ ${pdfContent.substring(0, 150000)}`;
       throw new Error("OpenAI response missing required question fields");
     }
 
-    // Ensure we don't return more questions than requested
-    const limitedQuestions = validQuestions.slice(0, numQuestions);
-    console.log(`Generated ${validQuestions.length} CPCT questions in ${medium}, returning ${limitedQuestions.length}`);
+    console.log(`Generated ${validQuestions.length} CPCT questions in ${medium}`);
 
-    return limitedQuestions.map((q: any, index: number) => ({
+    return validQuestions.map((q: any, index: number) => ({
       id: index + 1,
       question: q.question,
       options: q.options,
@@ -539,15 +486,7 @@ export async function generateNavodayaQuizQuestions(
     : "Class 9 entry level (students appearing from Class 8)";
 
   const languageInstruction = medium === "Hindi" 
-    ? `IMPORTANT: Generate ALL content (questions, options, explanations) in HINDI (Devanagari script). The entire quiz must be in Hindi language.
-
-CRITICAL TEXT CLEANUP (PDF ENCODING FIX):
-The PDF text may contain GARBLED characters due to encoding issues. You MUST fix these:
-- Latin letters mixed with Hindi text indicate encoding errors (e.g., "मुLा" → "मुंडा", "वतOमान" → "वर्तमान")
-- Any Latin letter (A-Z, 0-9) appearing WITHIN Hindi words is an encoding error - fix it
-- RECONSTRUCT the correct Hindi word by understanding context
-- ALL output must be in PURE Devanagari script with NO Latin characters mixed in
-- Remove pipe symbols "|" that appear as word separators`
+    ? `IMPORTANT: Generate ALL content (questions, options, explanations) in HINDI (Devanagari script). The entire quiz must be in Hindi language.`
     : `Generate all content in clear, simple English.`;
 
   const systemPrompt = `You are an EXPERT TEACHER and Jawahar Navodaya Vidyalaya (JNV) entrance exam content creator for India.
@@ -674,11 +613,9 @@ ${pdfContent.substring(0, 150000)}`;
       throw new Error("OpenAI response missing required question fields");
     }
 
-    // Ensure we don't return more questions than requested
-    const limitedQuestions = validQuestions.slice(0, numQuestions);
-    console.log(`Generated ${validQuestions.length} Navodaya questions for ${examGrade} in ${medium}, returning ${limitedQuestions.length}`);
+    console.log(`Generated ${validQuestions.length} Navodaya questions for ${examGrade} in ${medium}`);
 
-    return limitedQuestions.map((q: any, index: number) => ({
+    return validQuestions.map((q: any, index: number) => ({
       id: index + 1,
       question: q.question,
       options: q.options,

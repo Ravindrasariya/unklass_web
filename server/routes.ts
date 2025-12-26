@@ -1,11 +1,10 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertStudentSchema, insertCpctStudentSchema, insertNavodayaStudentSchema, insertContactSubmissionSchema, insertNoticeSchema, insertUnifiedStudentSchema, NAVODAYA_SECTIONS_6TH, NAVODAYA_SECTIONS_9TH, type Question, type ParsedQuestion, type ExamType } from "@shared/schema";
-import { generateQuizQuestions, generateAnswerFeedback, generateCpctQuizQuestions, generateNavodayaQuizQuestions, shuffleAllQuestionOptions } from "./openai";
+import { insertStudentSchema, insertCpctStudentSchema, insertNavodayaStudentSchema, insertContactSubmissionSchema, insertNoticeSchema, NAVODAYA_SECTIONS_6TH, NAVODAYA_SECTIONS_9TH, type Question, type ParsedQuestion } from "@shared/schema";
+import { generateQuizQuestions, generateAnswerFeedback, generateCpctQuizQuestions, generateNavodayaQuizQuestions } from "./openai";
 import { parseQuestionsFromPdfContent, getSequentialQuestions } from "./questionParser";
 import multer from "multer";
-import { z } from "zod";
 
 async function parsePdf(buffer: Buffer): Promise<string> {
   // Use dynamic import to handle both ESM and bundled CJS environments
@@ -55,201 +54,6 @@ export async function registerRoutes(
       res.status(500).json({ success: false, error: "Authentication failed" });
     }
   });
-
-  // ==================== UNIFIED AUTH SYSTEM ====================
-
-  // Unified student registration
-  app.post("/api/auth/register", async (req, res) => {
-    try {
-      const validatedData = insertUnifiedStudentSchema.parse(req.body);
-      
-      // Check if student already exists by mobile number
-      const existingStudent = await storage.getUnifiedStudentByMobile(validatedData.mobileNumber);
-      if (existingStudent) {
-        return res.status(400).json({ error: "A student with this mobile number is already registered. Please login instead." });
-      }
-      
-      const student = await storage.createUnifiedStudent(validatedData);
-      res.json(student);
-    } catch (error: unknown) {
-      console.error("Error registering unified student:", error);
-      const message = error instanceof Error ? error.message : "Failed to register student";
-      res.status(400).json({ error: message });
-    }
-  });
-
-  // Unified student login
-  app.post("/api/auth/login", async (req, res) => {
-    try {
-      const { name, mobileNumber } = req.body;
-      
-      if (!name || !mobileNumber) {
-        return res.status(400).json({ error: "Name and mobile number are required" });
-      }
-      
-      // First try to find in unified_students
-      let student = await storage.getUnifiedStudentByNameAndMobile(name, mobileNumber);
-      
-      if (!student) {
-        // Check legacy tables and auto-migrate if found
-        student = await storage.findAndMigrateLegacyUser(name, mobileNumber);
-        
-        if (student) {
-          console.log(`Migrated legacy user ${name} to unified_students (ID: ${student.id})`);
-        }
-      }
-      
-      if (!student) {
-        return res.status(404).json({ error: "Student not found. Please check your name and mobile number, or register if you're new." });
-      }
-      
-      // Include flag indicating if profile needs completion
-      const needsProfileCompletion = !student.fatherName || !student.location;
-      
-      res.json({ ...student, needsProfileCompletion });
-    } catch (error) {
-      console.error("Error logging in unified student:", error);
-      res.status(500).json({ error: "Failed to login" });
-    }
-  });
-
-  // Get unified student by ID
-  app.get("/api/auth/student/:id", async (req, res) => {
-    try {
-      const student = await storage.getUnifiedStudent(parseInt(req.params.id));
-      if (!student) {
-        return res.status(404).json({ error: "Student not found" });
-      }
-      res.json(student);
-    } catch (error) {
-      console.error("Error fetching unified student:", error);
-      res.status(500).json({ error: "Failed to fetch student" });
-    }
-  });
-
-  // Update unified student profile (for editable fields and profile completion)
-  app.patch("/api/auth/student/:id", async (req, res) => {
-    try {
-      const studentId = parseInt(req.params.id);
-      const { schoolName, dateOfBirth, fatherName, location } = req.body;
-      
-      // Build updates object - fatherName and location only allowed if currently empty (profile completion)
-      const updates: Record<string, string | null | undefined> = {
-        schoolName: schoolName ?? undefined,
-        dateOfBirth: dateOfBirth ?? undefined,
-      };
-      
-      // Only allow updating fatherName/location if they're being set (profile completion)
-      if (fatherName !== undefined) {
-        updates.fatherName = fatherName;
-      }
-      if (location !== undefined) {
-        updates.location = location;
-      }
-      
-      const student = await storage.updateUnifiedStudent(studentId, updates);
-      
-      if (!student) {
-        return res.status(404).json({ error: "Student not found" });
-      }
-      
-      res.json(student);
-    } catch (error) {
-      console.error("Error updating unified student:", error);
-      res.status(500).json({ error: "Failed to update student" });
-    }
-  });
-
-  // Get student exam profile (preferences for a specific exam type)
-  app.get("/api/auth/student/:id/profile/:examType", async (req, res) => {
-    try {
-      const studentId = parseInt(req.params.id);
-      const examType = req.params.examType;
-      
-      const profile = await storage.getStudentExamProfile(studentId, examType);
-      res.json(profile || { lastSelections: null });
-    } catch (error) {
-      console.error("Error fetching exam profile:", error);
-      res.status(500).json({ error: "Failed to fetch exam profile" });
-    }
-  });
-
-  // Update student exam profile (save preferences for a specific exam type)
-  app.post("/api/auth/student/:id/profile/:examType", async (req, res) => {
-    try {
-      const studentId = parseInt(req.params.id);
-      const examType = req.params.examType;
-      const { lastSelections } = req.body;
-      
-      const profile = await storage.upsertStudentExamProfile(studentId, examType, lastSelections);
-      res.json(profile);
-    } catch (error) {
-      console.error("Error updating exam profile:", error);
-      res.status(500).json({ error: "Failed to update exam profile" });
-    }
-  });
-
-  // Get all exam profiles for a student
-  app.get("/api/auth/student/:id/profiles", async (req, res) => {
-    try {
-      const studentId = parseInt(req.params.id);
-      const profiles = await storage.getStudentAllExamProfiles(studentId);
-      res.json(profiles);
-    } catch (error) {
-      console.error("Error fetching all exam profiles:", error);
-      res.status(500).json({ error: "Failed to fetch exam profiles" });
-    }
-  });
-
-  // Get unified student quiz history (board exam)
-  app.get("/api/unified/students/:studentId/quiz-history", async (req, res) => {
-    try {
-      const studentId = parseInt(req.params.studentId);
-      const sessions = await storage.getUnifiedStudentQuizHistory(studentId, "board");
-      res.json(sessions);
-    } catch (error) {
-      console.error("Error fetching unified quiz history:", error);
-      res.status(500).json({ error: "Failed to fetch quiz history" });
-    }
-  });
-
-  // Get unified student quiz history (CPCT)
-  app.get("/api/unified/students/:studentId/cpct-quiz-history", async (req, res) => {
-    try {
-      const studentId = parseInt(req.params.studentId);
-      const sessions = await storage.getUnifiedStudentQuizHistory(studentId, "cpct");
-      res.json(sessions);
-    } catch (error) {
-      console.error("Error fetching unified CPCT quiz history:", error);
-      res.status(500).json({ error: "Failed to fetch CPCT quiz history" });
-    }
-  });
-
-  // Get unified student quiz history (Navodaya)
-  app.get("/api/unified/students/:studentId/navodaya-quiz-history", async (req, res) => {
-    try {
-      const studentId = parseInt(req.params.studentId);
-      const sessions = await storage.getUnifiedStudentQuizHistory(studentId, "navodaya");
-      res.json(sessions);
-    } catch (error) {
-      console.error("Error fetching unified Navodaya quiz history:", error);
-      res.status(500).json({ error: "Failed to fetch Navodaya quiz history" });
-    }
-  });
-
-  // Get unified student quiz history (Chapter Practice)
-  app.get("/api/unified/students/:studentId/chapter-practice-quiz-history", async (req, res) => {
-    try {
-      const studentId = parseInt(req.params.studentId);
-      const sessions = await storage.getUnifiedStudentQuizHistory(studentId, "chapter-practice");
-      res.json(sessions);
-    } catch (error) {
-      console.error("Error fetching unified Chapter Practice quiz history:", error);
-      res.status(500).json({ error: "Failed to fetch Chapter Practice quiz history" });
-    }
-  });
-
-  // ==================== LEGACY STUDENT ROUTES ====================
 
   // Student registration
   app.post("/api/students/register", async (req, res) => {
@@ -332,23 +136,6 @@ export async function registerRoutes(
     }
   });
 
-  // Get available subjects with path params (for frontend query key compatibility)
-  app.get("/api/available-subjects/:grade/:board", async (req, res) => {
-    try {
-      const { grade, board } = req.params;
-      
-      const allPdfs = await storage.getActivePdfs();
-      const availableSubjects = allPdfs
-        .filter(pdf => pdf.grade === grade && pdf.board === board.toUpperCase())
-        .map(pdf => pdf.subject);
-      
-      res.json({ subjects: availableSubjects });
-    } catch (error) {
-      console.error("Error fetching available subjects:", error);
-      res.status(500).json({ error: "Failed to fetch available subjects" });
-    }
-  });
-
   // Admin: Upload PDF
   app.post("/api/admin/upload-pdf", upload.single("pdf"), async (req, res) => {
     try {
@@ -367,9 +154,6 @@ export async function registerRoutes(
       // Check for Navodaya simple format: {grade}_navodaya.pdf (e.g., 6th_navodaya.pdf)
       const navodayaSimpleMatch = filename.match(/^(\d+(?:st|nd|rd|th)?|6th|9th)_navodaya\.pdf$/i);
       
-      // Check for Chapter Practice format: {grade}_{board}_Chapter_Plan_{subject}.pdf (e.g., 8th_MP_Chapter_Plan_Mathematics.pdf)
-      const chapterPracticeMatch = filename.match(/^(\d+(?:st|nd|rd|th))_([A-Za-z]+)_Chapter_Plan_(.+)\.pdf$/i);
-      
       // Check for Board Exam format: {grade}_{board}_{subject}.pdf
       const boardMatch = filename.match(/^(.+)_(.+)_(.+)\.pdf$/i);
       
@@ -378,11 +162,10 @@ export async function registerRoutes(
       const isNavodayaSection = navodayaSectionMatch !== null;
       const isNavodayaSimple = navodayaSimpleMatch !== null;
       const isNavodaya = isNavodayaSection || isNavodayaSimple;
-      const isChapterPractice = chapterPracticeMatch !== null;
       
-      if (!isCpct && !isNavodaya && !isChapterPractice && !boardMatch) {
+      if (!isCpct && !isNavodaya && !boardMatch) {
         return res.status(400).json({ 
-          error: "Invalid filename format. Expected: grade_board_subject.pdf (Board Exam), grade_board_Chapter_Plan_subject.pdf (Chapter Practice), CPCT_{section}.pdf (CPCT), or grade_navodaya_{section}.pdf (Navodaya)" 
+          error: "Invalid filename format. Expected: grade_board_subject.pdf (Board Exam), CPCT_{section}.pdf (CPCT), or grade_navodaya_{section}.pdf (Navodaya)" 
         });
       }
 
@@ -416,12 +199,6 @@ export async function registerRoutes(
         grade = navodayaSimpleMatch![1];
         board = "Navodaya";
         subject = "Navodaya Entrance";
-      } else if (isChapterPractice) {
-        // Chapter Practice format - e.g., 8th_MP_Chapter_Plan_Mathematics.pdf
-        const [, g, b, s] = chapterPracticeMatch!;
-        grade = g;
-        board = b.toUpperCase(); // Store as "MP" - filename pattern identifies it as Chapter Practice
-        subject = s;
       } else {
         // Board Exam format
         const [, g, b, s] = boardMatch!;
@@ -491,25 +268,6 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching PDFs:", error);
       res.status(500).json({ error: "Failed to fetch PDFs" });
-    }
-  });
-
-  // Get Chapter Practice PDFs (admin)
-  app.get("/api/admin/chapter-practice-pdfs", async (req, res) => {
-    try {
-      const pdfs = await storage.getChapterPracticePdfs();
-      res.json(pdfs.map(pdf => ({
-        id: pdf.id,
-        filename: pdf.filename,
-        grade: pdf.grade,
-        board: pdf.board,
-        subject: pdf.subject,
-        uploadedAt: pdf.uploadedAt,
-        isArchived: pdf.isArchived ?? false,
-      })));
-    } catch (error) {
-      console.error("Error fetching Chapter Practice PDFs:", error);
-      res.status(500).json({ error: "Failed to fetch Chapter Practice PDFs" });
     }
   });
 
@@ -666,35 +424,20 @@ export async function registerRoutes(
   // Generate quiz questions
   app.post("/api/quiz/generate", async (req, res) => {
     try {
-      const { studentId, grade, board, subject, medium, useUnifiedAuth } = req.body;
+      const { studentId, grade, board, subject, medium } = req.body;
 
       if (!studentId || !grade || !board || !subject) {
         return res.status(400).json({ error: "Missing required fields" });
       }
 
-      // Verify student exists - check unified_students if useUnifiedAuth is true
-      let studentMedium = medium || "English";
-      if (useUnifiedAuth) {
-        const unifiedStudent = await storage.getUnifiedStudent(studentId);
-        if (!unifiedStudent) {
-          return res.status(404).json({ error: "Student not found" });
-        }
-      } else {
-        const student = await storage.getStudent(studentId);
-        if (!student) {
-          return res.status(404).json({ error: "Student not found" });
-        }
-        studentMedium = medium || student.medium || "English";
+      // Verify student exists
+      const student = await storage.getStudent(studentId);
+      if (!student) {
+        return res.status(404).json({ error: "Student not found" });
       }
-      
-      // IMPORTANT: Language-based subjects must be rendered in their native language
-      // Hindi subject PDFs are in Hindi - render questions in Hindi regardless of student's medium
-      // English subject PDFs are in English - render questions in English regardless of student's medium
-      const LANGUAGE_BASED_SUBJECTS = ["Hindi", "English"];
-      if (LANGUAGE_BASED_SUBJECTS.includes(subject)) {
-        studentMedium = subject; // Hindi subject -> Hindi medium, English subject -> English medium
-        console.log(`Language-based subject detected: ${subject} - forcing medium to ${studentMedium}`);
-      }
+
+      // Use student's medium preference or default to English
+      const studentMedium = medium || student.medium || "English";
 
       // Find the PDF for this grade/board/subject
       const pdf = await storage.getPdfByGradeBoardSubject(grade, board.toUpperCase(), subject);
@@ -703,35 +446,8 @@ export async function registerRoutes(
       
       if (pdf && pdf.parsedQuestions && Array.isArray(pdf.parsedQuestions) && pdf.parsedQuestions.length > 0) {
         // SERVER-SIDE SEQUENTIAL QUESTION PICKING
-        let parsedQuestions = pdf.parsedQuestions as ParsedQuestion[];
+        const parsedQuestions = pdf.parsedQuestions as ParsedQuestion[];
         
-        // Filter out instruction-only entries (not real questions)
-        const instructionPatterns = [
-          /^choose the correct option[:\s]*$/i,
-          /^multiple choice questions[:\s]*$/i,
-          /^select the correct answer[:\s]*$/i,
-          /^answer the following[:\s]*$/i,
-          /^questions[:\s]*$/i,
-          /^mcq[:\s]*$/i,
-        ];
-        parsedQuestions = parsedQuestions.filter(q => {
-          const text = q.rawText?.trim() || '';
-          return text.length > 30 && !instructionPatterns.some(p => p.test(text));
-        });
-        
-        if (parsedQuestions.length === 0) {
-          console.log(`PDF ${pdf.id} has no valid questions after filtering, using fallback`);
-          const previousQuestions = await storage.getStudentPreviousQuestions(studentId, subject);
-          questions = await generateQuizQuestions(
-            pdf.content,
-            subject,
-            grade,
-            board,
-            10,
-            previousQuestions,
-            studentMedium
-          );
-        } else {
         // Get current question pointer for this student + PDF
         const pointer = await storage.getQuestionPointer(studentId, 'board', pdf.id);
         const startIndex = pointer ? (pointer.lastQuestionIndex + 1) % parsedQuestions.length : 0;
@@ -774,7 +490,7 @@ export async function registerRoutes(
         // Update question pointer for next quiz
         await storage.updateQuestionPointer(studentId, 'board', pdf.id, actualNewIndex);
         console.log(`Generated ${generatedQuestions.length} questions, using ${questions.length}. Updated pointer to index ${actualNewIndex} for next quiz`);
-        }
+        
       } else if (pdf) {
         // Fallback: PDF exists but no parsed questions - use full content
         console.log(`PDF ${pdf.id} has no parsed questions, using full content`);
@@ -833,24 +549,20 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         );
       }
 
-      // Shuffle options to randomize correct answer positions
-      const shuffledQuestions = shuffleAllQuestionOptions(questions);
-
       // Create quiz session
       const session = await storage.createQuizSession({
         studentId,
-        unifiedStudentId: useUnifiedAuth ? studentId : null,
         pdfId: pdf?.id || null,
         subject,
         grade,
         board: board.toUpperCase(),
-        questions: shuffledQuestions,
-        totalQuestions: shuffledQuestions.length,
+        questions,
+        totalQuestions: questions.length, // Use actual count of generated questions
       });
 
       res.json({
         sessionId: session.id,
-        questions: shuffledQuestions,
+        questions,
       });
     } catch (error: unknown) {
       console.error("Error generating quiz:", error);
@@ -891,18 +603,9 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         return res.status(400).json({ error: "Missing required fields" });
       }
 
-      // Get the session first to validate score doesn't exceed total questions
-      const existingSession = await storage.getQuizSession(sessionId);
-      if (!existingSession) {
-        return res.status(404).json({ error: "Quiz session not found" });
-      }
-      
-      // Cap score at totalQuestions to prevent invalid data
-      const validatedScore = Math.min(score, existingSession.totalQuestions || 10);
-
       const session = await storage.updateQuizSession(sessionId, {
         answers,
-        score: validatedScore,
+        score,
         completedAt: new Date(),
       });
 
@@ -912,7 +615,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
 
       res.json({
         message: "Quiz completed",
-        score: validatedScore,
+        score,
         totalQuestions: session.totalQuestions,
       });
     } catch (error: unknown) {
@@ -967,17 +670,6 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     } catch (error) {
       console.error("Error fetching quiz for review:", error);
       res.status(500).json({ error: "Failed to fetch quiz details" });
-    }
-  });
-
-  // Admin: Get all unified registered students
-  app.get("/api/admin/unified-students", async (req, res) => {
-    try {
-      const allUnifiedStudents = await storage.getAllUnifiedStudents();
-      res.json(allUnifiedStudents);
-    } catch (error) {
-      console.error("Error fetching unified students:", error);
-      res.status(500).json({ error: "Failed to fetch unified students" });
     }
   });
 
@@ -1410,7 +1102,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
   // Generate CPCT quiz questions
   app.post("/api/cpct/quiz/generate", async (req, res) => {
     try {
-      const { studentId, section, useUnifiedAuth } = req.body;
+      const { studentId, section } = req.body;
 
       if (!studentId || !section) {
         return res.status(400).json({ error: "Missing required fields: studentId and section are required" });
@@ -1421,25 +1113,10 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         return res.status(400).json({ error: "Invalid section. Please select a valid CPCT section." });
       }
 
-      // Verify student exists - check unified_students if useUnifiedAuth is true
-      let studentMedium: "Hindi" | "English" = "Hindi";
-      if (useUnifiedAuth) {
-        const unifiedStudent = await storage.getUnifiedStudent(studentId);
-        if (!unifiedStudent) {
-          return res.status(404).json({ error: "Student not found" });
-        }
-        // For unified auth, get medium from exam profile
-        const profile = await storage.getStudentExamProfile(studentId, "cpct");
-        if (profile?.lastSelections && typeof profile.lastSelections === 'object' && 'medium' in profile.lastSelections) {
-          studentMedium = (profile.lastSelections as { medium?: string }).medium as "Hindi" | "English" || "Hindi";
-        }
-      } else {
-        // Verify legacy CPCT student exists
-        const student = await storage.getCpctStudent(studentId);
-        if (!student) {
-          return res.status(404).json({ error: "Student not found" });
-        }
-        studentMedium = student.medium as "Hindi" | "English";
+      // Verify CPCT student exists
+      const student = await storage.getCpctStudent(studentId);
+      if (!student) {
+        return res.status(404).json({ error: "Student not found" });
       }
 
       // Get all available CPCT PDFs (only active, not archived)
@@ -1451,7 +1128,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
       let usedYear = "2024"; // Default year for reference
       let usedPdfId: number | null = null;
       let questions: Question[];
-      const medium = studentMedium;
+      const medium = student.medium as "Hindi" | "English";
       
       console.log(`CPCT Quiz generation - Section: ${section}, Student: ${studentId}`);
       
@@ -1541,24 +1218,20 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         );
       }
 
-      // Shuffle options to randomize correct answer positions
-      const shuffledQuestions = shuffleAllQuestionOptions(questions);
-
       // Create CPCT quiz session
       const session = await storage.createCpctQuizSession({
         studentId,
-        unifiedStudentId: useUnifiedAuth ? studentId : null,
         pdfId: usedPdfId,
         year: usedYear,
         section: section,
-        medium: studentMedium,
-        questions: shuffledQuestions,
-        totalQuestions: shuffledQuestions.length,
+        medium: student.medium,
+        questions,
+        totalQuestions: questions.length, // Use actual count of generated questions
       });
 
       res.json({
         sessionId: session.id,
-        questions: shuffledQuestions,
+        questions,
       });
     } catch (error: unknown) {
       console.error("Error generating CPCT quiz:", error);
@@ -1576,18 +1249,9 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         return res.status(400).json({ error: "Missing required fields" });
       }
 
-      // Get the session first to validate score doesn't exceed total questions
-      const existingSession = await storage.getCpctQuizSession(sessionId);
-      if (!existingSession) {
-        return res.status(404).json({ error: "Quiz session not found" });
-      }
-      
-      // Cap score at totalQuestions to prevent invalid data
-      const validatedScore = Math.min(score, existingSession.totalQuestions || 10);
-
       const session = await storage.updateCpctQuizSession(sessionId, {
         answers,
-        score: validatedScore,
+        score,
         completedAt: new Date(),
       });
 
@@ -1597,7 +1261,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
 
       res.json({
         message: "Quiz completed",
-        score: validatedScore,
+        score,
         totalQuestions: session.totalQuestions,
       });
     } catch (error: unknown) {
@@ -1955,80 +1619,29 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     }
   });
 
-  // Get available Navodaya sections - path based version for frontend query key compatibility
-  app.get("/api/navodaya/available-sections/:grade", async (req, res) => {
-    try {
-      const { grade } = req.params;
-      
-      if (!grade || (grade !== "6th" && grade !== "9th")) {
-        return res.status(400).json({ error: "Valid grade (6th or 9th) is required" });
-      }
-      
-      const allSections = grade === "6th" 
-        ? [...NAVODAYA_SECTIONS_6TH] 
-        : [...NAVODAYA_SECTIONS_9TH];
-      
-      const allPdfs = await storage.getActivePdfs();
-      const navodayaPdfs = allPdfs.filter(pdf => 
-        pdf.filename.toLowerCase().includes('navodaya') && 
-        pdf.filename.endsWith(".pdf")
-      );
-      
-      const availableSections = allSections.filter(section => {
-        const matchingPdf = findNavodayaPdfForSection(navodayaPdfs, grade as string, section);
-        return matchingPdf !== null;
-      });
-      
-      res.json({ sections: availableSections, grade });
-    } catch (error) {
-      console.error("Error fetching available Navodaya sections:", error);
-      res.status(500).json({ error: "Failed to fetch available sections" });
-    }
-  });
-
   // Generate Navodaya quiz questions
   app.post("/api/navodaya/quiz/generate", async (req, res) => {
     try {
-      const { studentId, section, useUnifiedAuth } = req.body;
+      const { studentId, section } = req.body;
 
       if (!studentId || !section) {
         return res.status(400).json({ error: "Missing required fields: studentId and section are required" });
       }
 
-      // Verify student exists - check unified_students if useUnifiedAuth is true
-      let studentMedium: "Hindi" | "English" = "Hindi";
-      let studentExamGrade: "6th" | "9th" = "6th";
-      
-      if (useUnifiedAuth) {
-        const unifiedStudent = await storage.getUnifiedStudent(studentId);
-        if (!unifiedStudent) {
-          return res.status(404).json({ error: "Student not found" });
-        }
-        // For unified auth, get settings from exam profile
-        const profile = await storage.getStudentExamProfile(studentId, "navodaya");
-        if (profile?.lastSelections && typeof profile.lastSelections === 'object') {
-          const selections = profile.lastSelections as { medium?: string; examGrade?: string };
-          studentMedium = (selections.medium as "Hindi" | "English") || "Hindi";
-          studentExamGrade = (selections.examGrade as "6th" | "9th") || "6th";
-        }
-      } else {
-        // Verify legacy Navodaya student exists
-        const student = await storage.getNavodayaStudent(studentId);
-        if (!student) {
-          return res.status(404).json({ error: "Student not found" });
-        }
-        studentMedium = student.medium as "Hindi" | "English";
-        studentExamGrade = student.examGrade as "6th" | "9th";
+      // Verify student exists
+      const student = await storage.getNavodayaStudent(studentId);
+      if (!student) {
+        return res.status(404).json({ error: "Student not found" });
       }
 
       // Validate section based on grade
-      const validSections: readonly string[] = studentExamGrade === "6th" 
+      const validSections: readonly string[] = student.examGrade === "6th" 
         ? NAVODAYA_SECTIONS_6TH 
         : NAVODAYA_SECTIONS_9TH;
       
       if (!validSections.includes(section)) {
         return res.status(400).json({ 
-          error: `Invalid section for ${studentExamGrade} grade. Valid sections: ${validSections.join(", ")}` 
+          error: `Invalid section for ${student.examGrade} grade. Valid sections: ${validSections.join(", ")}` 
         });
       }
 
@@ -2040,21 +1653,21 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
       );
       
       // Try to find section-specific PDF
-      let pdf = findNavodayaPdfForSection(navodayaPdfs, studentExamGrade, section);
+      let pdf = findNavodayaPdfForSection(navodayaPdfs, student.examGrade, section);
       
       // Fallback to general grade PDF if no section-specific PDF
       if (!pdf) {
-        pdf = await storage.getNavodayaPdf(studentExamGrade);
+        pdf = await storage.getNavodayaPdf(student.examGrade);
       }
       
-      console.log(`Looking for PDF for examGrade: ${studentExamGrade}, section: ${section}, Found: ${pdf ? pdf.filename : 'NO PDF FOUND'}`);
+      console.log(`Looking for PDF for examGrade: ${student.examGrade}, section: ${section}, Found: ${pdf ? pdf.filename : 'NO PDF FOUND'}`);
       if (pdf) {
         console.log(`PDF content length: ${pdf.content.length}, First 200 chars: ${pdf.content.substring(0, 200)}`);
       }
       
       let questions: Question[];
-      const medium = studentMedium;
-      const examGrade = studentExamGrade;
+      const medium = student.medium as "Hindi" | "English";
+      const examGrade = student.examGrade as "6th" | "9th";
       
       if (pdf && pdf.parsedQuestions && Array.isArray(pdf.parsedQuestions) && pdf.parsedQuestions.length > 0) {
         // SERVER-SIDE SEQUENTIAL QUESTION PICKING
@@ -2159,24 +1772,20 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         );
       }
 
-      // Shuffle options to randomize correct answer positions
-      const shuffledQuestions = shuffleAllQuestionOptions(questions);
-
       // Create Navodaya quiz session with section
       const session = await storage.createNavodayaQuizSession({
         studentId,
-        unifiedStudentId: useUnifiedAuth ? studentId : null,
         pdfId: pdf?.id || null,
-        examGrade: studentExamGrade,
+        examGrade: student.examGrade,
         section,
-        medium: studentMedium,
-        questions: shuffledQuestions,
-        totalQuestions: shuffledQuestions.length,
+        medium: student.medium,
+        questions,
+        totalQuestions: questions.length, // Use actual count of generated questions
       });
 
       res.json({
         sessionId: session.id,
-        questions: shuffledQuestions,
+        questions,
       });
     } catch (error: unknown) {
       console.error("Error generating Navodaya quiz:", error);
@@ -2194,18 +1803,9 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         return res.status(400).json({ error: "Missing required fields" });
       }
 
-      // Get the session first to validate score doesn't exceed total questions
-      const existingSession = await storage.getNavodayaQuizSession(sessionId);
-      if (!existingSession) {
-        return res.status(404).json({ error: "Quiz session not found" });
-      }
-      
-      // Cap score at totalQuestions to prevent invalid data
-      const validatedScore = Math.min(score, existingSession.totalQuestions || 10);
-
       const session = await storage.updateNavodayaQuizSession(sessionId, {
         answers,
-        score: validatedScore,
+        score,
         completedAt: new Date(),
       });
 
@@ -2215,7 +1815,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
 
       res.json({
         message: "Quiz completed",
-        score: validatedScore,
+        score,
         totalQuestions: session.totalQuestions,
       });
     } catch (error: unknown) {
@@ -2312,443 +1912,6 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     }
   });
 
-  // ==================== CHAPTER PRACTICE ROUTES ====================
-
-  // Admin: Get all Chapter Practice students with progress
-  app.get("/api/admin/chapter-practice-students", async (req, res) => {
-    try {
-      const allStudents = await storage.getAllChapterPracticeStudents();
-      
-      const studentsWithProgress = await Promise.all(
-        allStudents.map(async (student) => {
-          const sessions = await storage.getChapterPracticeStudentQuizSessions(student.id);
-          const completedSessions = sessions.filter(s => s.completedAt);
-          const totalQuizzes = completedSessions.length;
-          const totalScore = completedSessions.reduce((sum, s) => sum + (s.score || 0), 0);
-          const totalQuestions = completedSessions.reduce((sum, s) => sum + (s.totalQuestions || 10), 0);
-          const averageScore = totalQuizzes > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
-          
-          return {
-            id: student.id,
-            name: student.name,
-            schoolName: student.schoolName,
-            grade: student.grade,
-            board: student.board,
-            medium: student.medium,
-            location: student.location,
-            mobileNumber: student.mobileNumber,
-            totalQuizzes,
-            averageScore,
-            sessions: completedSessions.map(s => ({
-              id: s.id,
-              subject: s.subject,
-              chapterName: s.chapterName,
-              score: s.score,
-              totalQuestions: s.totalQuestions,
-              completedAt: s.completedAt,
-            })),
-          };
-        })
-      );
-      
-      res.json(studentsWithProgress);
-    } catch (error) {
-      console.error("Error fetching Chapter Practice students:", error);
-      res.status(500).json({ error: "Failed to fetch students" });
-    }
-  });
-
-  // Chapter Practice Student registration
-  app.post("/api/chapter-practice/students/register", async (req, res) => {
-    try {
-      const { name, schoolName, grade, board, medium, location, mobileNumber } = req.body;
-      
-      if (!name || !grade || !board || !location || !mobileNumber) {
-        return res.status(400).json({ error: "All fields are required" });
-      }
-      
-      const existingStudent = await storage.getChapterPracticeStudentByMobile(mobileNumber);
-      if (existingStudent) {
-        return res.json(existingStudent);
-      }
-      
-      const student = await storage.createChapterPracticeStudent({
-        name,
-        schoolName: schoolName || null,
-        grade,
-        board,
-        medium: medium || "English",
-        location,
-        mobileNumber,
-      });
-      res.json(student);
-    } catch (error) {
-      console.error("Error registering chapter practice student:", error);
-      res.status(400).json({ error: "Failed to register student" });
-    }
-  });
-
-  // Chapter Practice Student login
-  app.post("/api/chapter-practice/students/login", async (req, res) => {
-    try {
-      const { name, mobileNumber } = req.body;
-      
-      if (!name || !mobileNumber) {
-        return res.status(400).json({ error: "Name and mobile number are required" });
-      }
-      
-      const student = await storage.getChapterPracticeStudentByMobile(mobileNumber);
-      if (!student) {
-        return res.status(404).json({ error: "Student not found. Please register first." });
-      }
-      
-      if (student.name.trim().toLowerCase() !== name.trim().toLowerCase()) {
-        return res.status(404).json({ error: "Student not found. Please check your name and mobile number." });
-      }
-      
-      res.json(student);
-    } catch (error) {
-      console.error("Error logging in chapter practice student:", error);
-      res.status(500).json({ error: "Failed to login" });
-    }
-  });
-
-  // Get available subjects for chapter practice
-  app.get("/api/chapter-practice/available-subjects/:grade/:board", async (req, res) => {
-    try {
-      const { grade, board } = req.params;
-      
-      const allPdfs = await storage.getActivePdfs();
-      const normalizedGrade = grade.toLowerCase();
-      const normalizedBoard = board.toUpperCase();
-      
-      const subjects = new Set<string>();
-      
-      for (const pdf of allPdfs) {
-        const lowerFilename = pdf.filename.toLowerCase();
-        if (lowerFilename.includes('chapter_plan') &&
-            pdf.grade.toLowerCase() === normalizedGrade && 
-            pdf.board.toUpperCase() === normalizedBoard && 
-            !pdf.isArchived) {
-          subjects.add(pdf.subject);
-        }
-      }
-      
-      res.json({ subjects: Array.from(subjects) });
-    } catch (error) {
-      console.error("Error fetching available subjects:", error);
-      res.status(500).json({ error: "Failed to fetch available subjects" });
-    }
-  });
-
-  app.get("/api/chapter-practice/available-subjects", async (req, res) => {
-    try {
-      const { grade, board } = req.query;
-      
-      if (!grade || !board) {
-        return res.status(400).json({ error: "Grade and board are required" });
-      }
-      
-      const allPdfs = await storage.getActivePdfs();
-      const normalizedGrade = (grade as string).toLowerCase();
-      const normalizedBoard = (board as string).toUpperCase();
-      
-      const subjects = new Set<string>();
-      
-      // Check for Chapter Practice PDFs by filename pattern: contains "chapter_plan"
-      for (const pdf of allPdfs) {
-        const lowerFilename = pdf.filename.toLowerCase();
-        if (lowerFilename.includes('chapter_plan') &&
-            pdf.grade.toLowerCase() === normalizedGrade && 
-            pdf.board.toUpperCase() === normalizedBoard && 
-            !pdf.isArchived) {
-          subjects.add(pdf.subject);
-        }
-      }
-      
-      res.json({ subjects: Array.from(subjects) });
-    } catch (error) {
-      console.error("Error fetching available subjects for chapter practice:", error);
-      res.status(500).json({ error: "Failed to fetch subjects" });
-    }
-  });
-
-  // Get available chapters for a subject
-  // Path-based route for available chapters (for React Query compatibility)
-  app.get("/api/chapter-practice/available-chapters/:grade/:board/:subject", async (req, res) => {
-    try {
-      const { grade, board, subject } = req.params;
-      
-      const pdf = await storage.getChapterPracticePdf(grade, board, subject);
-      
-      if (!pdf) {
-        return res.json({ chapters: [], pdfId: null });
-      }
-      
-      const { parseQuestionsWithChapters } = await import("./questionParser");
-      const { chapters } = parseQuestionsWithChapters(pdf.content);
-      
-      // Format chapter names with index (1-based) and chapter name
-      const chapterNames = chapters
-        .filter(c => c.questionCount > 0)
-        .map((c, index) => `${index + 1}. ${c.chapterName}`);
-      
-      res.json({ 
-        chapters: chapterNames,
-        pdfId: pdf.id
-      });
-    } catch (error) {
-      console.error("Error fetching available chapters:", error);
-      res.status(500).json({ error: "Failed to fetch chapters" });
-    }
-  });
-
-  app.get("/api/chapter-practice/available-chapters", async (req, res) => {
-    try {
-      const { grade, board, subject } = req.query;
-      
-      if (!grade || !board || !subject) {
-        return res.status(400).json({ error: "Grade, board, and subject are required" });
-      }
-      
-      const pdf = await storage.getChapterPracticePdf(grade as string, board as string, subject as string);
-      
-      if (!pdf) {
-        return res.json({ chapters: [], pdfId: null });
-      }
-      
-      const { parseQuestionsWithChapters } = await import("./questionParser");
-      const { chapters } = parseQuestionsWithChapters(pdf.content);
-      
-      // Format chapter names with index (1-based) and chapter name
-      const chapterNames = chapters
-        .filter(c => c.questionCount > 0)
-        .map((c, index) => `${index + 1}. ${c.chapterName}`);
-      
-      res.json({ 
-        chapters: chapterNames,
-        pdfId: pdf.id
-      });
-    } catch (error) {
-      console.error("Error fetching available chapters:", error);
-      res.status(500).json({ error: "Failed to fetch chapters" });
-    }
-  });
-
-  // Get chapters for a subject based on student's grade and board
-  app.get("/api/chapter-practice/chapters/:subject", async (req, res) => {
-    try {
-      const { subject } = req.params;
-      const { grade, board } = req.query;
-      
-      if (!grade || !board) {
-        return res.status(400).json({ error: "Grade and board are required" });
-      }
-      
-      const pdf = await storage.getChapterPracticePdf(grade as string, board as string, subject);
-      
-      if (!pdf) {
-        return res.json({ chapters: [], message: "No PDF found for this subject" });
-      }
-      
-      const { parseQuestionsWithChapters } = await import("./questionParser");
-      const { chapters } = parseQuestionsWithChapters(pdf.content);
-      
-      // Format chapter names with chapter numbers (e.g., "Chapter 1: Patterns in Mathematics")
-      const formattedChapters = chapters
-        .filter(c => c.questionCount > 0)
-        .map(c => `Chapter ${c.chapterNumber}: ${c.chapterName}`);
-      
-      res.json({ 
-        pdfId: pdf.id,
-        chapters: formattedChapters,
-        totalQuestions: pdf.totalQuestions || 0
-      });
-    } catch (error) {
-      console.error("Error fetching chapters:", error);
-      res.status(500).json({ error: "Failed to fetch chapters" });
-    }
-  });
-
-  // Generate chapter practice quiz (all questions from the chapter)
-  app.post("/api/chapter-practice/quiz/generate", async (req, res) => {
-    try {
-      const { studentId, grade, board, subject, chapter, medium } = req.body;
-      
-      if (!studentId || !subject || !chapter) {
-        return res.status(400).json({ error: "Missing required fields" });
-      }
-      
-      const student = await storage.getChapterPracticeStudent(studentId);
-      if (!student) {
-        return res.status(404).json({ error: "Student not found" });
-      }
-      
-      // IMPORTANT: Language-based subjects must be rendered in their native language
-      let effectiveMedium = medium || student.medium || "English";
-      const LANGUAGE_BASED_SUBJECTS = ["Hindi", "English"];
-      if (LANGUAGE_BASED_SUBJECTS.includes(subject)) {
-        effectiveMedium = subject;
-        console.log(`Chapter Practice: Language-based subject "${subject}" - forcing medium to ${effectiveMedium}`);
-      }
-      
-      const pdf = await storage.getChapterPracticePdf(
-        grade || student.grade, 
-        board || student.board, 
-        subject
-      );
-      if (!pdf) {
-        return res.status(404).json({ error: "PDF not found for this subject" });
-      }
-      
-      const { parseQuestionsWithChapters, getQuestionsForChapterByName } = await import("./questionParser");
-      const { questions: parsedQuestions, chapters } = parseQuestionsWithChapters(pdf.content);
-      
-      const chapterQuestions = getQuestionsForChapterByName(parsedQuestions, chapters, chapter);
-      
-      if (chapterQuestions.length === 0) {
-        return res.status(400).json({ error: "No questions found for this chapter" });
-      }
-      
-      // Extract chapter name without prefix (e.g., "1. Lines and Angles" -> "Lines and Angles")
-      let chapterSearchName = chapter;
-      const numberPrefixMatch = chapter.match(/^\d+\.\s*(.+)$/);
-      if (numberPrefixMatch) {
-        chapterSearchName = numberPrefixMatch[1].trim();
-      }
-      const chapterInfo = chapters.find(c => c.chapterName === chapterSearchName);
-      const chapterNumber = chapterInfo?.chapterNumber || 1;
-      
-      console.log(`Generating chapter practice quiz for student ${studentId}, chapter "${chapter}": ${chapterQuestions.length} questions`);
-      
-      const questionsToSend = chapterQuestions.map(q => q.rawText).join('\n\n---\n\n');
-      
-      const generatedQuestions = await generateQuizQuestions(
-        questionsToSend,
-        subject,
-        grade || student.grade,
-        board || student.board,
-        chapterQuestions.length,
-        [],
-        effectiveMedium
-      );
-      
-      // Shuffle options to randomize correct answer positions
-      const shuffledQuestions = shuffleAllQuestionOptions(generatedQuestions);
-      
-      const session = await storage.createChapterPracticeQuizSession({
-        studentId,
-        pdfId: pdf.id,
-        subject,
-        chapterNumber,
-        chapterName: chapter,
-        grade: grade || student.grade,
-        board: board || student.board,
-        medium: effectiveMedium,
-        totalQuestions: shuffledQuestions.length,
-        questions: shuffledQuestions,
-      });
-      
-      res.json({
-        sessionId: session.id,
-        questions: shuffledQuestions,
-        totalQuestions: shuffledQuestions.length,
-        chapterName: chapter,
-      });
-    } catch (error) {
-      console.error("Error generating chapter practice quiz:", error);
-      res.status(500).json({ error: "Failed to generate quiz" });
-    }
-  });
-
-  // Submit chapter practice quiz
-  app.post("/api/chapter-practice/quiz/submit", async (req, res) => {
-    try {
-      const { sessionId, answers, score } = req.body;
-      
-      if (!sessionId || !answers || score === undefined) {
-        return res.status(400).json({ error: "Missing required fields" });
-      }
-      
-      const session = await storage.getChapterPracticeQuizSession(sessionId);
-      if (!session) {
-        return res.status(404).json({ error: "Quiz session not found" });
-      }
-      
-      // Cap score at totalQuestions to prevent invalid data
-      const validatedScore = Math.min(score, session.totalQuestions || 10);
-      
-      const updatedSession = await storage.updateChapterPracticeQuizSession(sessionId, {
-        answers,
-        score: validatedScore,
-        completedAt: new Date(),
-      });
-      
-      res.json({
-        success: true,
-        score: validatedScore,
-        totalQuestions: session.totalQuestions,
-      });
-    } catch (error) {
-      console.error("Error submitting chapter practice quiz:", error);
-      res.status(500).json({ error: "Failed to submit quiz" });
-    }
-  });
-
-  // Get chapter practice quiz history
-  app.get("/api/chapter-practice/students/:studentId/quiz-history", async (req, res) => {
-    try {
-      const studentId = parseInt(req.params.studentId, 10);
-      if (isNaN(studentId)) {
-        return res.status(400).json({ error: "Invalid student ID" });
-      }
-      
-      const sessions = await storage.getChapterPracticeStudentQuizSessions(studentId);
-      
-      res.json(sessions.map(s => ({
-        id: s.id,
-        subject: s.subject,
-        chapterNumber: s.chapterNumber,
-        chapterName: s.chapterName,
-        score: s.score,
-        totalQuestions: s.totalQuestions,
-        completedAt: s.completedAt,
-        questions: s.questions,
-        answers: s.answers,
-      })));
-    } catch (error) {
-      console.error("Error fetching chapter practice quiz history:", error);
-      res.status(500).json({ error: "Failed to fetch quiz history" });
-    }
-  });
-
-  // Get detailed Chapter Practice quiz session for review
-  app.get("/api/chapter-practice/quiz/:sessionId/review", async (req, res) => {
-    try {
-      const sessionId = parseInt(req.params.sessionId);
-      const session = await storage.getChapterPracticeQuizSession(sessionId);
-      
-      if (!session) {
-        return res.status(404).json({ error: "Quiz session not found" });
-      }
-      
-      res.json({
-        id: session.id,
-        subject: session.subject,
-        chapterNumber: session.chapterNumber,
-        chapterName: session.chapterName,
-        score: session.score,
-        totalQuestions: session.totalQuestions,
-        questions: session.questions,
-        answers: session.answers,
-        completedAt: session.completedAt,
-      });
-    } catch (error) {
-      console.error("Error fetching Chapter Practice quiz for review:", error);
-      res.status(500).json({ error: "Failed to fetch quiz details" });
-    }
-  });
-
   // Weekly Leaderboard - IST timezone (Monday to Sunday)
   app.get("/api/leaderboard/weekly", async (req, res) => {
     // Prevent caching to ensure fresh data after student deletions
@@ -2802,7 +1965,6 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         boardExam: leaderboard.boardExam,
         cpct: leaderboard.cpct,
         navodaya: leaderboard.navodaya,
-        chapterPractice: leaderboard.chapterPractice,
       });
     } catch (error) {
       console.error("Error fetching weekly leaderboard:", error);

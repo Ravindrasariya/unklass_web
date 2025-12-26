@@ -1,16 +1,9 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, BookOpen, Monitor, GraduationCap, Shield, School, Bell, Library, User, LogOut, Award } from "lucide-react";
+import { ChevronLeft, ChevronRight, BookOpen, Monitor, GraduationCap, Shield, School, Bell } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import WeeklyLeaderboard from "./WeeklyLeaderboard";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 interface Notice {
   id: number;
@@ -20,17 +13,6 @@ interface Notice {
   isActive: boolean | null;
   priority: number | null;
   createdAt: string | null;
-}
-
-interface UnifiedStudent {
-  id: number;
-  name: string;
-  fatherName: string | null;
-  location: string | null;
-  mobileNumber: string;
-  schoolName?: string | null;
-  dateOfBirth?: string | null;
-  needsProfileCompletion?: boolean;
 }
 import logoImage from "@assets/Screenshot_2025-12-11_at_12.16.26_AM_1765392397522.png";
 import studentImage from "@assets/Screenshot_2025-12-17_at_6.41.41_AM_1765934337756.png";
@@ -47,12 +29,6 @@ interface LandingPageProps {
   onBoardExamClick: () => void;
   onCPCTClick: () => void;
   onNavodayaClick: () => void;
-  onChapterPracticeClick: () => void;
-  unifiedStudent?: UnifiedStudent | null;
-  onLoginClick?: () => void;
-  onSignupClick?: () => void;
-  onProfileClick?: () => void;
-  onLogout?: () => void;
 }
 
 const sliderContent = [
@@ -74,17 +50,7 @@ const sliderContent = [
   },
 ];
 
-export default function LandingPage({ 
-  onBoardExamClick, 
-  onCPCTClick, 
-  onNavodayaClick, 
-  onChapterPracticeClick,
-  unifiedStudent,
-  onLoginClick,
-  onSignupClick,
-  onProfileClick,
-  onLogout
-}: LandingPageProps) {
+export default function LandingPage({ onBoardExamClick, onCPCTClick, onNavodayaClick }: LandingPageProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [currentClassroom, setCurrentClassroom] = useState(0);
 
@@ -194,65 +160,6 @@ export default function LandingPage({
                 Contact Us
               </Button>
             </Link>
-            
-            {unifiedStudent ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    className="rounded-full bg-sky-100 text-sky-700"
-                    data-testid="button-user-menu"
-                  >
-                    <User className="h-5 w-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <div className="px-2 py-1.5 text-sm font-medium text-gray-900">
-                    {unifiedStudent.name}
-                  </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem 
-                    onClick={onProfileClick}
-                    className="cursor-pointer"
-                    data-testid="menu-profile"
-                  >
-                    <User className="mr-2 h-4 w-4" />
-                    Profile
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem 
-                    onClick={onLogout}
-                    className="cursor-pointer text-red-600 focus:text-red-600"
-                    data-testid="menu-logout"
-                  >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Logout
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <div className="flex items-center gap-1 sm:gap-2">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="text-gray-700 font-medium text-xs sm:text-sm px-2 sm:px-3"
-                  onClick={onLoginClick}
-                  data-testid="button-login"
-                >
-                  Login
-                </Button>
-                <Button 
-                  variant="default" 
-                  size="sm" 
-                  className="text-xs sm:text-sm px-2 sm:px-3"
-                  onClick={onSignupClick}
-                  data-testid="button-signup"
-                >
-                  Sign Up
-                </Button>
-              </div>
-            )}
           </nav>
         </div>
       </header>
@@ -517,16 +424,15 @@ export default function LandingPage({
             </div>
 
             <div className="grid md:grid-cols-2 gap-6 items-stretch">
-              {/* 1. Board Exam - Light Violet */}
               <div 
-                className="bg-white border border-violet-200 rounded-2xl p-6 text-center transition-all duration-300 hover:shadow-2xl hover:shadow-violet-100 hover:-translate-y-1 cursor-pointer group relative overflow-hidden flex flex-col"
+                className="bg-white border border-sky-100 rounded-2xl p-6 text-center transition-all duration-300 hover:shadow-2xl hover:shadow-sky-100 hover:-translate-y-1 cursor-pointer group relative overflow-hidden flex flex-col"
                 onClick={onBoardExamClick}
                 data-testid="card-board-exam"
               >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-violet-100 to-transparent rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-500"></div>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-sky-100 to-transparent rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-500"></div>
                 <div className="relative z-10 flex flex-col flex-1">
-                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-violet-100 to-violet-50 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-sm">
-                    <BookOpen className="w-8 h-8 text-violet-600" />
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-sky-100 to-sky-50 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-sm">
+                    <BookOpen className="w-8 h-8 text-sky-600" />
                   </div>
                   <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-2">
                     UNKLASS Board Exam Prep
@@ -535,7 +441,7 @@ export default function LandingPage({
                     Prepare for 8th and 10th board exams with Exam Important Quizzes
                   </p>
                   <Button 
-                    className="w-full bg-gradient-to-r from-violet-500 to-violet-600 hover:from-violet-600 hover:to-violet-700 text-white font-medium py-5 rounded-xl shadow-lg shadow-violet-200 transition-all group-hover:shadow-xl mt-auto"
+                    className="w-full bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 text-white font-medium py-5 rounded-xl shadow-lg shadow-sky-200 transition-all group-hover:shadow-xl mt-auto"
                     data-testid="button-board-exam"
                   >
                     Start Preparation
@@ -543,45 +449,15 @@ export default function LandingPage({
                 </div>
               </div>
 
-              {/* 2. Chapter Practice - Light Violet */}
               <div 
-                className="bg-white border border-violet-200 rounded-2xl p-6 text-center transition-all duration-300 hover:shadow-2xl hover:shadow-violet-100 hover:-translate-y-1 cursor-pointer group relative overflow-hidden flex flex-col"
-                onClick={onChapterPracticeClick}
-                data-testid="card-chapter-practice"
-              >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-violet-100 to-transparent rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-500"></div>
-                <div className="relative z-10 flex flex-col flex-1">
-                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-violet-100 to-violet-50 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-sm">
-                    <Library className="w-8 h-8 text-violet-600" />
-                  </div>
-                  <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-1">
-                    UNKLASS Chapter Practice - NCERT
-                  </h3>
-                  <p className="text-violet-600 text-xs font-medium mb-2">
-                    6th to 10th Grade
-                  </p>
-                  <p className="text-gray-600 text-sm mb-4 flex-1">
-                    Practice chapter-wise questions from NCERT textbooks
-                  </p>
-                  <Button 
-                    className="w-full bg-gradient-to-r from-violet-500 to-violet-600 hover:from-violet-600 hover:to-violet-700 text-white font-medium py-5 rounded-xl shadow-lg shadow-violet-200 transition-all group-hover:shadow-xl mt-auto"
-                    data-testid="button-chapter-practice"
-                  >
-                    Start Practice
-                  </Button>
-                </div>
-              </div>
-
-              {/* 3. CPCT - Blue */}
-              <div 
-                className="bg-white border border-sky-100 rounded-2xl p-6 text-center transition-all duration-300 hover:shadow-2xl hover:shadow-sky-100 hover:-translate-y-1 cursor-pointer group relative overflow-hidden flex flex-col"
+                className="bg-white border border-gray-100 rounded-2xl p-6 text-center transition-all duration-300 hover:shadow-2xl hover:shadow-gray-100 hover:-translate-y-1 cursor-pointer group relative overflow-hidden flex flex-col"
                 onClick={onCPCTClick}
                 data-testid="card-cpct"
               >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-sky-100 to-transparent rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-500"></div>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-gray-100 to-transparent rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-500"></div>
                 <div className="relative z-10 flex flex-col flex-1">
-                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-sky-100 to-sky-50 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-sm">
-                    <Monitor className="w-8 h-8 text-sky-600" />
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-gray-100 to-gray-50 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:bg-gradient-to-br group-hover:from-sky-100 group-hover:to-sky-50 transition-all duration-300 shadow-sm">
+                    <Monitor className="w-8 h-8 text-gray-600 group-hover:text-sky-600 transition-colors duration-300" />
                   </div>
                   <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-2">
                     UNKLASS MP CPCT Exam Prep
@@ -598,16 +474,15 @@ export default function LandingPage({
                 </div>
               </div>
 
-              {/* 4. Navodaya - Blue */}
               <div 
-                className="bg-white border border-sky-100 rounded-2xl p-6 text-center transition-all duration-300 hover:shadow-2xl hover:shadow-sky-100 hover:-translate-y-1 cursor-pointer group relative overflow-hidden flex flex-col"
+                className="bg-white border border-gray-100 rounded-2xl p-6 text-center transition-all duration-300 hover:shadow-2xl hover:shadow-gray-100 hover:-translate-y-1 cursor-pointer group relative overflow-hidden flex flex-col"
                 onClick={onNavodayaClick}
                 data-testid="card-navodaya"
               >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-sky-100 to-transparent rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-500"></div>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-gray-100 to-transparent rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-500"></div>
                 <div className="relative z-10 flex flex-col flex-1">
-                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-sky-100 to-sky-50 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-sm">
-                    <School className="w-8 h-8 text-sky-600" />
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-gray-100 to-gray-50 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:bg-gradient-to-br group-hover:from-sky-100 group-hover:to-sky-50 transition-all duration-300 shadow-sm">
+                    <School className="w-8 h-8 text-gray-600 group-hover:text-sky-600 transition-colors duration-300" />
                   </div>
                   <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-2">
                     UNKLASS Navodaya Exam Prep
@@ -624,50 +499,17 @@ export default function LandingPage({
                 </div>
               </div>
 
-              {/* 5. Olympiad - Coming Soon */}
               <div 
-                className="bg-white border border-amber-200 rounded-2xl p-6 text-center relative overflow-hidden flex flex-col opacity-75"
-                data-testid="card-olympiad"
-              >
-                <div className="absolute top-3 right-3 bg-amber-100 text-amber-700 text-xs font-semibold px-3 py-1 rounded-full z-20">
-                  Coming Soon
-                </div>
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-100 to-transparent rounded-full -translate-y-1/2 translate-x-1/2"></div>
-                <div className="relative z-10 flex flex-col flex-1">
-                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-amber-100 to-amber-50 rounded-2xl flex items-center justify-center shadow-sm">
-                    <Award className="w-8 h-8 text-amber-600" />
-                  </div>
-                  <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-1">
-                    UNKLASS Olympiad Exam Prep
-                  </h3>
-                  <p className="text-amber-600 text-xs font-medium mb-2">
-                    3rd to 12th Grade
-                  </p>
-                  <p className="text-gray-600 text-sm mb-4 flex-1">
-                    Prepare for Science, Math & other Olympiad competitions
-                  </p>
-                  <Button 
-                    className="w-full bg-gray-300 text-gray-500 font-medium py-5 rounded-xl cursor-not-allowed mt-auto"
-                    disabled
-                    data-testid="button-olympiad"
-                  >
-                    Coming Soon
-                  </Button>
-                </div>
-              </div>
-
-              {/* 6. MP Police - Coming Soon */}
-              <div 
-                className="bg-white border border-amber-200 rounded-2xl p-6 text-center relative overflow-hidden flex flex-col opacity-75"
+                className="bg-white border border-gray-200 rounded-2xl p-6 text-center relative overflow-hidden flex flex-col opacity-75"
                 data-testid="card-police"
               >
                 <div className="absolute top-3 right-3 bg-amber-100 text-amber-700 text-xs font-semibold px-3 py-1 rounded-full z-20">
                   Coming Soon
                 </div>
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-100 to-transparent rounded-full -translate-y-1/2 translate-x-1/2"></div>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-gray-100 to-transparent rounded-full -translate-y-1/2 translate-x-1/2"></div>
                 <div className="relative z-10 flex flex-col flex-1">
-                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-amber-100 to-amber-50 rounded-2xl flex items-center justify-center shadow-sm">
-                    <Shield className="w-8 h-8 text-amber-600" />
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-gray-100 to-gray-50 rounded-2xl flex items-center justify-center shadow-sm">
+                    <Shield className="w-8 h-8 text-gray-500" />
                   </div>
                   <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-2">
                     UNKLASS MP Police Exam Prep
