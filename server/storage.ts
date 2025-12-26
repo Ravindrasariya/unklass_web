@@ -255,6 +255,7 @@ export class DatabaseStorage implements IStorage {
     const gradeVariants = normalizeGrade(grade);
     
     // Only return active (non-archived) PDFs for quiz generation
+    // Exclude Chapter Practice PDFs (those have "chapter_plan" in filename)
     const [pdf] = await db.select().from(pdfs).where(
       and(
         or(
@@ -263,7 +264,8 @@ export class DatabaseStorage implements IStorage {
         ),
         eq(pdfs.board, board),
         eq(pdfs.subject, subject),
-        eq(pdfs.isArchived, false)
+        eq(pdfs.isArchived, false),
+        sql`${pdfs.filename} NOT ILIKE '%chapter_plan%'`
       )
     );
     return pdf || undefined;
