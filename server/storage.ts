@@ -1143,9 +1143,13 @@ export class DatabaseStorage implements IStorage {
         .where(eq(navodayaQuizSessions.unifiedStudentId, studentId))
         .orderBy(desc(navodayaQuizSessions.completedAt));
     } else if (examType === "chapter-practice") {
-      return await db.select().from(chapterPracticeQuizSessions)
-        .where(eq(chapterPracticeQuizSessions.unifiedStudentId, studentId))
-        .orderBy(desc(chapterPracticeQuizSessions.createdAt));
+      // Use raw SQL to avoid potential Drizzle ORM column mapping issues
+      const result = await db.execute(
+        sql`SELECT * FROM chapter_practice_quiz_sessions 
+            WHERE unified_student_id = ${studentId} 
+            ORDER BY created_at DESC`
+      );
+      return result.rows as any[];
     }
     return [];
   }
