@@ -8,7 +8,7 @@ import LandingPage from "@/components/LandingPage";
 import StudentOnboardingForm, { type StudentData } from "@/components/StudentOnboardingForm";
 import CpctOnboardingForm, { type CpctStudentData } from "@/components/CpctOnboardingForm";
 import NavodayaOnboardingForm, { type NavodayaStudentData } from "@/components/NavodayaOnboardingForm";
-import ChapterPracticeOnboardingForm, { type ChapterPracticeStudentData } from "@/components/ChapterPracticeOnboardingForm";
+import { type ChapterPracticeStudentData } from "@/components/ChapterPracticeOnboardingForm";
 import UnifiedAuthForm, { type LoginData, type RegisterData } from "@/components/UnifiedAuthForm";
 import BoardExamOptions, { type BoardExamOptionsData } from "@/components/BoardExamOptions";
 import CPCTExamOptions, { type CPCTExamOptionsData } from "@/components/CPCTExamOptions";
@@ -50,7 +50,7 @@ interface ExamProfile {
 type AppState = "landing" | "onboarding" | "ready" | "loading" | "quiz" | "results" | "history" 
   | "cpct-onboarding" | "cpct-ready" | "cpct-loading" | "cpct-quiz" | "cpct-results" | "cpct-history"
   | "navodaya-onboarding" | "navodaya-ready" | "navodaya-loading" | "navodaya-quiz" | "navodaya-results" | "navodaya-history"
-  | "chapter-practice-onboarding" | "chapter-practice-ready" | "chapter-practice-loading" | "chapter-practice-quiz" | "chapter-practice-results"
+  | "chapter-practice-loading" | "chapter-practice-quiz" | "chapter-practice-results"
   | "unified-auth" | "unified-board-options" | "unified-cpct-options" | "unified-navodaya-options" | "unified-chapter-options"
   | "unified-board-history" | "unified-cpct-history" | "unified-navodaya-history" | "unified-chapter-history"
   | "profile";
@@ -288,9 +288,9 @@ function App() {
     }
   }, [navodayaStudentData, appState]);
 
-  // Fetch available subjects for chapter practice
+  // Fetch available subjects for chapter practice (unified flow)
   useEffect(() => {
-    if (chapterPracticeStudentData && appState === "chapter-practice-ready") {
+    if (chapterPracticeStudentData && appState === "unified-chapter-options") {
       fetch(`/api/chapter-practice/available-subjects?grade=${encodeURIComponent(chapterPracticeStudentData.grade)}&board=${encodeURIComponent(chapterPracticeStudentData.board)}`)
         .then(res => res.json())
         .then(data => {
@@ -303,9 +303,9 @@ function App() {
     }
   }, [chapterPracticeStudentData, appState]);
 
-  // Fetch available chapters when subject is selected
+  // Fetch available chapters when subject is selected (unified flow)
   useEffect(() => {
-    if (chapterPracticeStudentData && selectedChapterPracticeSubject && appState === "chapter-practice-ready") {
+    if (chapterPracticeStudentData && selectedChapterPracticeSubject && appState === "unified-chapter-options") {
       fetch(`/api/chapter-practice/available-chapters?grade=${encodeURIComponent(chapterPracticeStudentData.grade)}&board=${encodeURIComponent(chapterPracticeStudentData.board)}&subject=${encodeURIComponent(selectedChapterPracticeSubject)}`)
         .then(res => res.json())
         .then(data => {
@@ -725,50 +725,7 @@ function App() {
     setAppState("navodaya-history");
   }, []);
 
-  // Chapter Practice handlers
-  const handleChapterPracticeOnboardingSubmit = useCallback(async (data: ChapterPracticeStudentData) => {
-    try {
-      const response = await apiRequest("POST", "/api/chapter-practice/students/register", {
-        name: data.name,
-        schoolName: data.schoolName,
-        grade: data.grade,
-        board: data.board,
-        medium: data.medium,
-        location: data.location,
-        mobileNumber: data.mobile,
-      });
-      const student = await response.json();
-      setChapterPracticeStudentData(student);
-      setAppState("chapter-practice-ready");
-    } catch (error) {
-      console.error("Registration error:", error);
-      toast({
-        title: "Registration failed",
-        description: "Please try again.",
-        variant: "destructive",
-      });
-    }
-  }, [toast]);
-
-  const handleChapterPracticeLogin = useCallback(async (data: { name: string; mobile: string }): Promise<boolean> => {
-    try {
-      const response = await apiRequest("POST", "/api/chapter-practice/students/login", {
-        name: data.name,
-        mobileNumber: data.mobile,
-      });
-      const student = await response.json();
-      if (student && student.id) {
-        setChapterPracticeStudentData(student);
-        setAppState("chapter-practice-ready");
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error("Login error:", error);
-      return false;
-    }
-  }, []);
-
+  // Chapter Practice handlers (unified flow only)
   const handleChapterPracticeStartQuiz = useCallback(async () => {
     if (!selectedChapter || !selectedChapterPracticeSubject || !chapterPracticeStudentData) return;
     
@@ -830,7 +787,7 @@ function App() {
           description: "No questions found for this chapter. Please try another chapter.",
           variant: "destructive",
         });
-        setAppState("chapter-practice-ready");
+        setAppState("unified-chapter-options");
       }
     } catch (error) {
       console.error("Quiz generation error:", error);
@@ -839,7 +796,7 @@ function App() {
         description: "Please try again later.",
         variant: "destructive",
       });
-      setAppState("chapter-practice-ready");
+      setAppState("unified-chapter-options");
     }
   }, [selectedChapter, selectedChapterPracticeSubject, chapterPracticeStudentData, toast]);
 
@@ -1346,7 +1303,7 @@ function App() {
           <Route path="/contact" component={ContactPage} />
           <Route path="/">
             <div className="min-h-screen bg-background">
-              {appState !== "onboarding" && appState !== "landing" && appState !== "cpct-onboarding" && appState !== "navodaya-onboarding" && appState !== "chapter-practice-onboarding" && appState !== "unified-auth" && appState !== "unified-board-options" && appState !== "unified-cpct-options" && appState !== "unified-navodaya-options" && appState !== "unified-chapter-options" && appState !== "profile" && (
+              {appState !== "onboarding" && appState !== "landing" && appState !== "cpct-onboarding" && appState !== "navodaya-onboarding" && appState !== "unified-auth" && appState !== "unified-board-options" && appState !== "unified-cpct-options" && appState !== "unified-navodaya-options" && appState !== "unified-chapter-options" && appState !== "profile" && (
                 <AppHeader studentName={unifiedStudent?.name || studentData?.name || cpctStudentData?.name || navodayaStudentData?.name || chapterPracticeStudentData?.name} onLogoClick={() => setAppState("landing")} />
               )}
 
@@ -1912,134 +1869,6 @@ function App() {
                 />
               )}
 
-              {appState === "chapter-practice-onboarding" && (
-                <ChapterPracticeOnboardingForm 
-                  onSubmit={handleChapterPracticeOnboardingSubmit} 
-                  onLogin={handleChapterPracticeLogin}
-                  onBack={() => setAppState("landing")}
-                />
-              )}
-
-              {appState === "chapter-practice-ready" && chapterPracticeStudentData && (
-                <div className="min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center p-4">
-                  <Card className="w-full max-w-md">
-                    <CardContent className="p-8">
-                      <div className="text-center mb-6">
-                        <div className="w-16 h-16 mx-auto rounded-lg overflow-hidden mb-4 bg-violet-50 flex items-center justify-center">
-                          <Library className="h-8 w-8 text-violet-600" />
-                        </div>
-                        <h1 className="text-2xl font-semibold mb-2">Chapter Practice</h1>
-                        <p className="text-muted-foreground text-sm">
-                          Select a subject and chapter to practice all questions from that chapter.
-                        </p>
-                      </div>
-
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="chapter-practice-subject">Subject</Label>
-                          {availableChapterPracticeSubjects.length === 0 ? (
-                            <div className="p-4 text-center text-muted-foreground border rounded-md bg-muted/30">
-                              <p className="text-sm">No study materials available for {chapterPracticeStudentData.grade} {chapterPracticeStudentData.board} yet.</p>
-                              <p className="text-xs mt-1">Please check back later.</p>
-                            </div>
-                          ) : (
-                            <Select 
-                              value={selectedChapterPracticeSubject} 
-                              onValueChange={setSelectedChapterPracticeSubject}
-                            >
-                              <SelectTrigger id="chapter-practice-subject" data-testid="select-chapter-practice-subject">
-                                <SelectValue placeholder="Select a subject" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {availableChapterPracticeSubjects.map((subject) => (
-                                  <SelectItem key={subject} value={subject}>
-                                    {subject}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          )}
-                        </div>
-
-                        {selectedChapterPracticeSubject && (
-                          <div className="space-y-2">
-                            <Label htmlFor="chapter">Chapter</Label>
-                            {availableChapters.length === 0 ? (
-                              <div className="p-4 text-center text-muted-foreground border rounded-md bg-muted/30">
-                                <p className="text-sm">No chapters available for this subject yet.</p>
-                              </div>
-                            ) : (
-                              <Select 
-                                value={selectedChapter} 
-                                onValueChange={setSelectedChapter}
-                              >
-                                <SelectTrigger id="chapter" data-testid="select-chapter">
-                                  <SelectValue placeholder="Select a chapter" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {availableChapters.map((chapter, index) => {
-                                    const colors = [
-                                      "bg-rose-100 dark:bg-rose-900/30",
-                                      "bg-orange-100 dark:bg-orange-900/30",
-                                      "bg-amber-100 dark:bg-amber-900/30",
-                                      "bg-lime-100 dark:bg-lime-900/30",
-                                      "bg-emerald-100 dark:bg-emerald-900/30",
-                                      "bg-teal-100 dark:bg-teal-900/30",
-                                      "bg-cyan-100 dark:bg-cyan-900/30",
-                                      "bg-sky-100 dark:bg-sky-900/30",
-                                      "bg-violet-100 dark:bg-violet-900/30",
-                                      "bg-fuchsia-100 dark:bg-fuchsia-900/30",
-                                    ];
-                                    const colorClass = colors[index % colors.length];
-                                    return (
-                                      <SelectItem 
-                                        key={chapter} 
-                                        value={chapter}
-                                        className={`${colorClass} my-1 rounded-md`}
-                                      >
-                                        {chapter}
-                                      </SelectItem>
-                                    );
-                                  })}
-                                </SelectContent>
-                              </Select>
-                            )}
-                          </div>
-                        )}
-
-                        <div className="p-3 bg-muted/50 rounded-lg text-sm">
-                          <p className="text-muted-foreground">
-                            <span className="font-medium text-foreground">Grade:</span> {chapterPracticeStudentData.grade} | 
-                            <span className="font-medium text-foreground ml-2">Board:</span> {chapterPracticeStudentData.board}
-                          </p>
-                        </div>
-
-                        <Button 
-                          className="w-full bg-violet-600 hover:bg-violet-700" 
-                          onClick={handleChapterPracticeStartQuiz}
-                          disabled={!selectedChapter}
-                          data-testid="button-start-chapter-practice"
-                        >
-                          Start Practice
-                        </Button>
-
-                        <Button 
-                          variant="ghost"
-                          className="w-full" 
-                          onClick={() => {
-                            setChapterPracticeStudentData(null);
-                            setAppState("landing");
-                          }}
-                          data-testid="button-chapter-practice-back-landing"
-                        >
-                          Back to Home
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
-
               {appState === "chapter-practice-loading" && (
                 <div className="min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center p-4">
                   <Card className="w-full max-w-md text-center">
@@ -2081,29 +1910,17 @@ function App() {
                   onRetakeQuiz={() => {
                     setSelectedChapter("");
                     setSelectedChapterPracticeSubject("");
-                    if (unifiedStudent) {
-                      setAppState("unified-chapter-options");
-                    } else {
-                      setAppState("chapter-practice-ready");
-                    }
+                    setAppState("unified-chapter-options");
                   }}
                   onTryAnotherSubject={() => {
                     setSelectedChapter("");
                     setSelectedChapterPracticeSubject("");
-                    if (unifiedStudent) {
-                      setAppState("unified-chapter-options");
-                    } else {
-                      setAppState("chapter-practice-ready");
-                    }
+                    setAppState("unified-chapter-options");
                   }}
                   onBackToHome={() => {
                     setSelectedChapter("");
                     setSelectedChapterPracticeSubject("");
-                    if (unifiedStudent) {
-                      setAppState("unified-chapter-options");
-                    } else {
-                      setAppState("chapter-practice-ready");
-                    }
+                    setAppState("unified-chapter-options");
                   }}
                   subjectLabel="Practice Another Chapter"
                   hideRetakeButton={true}
