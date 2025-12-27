@@ -543,32 +543,32 @@ export default function LandingPage({
                 </div>
               </div>
 
-              {/* 2. Chapter Practice - Coming Soon */}
+              {/* 2. Chapter Practice - Coming Soon (Violet theme) */}
               <div 
-                className="bg-gray-50 border border-gray-200 rounded-2xl p-6 text-center relative overflow-hidden flex flex-col opacity-75"
+                className="bg-white border border-violet-200 rounded-2xl p-6 text-center relative overflow-hidden flex flex-col opacity-70"
                 data-testid="card-chapter-practice"
               >
                 <div className="absolute top-3 right-3 z-20">
-                  <span className="bg-amber-100 text-amber-700 text-xs font-semibold px-3 py-1 rounded-full">
+                  <span className="bg-violet-100 text-violet-700 text-xs font-semibold px-3 py-1 rounded-full">
                     Coming Soon
                   </span>
                 </div>
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-gray-100 to-transparent rounded-full -translate-y-1/2 translate-x-1/2"></div>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-violet-100 to-transparent rounded-full -translate-y-1/2 translate-x-1/2"></div>
                 <div className="relative z-10 flex flex-col flex-1">
-                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-gray-200 to-gray-100 rounded-2xl flex items-center justify-center shadow-sm">
-                    <Library className="w-8 h-8 text-gray-400" />
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-violet-100 to-violet-50 rounded-2xl flex items-center justify-center shadow-sm">
+                    <Library className="w-8 h-8 text-violet-400" />
                   </div>
-                  <h3 className="text-lg md:text-xl font-bold text-gray-500 mb-1">
+                  <h3 className="text-lg md:text-xl font-bold text-gray-700 mb-1">
                     UNKLASS Chapter Practice - NCERT
                   </h3>
-                  <p className="text-gray-400 text-xs font-medium mb-2">
+                  <p className="text-violet-400 text-xs font-medium mb-2">
                     6th to 10th Grade
                   </p>
-                  <p className="text-gray-400 text-sm mb-4 flex-1">
+                  <p className="text-gray-500 text-sm mb-4 flex-1">
                     Practice chapter-wise questions from NCERT textbooks
                   </p>
                   <Button 
-                    className="w-full bg-gray-300 text-gray-500 font-medium py-5 rounded-xl cursor-not-allowed mt-auto"
+                    className="w-full bg-gradient-to-r from-violet-300 to-violet-400 text-white font-medium py-5 rounded-xl cursor-not-allowed mt-auto"
                     disabled
                     data-testid="button-chapter-practice"
                   >
