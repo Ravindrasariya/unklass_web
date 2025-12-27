@@ -796,9 +796,33 @@ function App() {
         }));
         
         setChapterPracticeQuestions(formattedQuestions);
-        setChapterPracticeCurrentQuestionIndex(0);
-        setChapterPracticeAnswers([]);
         setChapterPracticeSessionId(data.sessionId);
+        
+        // Handle resume: restore saved state if resuming an incomplete quiz
+        if (data.isResume && data.savedAnswers) {
+          const savedAnswersArray: QuizAnswer[] = [];
+          const savedAnswersObj = data.savedAnswers as Record<string, any>;
+          // Reconstruct answers array from saved answers object (keyed by questionId)
+          Object.entries(savedAnswersObj).forEach(([questionIdStr, answer]: [string, any]) => {
+            savedAnswersArray.push({
+              questionId: parseInt(questionIdStr, 10),
+              selectedOption: answer.selectedOption,
+              isCorrect: answer.isCorrect,
+            });
+          });
+          // Sort by questionId to maintain order
+          savedAnswersArray.sort((a, b) => a.questionId - b.questionId);
+          setChapterPracticeAnswers(savedAnswersArray);
+          setChapterPracticeCurrentQuestionIndex(data.currentQuestionIndex || 0);
+          toast({
+            title: "Resuming Quiz",
+            description: `Continuing from question ${(data.currentQuestionIndex || 0) + 1} of ${formattedQuestions.length}`,
+          });
+        } else {
+          setChapterPracticeCurrentQuestionIndex(0);
+          setChapterPracticeAnswers([]);
+        }
+        
         setAppState("chapter-practice-quiz");
       } else {
         toast({
@@ -819,19 +843,82 @@ function App() {
     }
   }, [selectedChapter, selectedChapterPracticeSubject, chapterPracticeStudentData, toast]);
 
-  const handleChapterPracticeAnswer = useCallback((selectedOption: number, isCorrect: boolean) => {
+  const handleChapterPracticeAnswer = useCallback(async (selectedOption: number, isCorrect: boolean) => {
     const currentQuestion = chapterPracticeQuestions[chapterPracticeCurrentQuestionIndex];
     const newAnswer: QuizAnswer = {
       questionId: currentQuestion.id,
       selectedOption,
       isCorrect,
     };
-    setChapterPracticeAnswers(prev => [...prev, newAnswer]);
-  }, [chapterPracticeQuestions, chapterPracticeCurrentQuestionIndex]);
+    
+    // Update existing entry or add new (avoid duplicates if same question answered again)
+    let updatedAnswers: QuizAnswer[] = [];
+    setChapterPracticeAnswers(prev => {
+      const existingIdx = prev.findIndex(a => a.questionId === currentQuestion.id);
+      if (existingIdx >= 0) {
+        const updated = [...prev];
+        updated[existingIdx] = newAnswer;
+        updatedAnswers = updated;
+        return updated;
+      }
+      updatedAnswers = [...prev, newAnswer];
+      return updatedAnswers;
+    });
+    
+    // Save progress immediately on answer selection (in case user closes browser)
+    if (chapterPracticeSessionId) {
+      try {
+        const answersObj: Record<string, { selectedOption: number; isCorrect: boolean }> = {};
+        // Include the current answer in the save
+        [...updatedAnswers].forEach((answer) => {
+          answersObj[String(answer.questionId)] = {
+            selectedOption: answer.selectedOption,
+            isCorrect: answer.isCorrect,
+          };
+        });
+        // Also add current answer directly in case state hasn't updated yet
+        answersObj[String(currentQuestion.id)] = {
+          selectedOption,
+          isCorrect,
+        };
+        
+        await apiRequest("POST", "/api/chapter-practice/quiz/save-progress", {
+          sessionId: chapterPracticeSessionId,
+          currentQuestionIndex: chapterPracticeCurrentQuestionIndex,
+          answers: answersObj,
+        });
+      } catch (error) {
+        console.error("Failed to save answer progress:", error);
+      }
+    }
+  }, [chapterPracticeQuestions, chapterPracticeCurrentQuestionIndex, chapterPracticeSessionId]);
 
   const handleChapterPracticeNext = useCallback(async () => {
     if (chapterPracticeCurrentQuestionIndex < chapterPracticeQuestions.length - 1) {
-      setChapterPracticeCurrentQuestionIndex(prev => prev + 1);
+      const nextIndex = chapterPracticeCurrentQuestionIndex + 1;
+      
+      // Update currentQuestionIndex for resume (answers already saved on selection)
+      if (chapterPracticeSessionId) {
+        try {
+          const answersObj: Record<string, { selectedOption: number; isCorrect: boolean }> = {};
+          chapterPracticeAnswers.forEach((answer) => {
+            answersObj[String(answer.questionId)] = {
+              selectedOption: answer.selectedOption,
+              isCorrect: answer.isCorrect,
+            };
+          });
+          
+          await apiRequest("POST", "/api/chapter-practice/quiz/save-progress", {
+            sessionId: chapterPracticeSessionId,
+            currentQuestionIndex: nextIndex,
+            answers: answersObj,
+          });
+        } catch (error) {
+          console.error("Failed to save progress:", error);
+        }
+      }
+      
+      setChapterPracticeCurrentQuestionIndex(nextIndex);
     } else {
       // Submit results
       if (chapterPracticeSessionId) {
@@ -1150,9 +1237,33 @@ function App() {
         }));
         
         setChapterPracticeQuestions(formattedQuestions);
-        setChapterPracticeCurrentQuestionIndex(0);
-        setChapterPracticeAnswers([]);
         setChapterPracticeSessionId(quizData.sessionId);
+        
+        // Handle resume: restore saved state if resuming an incomplete quiz
+        if (quizData.isResume && quizData.savedAnswers) {
+          const savedAnswersArray: QuizAnswer[] = [];
+          const savedAnswersObj = quizData.savedAnswers as Record<string, any>;
+          // Reconstruct answers array from saved answers object (keyed by questionId)
+          Object.entries(savedAnswersObj).forEach(([questionIdStr, answer]: [string, any]) => {
+            savedAnswersArray.push({
+              questionId: parseInt(questionIdStr, 10),
+              selectedOption: answer.selectedOption,
+              isCorrect: answer.isCorrect,
+            });
+          });
+          // Sort by questionId to maintain order
+          savedAnswersArray.sort((a, b) => a.questionId - b.questionId);
+          setChapterPracticeAnswers(savedAnswersArray);
+          setChapterPracticeCurrentQuestionIndex(quizData.currentQuestionIndex || 0);
+          toast({
+            title: "Resuming Quiz",
+            description: `Continuing from question ${(quizData.currentQuestionIndex || 0) + 1} of ${formattedQuestions.length}`,
+          });
+        } else {
+          setChapterPracticeCurrentQuestionIndex(0);
+          setChapterPracticeAnswers([]);
+        }
+        
         setAppState("chapter-practice-quiz");
       } else {
         toast({
