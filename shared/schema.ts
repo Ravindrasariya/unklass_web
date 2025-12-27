@@ -193,6 +193,7 @@ export const chapterPracticeQuizSessions = pgTable("chapter_practice_quiz_sessio
   medium: varchar("medium", { length: 10 }).notNull(),
   score: integer("score"),
   totalQuestions: integer("total_questions"),
+  currentQuestionIndex: integer("current_question_index").default(0), // Track resume progress
   questions: jsonb("questions"),
   answers: jsonb("answers"),
   completedAt: timestamp("completed_at"),

@@ -137,6 +137,7 @@ export interface IStorage {
   updateChapterPracticeQuizSession(id: number, updates: Partial<ChapterPracticeQuizSession>): Promise<ChapterPracticeQuizSession | undefined>;
   getChapterPracticeQuizSession(id: number): Promise<ChapterPracticeQuizSession | undefined>;
   getChapterPracticeStudentQuizSessions(studentId: number): Promise<ChapterPracticeQuizSession[]>;
+  getIncompleteChapterPracticeSession(studentId: number, chapterName: string): Promise<ChapterPracticeQuizSession | undefined>;
 
   // Chapter Practice PDFs
   getChapterPracticePdf(grade: string, board: string, subject: string): Promise<Pdf | undefined>;
@@ -928,6 +929,21 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(chapterPracticeQuizSessions)
       .where(eq(chapterPracticeQuizSessions.studentId, studentId))
       .orderBy(desc(chapterPracticeQuizSessions.createdAt));
+  }
+
+  async getIncompleteChapterPracticeSession(studentId: number, chapterName: string): Promise<ChapterPracticeQuizSession | undefined> {
+    // Find the most recent incomplete session for this student + chapter
+    const [session] = await db.select().from(chapterPracticeQuizSessions)
+      .where(
+        and(
+          eq(chapterPracticeQuizSessions.studentId, studentId),
+          eq(chapterPracticeQuizSessions.chapterName, chapterName),
+          sql`${chapterPracticeQuizSessions.completedAt} IS NULL`
+        )
+      )
+      .orderBy(desc(chapterPracticeQuizSessions.createdAt))
+      .limit(1);
+    return session || undefined;
   }
 
   // Chapter Practice PDFs - look for {grade}_{board}_chapter_plan_{subject}.pdf format
