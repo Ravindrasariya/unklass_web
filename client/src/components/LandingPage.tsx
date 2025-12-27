@@ -543,35 +543,31 @@ export default function LandingPage({
                 </div>
               </div>
 
-              {/* 2. Chapter Practice - Light Violet - COMING SOON */}
+              {/* 2. Chapter Practice - Light Violet */}
               <div 
-                className="bg-white border border-violet-200 rounded-2xl p-6 text-center relative overflow-hidden flex flex-col opacity-70 cursor-not-allowed"
+                className="bg-white border border-violet-200 rounded-2xl p-6 text-center transition-all duration-300 hover:shadow-2xl hover:shadow-violet-100 hover:-translate-y-1 cursor-pointer group relative overflow-hidden flex flex-col"
+                onClick={onChapterPracticeClick}
                 data-testid="card-chapter-practice"
               >
-                {/* Coming Soon Badge */}
-                <div className="absolute top-4 right-4 z-20 bg-amber-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md">
-                  Coming Soon
-                </div>
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-violet-100 to-transparent rounded-full -translate-y-1/2 translate-x-1/2"></div>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-violet-100 to-transparent rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-500"></div>
                 <div className="relative z-10 flex flex-col flex-1">
-                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-violet-100 to-violet-50 rounded-2xl flex items-center justify-center shadow-sm">
-                    <Library className="w-8 h-8 text-violet-400" />
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-violet-100 to-violet-50 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-sm">
+                    <Library className="w-8 h-8 text-violet-600" />
                   </div>
-                  <h3 className="text-lg md:text-xl font-bold text-gray-700 mb-1">
+                  <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-1">
                     UNKLASS Chapter Practice - NCERT
                   </h3>
-                  <p className="text-violet-400 text-xs font-medium mb-2">
+                  <p className="text-violet-600 text-xs font-medium mb-2">
                     6th to 10th Grade
                   </p>
-                  <p className="text-gray-500 text-sm mb-4 flex-1">
+                  <p className="text-gray-600 text-sm mb-4 flex-1">
                     Practice chapter-wise questions from NCERT textbooks
                   </p>
                   <Button 
-                    disabled
-                    className="w-full bg-violet-300 text-white font-medium py-5 rounded-xl mt-auto cursor-not-allowed shadow-lg shadow-violet-100"
+                    className="w-full bg-gradient-to-r from-violet-500 to-violet-600 hover:from-violet-600 hover:to-violet-700 text-white font-medium py-5 rounded-xl shadow-lg shadow-violet-200 transition-all group-hover:shadow-xl mt-auto"
                     data-testid="button-chapter-practice"
                   >
-                    Coming Soon
+                    Start Practice
                   </Button>
                 </div>
               </div>
