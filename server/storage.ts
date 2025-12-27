@@ -149,6 +149,7 @@ export interface IStorage {
   getUnifiedStudentByNameAndMobile(name: string, mobileNumber: string): Promise<UnifiedStudent | undefined>;
   createUnifiedStudent(student: InsertUnifiedStudent): Promise<UnifiedStudent>;
   updateUnifiedStudent(id: number, updates: Partial<InsertUnifiedStudent>): Promise<UnifiedStudent | undefined>;
+  deleteUnifiedStudentCascade(mobileNumber: string): Promise<boolean>;
   getAllUnifiedStudents(): Promise<UnifiedStudent[]>;
 
   // Student Exam Profiles (preferences per exam type)
@@ -1015,6 +1016,48 @@ export class DatabaseStorage implements IStorage {
 
   async getAllUnifiedStudents(): Promise<UnifiedStudent[]> {
     return await db.select().from(unifiedStudents).orderBy(desc(unifiedStudents.createdAt));
+  }
+
+  async deleteUnifiedStudentCascade(mobileNumber: string): Promise<boolean> {
+    // Find all students with this mobile number across all tables
+    const [unifiedStudent] = await db.select().from(unifiedStudents).where(eq(unifiedStudents.mobileNumber, mobileNumber));
+    const [boardStudent] = await db.select().from(students).where(eq(students.mobileNumber, mobileNumber));
+    const [cpctStudent] = await db.select().from(cpctStudents).where(eq(cpctStudents.mobileNumber, mobileNumber));
+    const [navodayaStudent] = await db.select().from(navodayaStudents).where(eq(navodayaStudents.mobileNumber, mobileNumber));
+    const [chapterStudent] = await db.select().from(chapterPracticeStudents).where(eq(chapterPracticeStudents.mobileNumber, mobileNumber));
+
+    // Delete related quiz sessions first, then students
+    if (boardStudent) {
+      await db.delete(quizSessions).where(eq(quizSessions.studentId, boardStudent.id));
+      await db.delete(questionPointers).where(and(eq(questionPointers.studentId, boardStudent.id), eq(questionPointers.studentType, 'board')));
+      await db.delete(students).where(eq(students.id, boardStudent.id));
+    }
+
+    if (cpctStudent) {
+      await db.delete(cpctQuizSessions).where(eq(cpctQuizSessions.studentId, cpctStudent.id));
+      await db.delete(questionPointers).where(and(eq(questionPointers.studentId, cpctStudent.id), eq(questionPointers.studentType, 'cpct')));
+      await db.delete(cpctStudents).where(eq(cpctStudents.id, cpctStudent.id));
+    }
+
+    if (navodayaStudent) {
+      await db.delete(navodayaQuizSessions).where(eq(navodayaQuizSessions.studentId, navodayaStudent.id));
+      await db.delete(questionPointers).where(and(eq(questionPointers.studentId, navodayaStudent.id), eq(questionPointers.studentType, 'navodaya')));
+      await db.delete(navodayaStudents).where(eq(navodayaStudents.id, navodayaStudent.id));
+    }
+
+    if (chapterStudent) {
+      await db.delete(chapterPracticeQuizSessions).where(eq(chapterPracticeQuizSessions.studentId, chapterStudent.id));
+      await db.delete(questionPointers).where(and(eq(questionPointers.studentId, chapterStudent.id), eq(questionPointers.studentType, 'chapter_practice')));
+      await db.delete(chapterPracticeStudents).where(eq(chapterPracticeStudents.id, chapterStudent.id));
+    }
+
+    if (unifiedStudent) {
+      // Delete exam profiles for this unified student
+      await db.delete(studentExamProfiles).where(eq(studentExamProfiles.studentId, unifiedStudent.id));
+      await db.delete(unifiedStudents).where(eq(unifiedStudents.id, unifiedStudent.id));
+    }
+
+    return !!(unifiedStudent || boardStudent || cpctStudent || navodayaStudent || chapterStudent);
   }
 
   // Student Exam Profiles (preferences per exam type)

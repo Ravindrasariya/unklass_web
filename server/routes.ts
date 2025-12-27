@@ -1087,6 +1087,54 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     }
   });
 
+  // Admin: Update student by mobile number
+  app.patch("/api/admin/student/:mobileNumber", async (req, res) => {
+    try {
+      const { mobileNumber } = req.params;
+      const updates = req.body;
+
+      // Update in unified students table
+      const unifiedStudent = await storage.getUnifiedStudentByMobile(mobileNumber);
+      if (unifiedStudent) {
+        const updated = await storage.updateUnifiedStudent(unifiedStudent.id, updates);
+        if (updated) {
+          return res.json(updated);
+        }
+      }
+
+      // If not in unified, check legacy tables and update there
+      const boardStudent = await storage.getStudentByMobile(mobileNumber);
+      if (boardStudent) {
+        const updated = await storage.updateStudent(boardStudent.id, updates);
+        if (updated) {
+          return res.json(updated);
+        }
+      }
+
+      res.status(404).json({ error: "Student not found" });
+    } catch (error) {
+      console.error("Error updating student:", error);
+      res.status(500).json({ error: "Failed to update student" });
+    }
+  });
+
+  // Admin: Delete student by mobile number (cascading delete)
+  app.delete("/api/admin/student/:mobileNumber", async (req, res) => {
+    try {
+      const { mobileNumber } = req.params;
+      const deleted = await storage.deleteUnifiedStudentCascade(mobileNumber);
+      
+      if (deleted) {
+        res.json({ success: true, message: "Student and all related data deleted" });
+      } else {
+        res.status(404).json({ error: "Student not found" });
+      }
+    } catch (error) {
+      console.error("Error deleting student:", error);
+      res.status(500).json({ error: "Failed to delete student" });
+    }
+  });
+
   // Admin: Get all students with their progress
   app.get("/api/admin/students", async (req, res) => {
     try {

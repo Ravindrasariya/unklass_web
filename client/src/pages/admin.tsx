@@ -199,6 +199,16 @@ export default function AdminPage() {
   const [showNoticeForm, setShowNoticeForm] = useState(false);
   const [noticeForm, setNoticeForm] = useState({ title: "", subtitle: "", description: "", priority: 0 });
   const [editingNotice, setEditingNotice] = useState<Notice | null>(null);
+  
+  // Combined student edit/delete state
+  const [editingCombinedStudent, setEditingCombinedStudent] = useState<CombinedStudent | null>(null);
+  const [deletingCombinedStudent, setDeletingCombinedStudent] = useState<CombinedStudent | null>(null);
+  const [combinedEditForm, setCombinedEditForm] = useState({
+    name: "",
+    fatherName: "",
+    location: "",
+    schoolName: "",
+  });
 
   const handleTabChange = (tab: "allRegistered" | "board" | "cpct" | "navodaya" | "chapterPractice") => {
     setStudentTab(tab);
@@ -556,6 +566,80 @@ export default function AdminPage() {
       });
     },
   });
+
+  // Combined student mutations
+  const updateCombinedStudentMutation = useMutation({
+    mutationFn: async ({ mobileNumber, data }: { mobileNumber: string; data: typeof combinedEditForm }) => {
+      await apiRequest("PATCH", `/api/admin/student/${mobileNumber}`, data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Student Updated",
+        description: "Student information has been updated.",
+      });
+      setEditingCombinedStudent(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/all-registered-students"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/unified-students"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/students"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Update Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteCombinedStudentMutation = useMutation({
+    mutationFn: async (mobileNumber: string) => {
+      await apiRequest("DELETE", `/api/admin/student/${mobileNumber}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Student Deleted",
+        description: "Student and all their exam data have been removed from all tables.",
+      });
+      setDeletingCombinedStudent(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/all-registered-students"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/unified-students"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/students"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/cpct-students"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/navodaya-students"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Delete Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleEditCombinedStudent = (student: CombinedStudent) => {
+    setEditingCombinedStudent(student);
+    setCombinedEditForm({
+      name: student.name,
+      fatherName: student.fatherName || "",
+      location: student.location || "",
+      schoolName: student.schoolName || "",
+    });
+  };
+
+  const handleSaveCombinedStudent = () => {
+    if (editingCombinedStudent) {
+      updateCombinedStudentMutation.mutate({
+        mobileNumber: editingCombinedStudent.mobileNumber,
+        data: combinedEditForm,
+      });
+    }
+  };
+
+  const handleDeleteCombinedStudent = () => {
+    if (deletingCombinedStudent) {
+      deleteCombinedStudentMutation.mutate(deletingCombinedStudent.mobileNumber);
+    }
+  };
 
   const handleEditStudent = (student: StudentProgress) => {
     setEditingStudent(student);
@@ -1148,7 +1232,7 @@ export default function AdminPage() {
                               <div className="flex items-center gap-2 flex-wrap mb-1">
                                 <p className="font-medium">{student.name}</p>
                               </div>
-                              <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-sm">
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
                                 <div>
                                   <span className="text-muted-foreground">Mobile:</span>{" "}
                                   {student.mobileNumber}
@@ -1166,6 +1250,24 @@ export default function AdminPage() {
                                   {student.schoolName || "N/A"}
                                 </div>
                               </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => handleEditCombinedStudent(student)}
+                                data-testid={`button-edit-student-${student.mobileNumber}`}
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => setDeletingCombinedStudent(student)}
+                                data-testid={`button-delete-student-${student.mobileNumber}`}
+                              >
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </Button>
                             </div>
                           </div>
                         </div>
@@ -2004,6 +2106,120 @@ export default function AdminPage() {
                 data-testid="button-save-student"
               >
                 {updateStudentMutation.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Combined Student Dialog */}
+      <Dialog open={!!editingCombinedStudent} onOpenChange={(open) => !open && setEditingCombinedStudent(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="h-5 w-5" />
+              Edit Student
+            </DialogTitle>
+            <DialogDescription>
+              Update student registration details
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="combined-edit-name">Name</Label>
+              <Input
+                id="combined-edit-name"
+                value={combinedEditForm.name}
+                onChange={(e) => setCombinedEditForm(prev => ({ ...prev, name: e.target.value }))}
+                data-testid="input-combined-edit-name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="combined-edit-father">Father's Name</Label>
+              <Input
+                id="combined-edit-father"
+                value={combinedEditForm.fatherName}
+                onChange={(e) => setCombinedEditForm(prev => ({ ...prev, fatherName: e.target.value }))}
+                data-testid="input-combined-edit-father"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="combined-edit-location">Location</Label>
+              <Input
+                id="combined-edit-location"
+                value={combinedEditForm.location}
+                onChange={(e) => setCombinedEditForm(prev => ({ ...prev, location: e.target.value }))}
+                data-testid="input-combined-edit-location"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="combined-edit-school">School Name</Label>
+              <Input
+                id="combined-edit-school"
+                value={combinedEditForm.schoolName}
+                onChange={(e) => setCombinedEditForm(prev => ({ ...prev, schoolName: e.target.value }))}
+                data-testid="input-combined-edit-school"
+              />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Mobile: {editingCombinedStudent?.mobileNumber} (cannot be changed)
+            </p>
+            <div className="flex justify-end gap-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setEditingCombinedStudent(null)}
+                data-testid="button-cancel-combined-edit"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveCombinedStudent}
+                disabled={updateCombinedStudentMutation.isPending}
+                data-testid="button-save-combined-student"
+              >
+                {updateCombinedStudentMutation.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Combined Student Confirmation Dialog */}
+      <Dialog open={!!deletingCombinedStudent} onOpenChange={(open) => !open && setDeletingCombinedStudent(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              Delete Student
+            </DialogTitle>
+            <DialogDescription>
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div className="p-4 bg-destructive/10 rounded-lg border border-destructive/20">
+              <p className="font-medium mb-2">You are about to delete:</p>
+              <p className="text-sm"><strong>Name:</strong> {deletingCombinedStudent?.name}</p>
+              <p className="text-sm"><strong>Mobile:</strong> {deletingCombinedStudent?.mobileNumber}</p>
+              <p className="text-sm mt-2 text-destructive">
+                This will permanently delete this student and ALL their quiz history from every exam type (Board, CPCT, Navodaya, etc.)
+              </p>
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setDeletingCombinedStudent(null)}
+                data-testid="button-cancel-combined-delete"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteCombinedStudent}
+                disabled={deleteCombinedStudentMutation.isPending}
+                data-testid="button-confirm-combined-delete"
+              >
+                {deleteCombinedStudentMutation.isPending ? "Deleting..." : "Delete Student"}
               </Button>
             </div>
           </div>
