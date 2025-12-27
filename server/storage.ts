@@ -277,7 +277,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllPdfs(): Promise<Pdf[]> {
-    return await db.select().from(pdfs);
+    // Exclude Chapter Practice PDFs (those with "chapter_plan" in filename)
+    // They are shown in a separate section
+    return await db.select().from(pdfs).where(
+      sql`${pdfs.filename} NOT ILIKE '%chapter_plan%'`
+    );
   }
 
   async deletePdf(id: number): Promise<boolean> {
