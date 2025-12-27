@@ -160,6 +160,17 @@ interface UnifiedStudent {
   createdAt: string | null;
 }
 
+interface CombinedStudent {
+  id: number;
+  name: string;
+  mobileNumber: string;
+  location: string | null;
+  fatherName?: string | null;
+  schoolName?: string | null;
+  examTypes: string[];
+  source: string;
+}
+
 export default function AdminPage() {
   const { toast } = useToast();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -230,6 +241,11 @@ export default function AdminPage() {
 
   const { data: unifiedStudents, isLoading: unifiedStudentsLoading } = useQuery<UnifiedStudent[]>({
     queryKey: ["/api/admin/unified-students"],
+    enabled: isAuthenticated,
+  });
+
+  const { data: allRegisteredStudents, isLoading: allRegisteredStudentsLoading } = useQuery<CombinedStudent[]>({
+    queryKey: ["/api/admin/all-registered-students"],
     enabled: isAuthenticated,
   });
 
@@ -1073,7 +1089,7 @@ export default function AdminPage() {
                 onClick={() => handleTabChange("allRegistered")}
                 data-testid="tab-all-registered-students"
               >
-                All Registered ({unifiedStudents?.length || 0})
+                All Registered ({allRegisteredStudents?.length || 0})
               </Button>
               <Button
                 variant={studentTab === "board" ? "default" : "outline"}
@@ -1112,59 +1128,60 @@ export default function AdminPage() {
 
             {studentTab === "allRegistered" && (
               <>
-                {unifiedStudentsLoading ? (
+                {allRegisteredStudentsLoading ? (
                   <p className="text-muted-foreground text-center py-8">Loading students...</p>
-                ) : !unifiedStudents || unifiedStudents.length === 0 ? (
+                ) : !allRegisteredStudents || allRegisteredStudents.length === 0 ? (
                   <p className="text-muted-foreground text-center py-8">
                     No students registered yet.
                   </p>
                 ) : (
                   <div className="space-y-2">
                     <div className="grid grid-cols-1 gap-2">
-                      {unifiedStudents.map((student) => (
+                      {allRegisteredStudents.map((student, index) => (
                         <div
-                          key={student.id}
+                          key={`${student.source}-${student.id}-${index}`}
                           className="border rounded-lg p-4"
-                          data-testid={`unified-student-row-${student.id}`}
+                          data-testid={`combined-student-row-${student.mobileNumber}`}
                         >
                           <div className="flex items-start justify-between gap-4 flex-wrap">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap mb-1">
                                 <p className="font-medium">{student.name}</p>
+                                {student.examTypes.map((examType) => (
+                                  <Badge 
+                                    key={examType} 
+                                    variant="secondary" 
+                                    className={`text-xs ${
+                                      examType === 'Board Exam' ? 'bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300' :
+                                      examType === 'CPCT' ? 'bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300' :
+                                      examType === 'Navodaya' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' :
+                                      examType === 'Unified' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300' :
+                                      ''
+                                    }`}
+                                  >
+                                    {examType}
+                                  </Badge>
+                                ))}
                                 {student.schoolName && (
-                                  <Badge variant="secondary" className="text-xs">{student.schoolName}</Badge>
+                                  <Badge variant="outline" className="text-xs">{student.schoolName}</Badge>
                                 )}
                               </div>
                               <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-                                <div>
-                                  <span className="text-muted-foreground">Father:</span>{" "}
-                                  {student.fatherName}
-                                </div>
+                                {student.fatherName && (
+                                  <div>
+                                    <span className="text-muted-foreground">Father:</span>{" "}
+                                    {student.fatherName}
+                                  </div>
+                                )}
                                 <div>
                                   <span className="text-muted-foreground">Mobile:</span>{" "}
                                   {student.mobileNumber}
                                 </div>
                                 <div>
                                   <span className="text-muted-foreground">Location:</span>{" "}
-                                  {student.location}
-                                </div>
-                                <div>
-                                  <span className="text-muted-foreground">Registered:</span>{" "}
-                                  {student.createdAt
-                                    ? new Date(student.createdAt).toLocaleDateString()
-                                    : "N/A"}
+                                  {student.location || "N/A"}
                                 </div>
                               </div>
-                              {(student.dateOfBirth || student.schoolName) && (
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm mt-1">
-                                  {student.dateOfBirth && (
-                                    <div>
-                                      <span className="text-muted-foreground">DOB:</span>{" "}
-                                      {new Date(student.dateOfBirth).toLocaleDateString()}
-                                    </div>
-                                  )}
-                                </div>
-                              )}
                             </div>
                           </div>
                         </div>

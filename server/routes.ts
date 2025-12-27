@@ -981,6 +981,112 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     }
   });
 
+  // Admin: Get ALL students (unified + legacy) combined with exam type info
+  app.get("/api/admin/all-registered-students", async (req, res) => {
+    try {
+      // Get all students from all tables
+      const [unifiedStudents, boardStudents, cpctStudents, navodayaStudents] = await Promise.all([
+        storage.getAllUnifiedStudents(),
+        storage.getAllStudents(),
+        storage.getAllCpctStudents(),
+        storage.getAllNavodayaStudents(),
+      ]);
+
+      // Create a map to track unique students by mobile number
+      const studentMap = new Map<string, {
+        id: number;
+        name: string;
+        mobileNumber: string;
+        location: string | null;
+        fatherName?: string | null;
+        schoolName?: string | null;
+        examTypes: string[];
+        source: string;
+      }>();
+
+      // Add unified students first (they take priority)
+      for (const student of unifiedStudents) {
+        studentMap.set(student.mobileNumber, {
+          id: student.id,
+          name: student.name,
+          mobileNumber: student.mobileNumber,
+          location: student.location,
+          fatherName: student.fatherName,
+          schoolName: student.schoolName,
+          examTypes: ['Unified'],
+          source: 'unified',
+        });
+      }
+
+      // Add legacy board students (if not already in unified)
+      for (const student of boardStudents) {
+        const existing = studentMap.get(student.mobileNumber);
+        if (existing) {
+          if (!existing.examTypes.includes('Board Exam')) {
+            existing.examTypes.push('Board Exam');
+          }
+        } else {
+          studentMap.set(student.mobileNumber, {
+            id: student.id,
+            name: student.name,
+            mobileNumber: student.mobileNumber,
+            location: student.location,
+            examTypes: ['Board Exam'],
+            source: 'board',
+          });
+        }
+      }
+
+      // Add legacy CPCT students
+      for (const student of cpctStudents) {
+        const existing = studentMap.get(student.mobileNumber);
+        if (existing) {
+          if (!existing.examTypes.includes('CPCT')) {
+            existing.examTypes.push('CPCT');
+          }
+        } else {
+          studentMap.set(student.mobileNumber, {
+            id: student.id,
+            name: student.name,
+            mobileNumber: student.mobileNumber,
+            location: student.location,
+            examTypes: ['CPCT'],
+            source: 'cpct',
+          });
+        }
+      }
+
+      // Add legacy Navodaya students
+      for (const student of navodayaStudents) {
+        const existing = studentMap.get(student.mobileNumber);
+        if (existing) {
+          if (!existing.examTypes.includes('Navodaya')) {
+            existing.examTypes.push('Navodaya');
+          }
+        } else {
+          studentMap.set(student.mobileNumber, {
+            id: student.id,
+            name: student.name,
+            mobileNumber: student.mobileNumber,
+            location: student.location,
+            examTypes: ['Navodaya'],
+            source: 'navodaya',
+          });
+        }
+      }
+
+      // Convert map to array and sort by name
+      const allStudents = Array.from(studentMap.values()).sort((a, b) => 
+        a.name.localeCompare(b.name)
+      );
+
+      res.json(allStudents);
+    } catch (error) {
+      console.error("Error fetching all registered students:", error);
+      res.status(500).json({ error: "Failed to fetch students" });
+    }
+  });
+
   // Admin: Get all students with their progress
   app.get("/api/admin/students", async (req, res) => {
     try {
