@@ -1147,39 +1147,23 @@ export default function AdminPage() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap mb-1">
                                 <p className="font-medium">{student.name}</p>
-                                {student.examTypes.map((examType) => (
-                                  <Badge 
-                                    key={examType} 
-                                    variant="secondary" 
-                                    className={`text-xs ${
-                                      examType === 'Board Exam' ? 'bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300' :
-                                      examType === 'CPCT' ? 'bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300' :
-                                      examType === 'Navodaya' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' :
-                                      examType === 'Unified' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300' :
-                                      ''
-                                    }`}
-                                  >
-                                    {examType}
-                                  </Badge>
-                                ))}
-                                {student.schoolName && (
-                                  <Badge variant="outline" className="text-xs">{student.schoolName}</Badge>
-                                )}
                               </div>
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-                                {student.fatherName && (
-                                  <div>
-                                    <span className="text-muted-foreground">Father:</span>{" "}
-                                    {student.fatherName}
-                                  </div>
-                                )}
+                              <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-sm">
                                 <div>
                                   <span className="text-muted-foreground">Mobile:</span>{" "}
                                   {student.mobileNumber}
                                 </div>
                                 <div>
+                                  <span className="text-muted-foreground">Father:</span>{" "}
+                                  {student.fatherName || "N/A"}
+                                </div>
+                                <div>
                                   <span className="text-muted-foreground">Location:</span>{" "}
                                   {student.location || "N/A"}
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">School:</span>{" "}
+                                  {student.schoolName || "N/A"}
                                 </div>
                               </div>
                             </div>
