@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -38,6 +38,16 @@ export default function QuizQuestion({
     previousAnswer?.selectedOption ?? null
   );
   const [hasSubmitted, setHasSubmitted] = useState(previousAnswer !== null);
+
+  useEffect(() => {
+    if (previousAnswer) {
+      setSelectedOption(previousAnswer.selectedOption);
+      setHasSubmitted(true);
+    } else {
+      setSelectedOption(null);
+      setHasSubmitted(false);
+    }
+  }, [question.id, previousAnswer]);
 
   const handleOptionSelect = (index: number) => {
     if (hasSubmitted) return;
