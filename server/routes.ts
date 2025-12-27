@@ -1174,7 +1174,9 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         })
       );
       
-      res.json(studentsWithProgress);
+      // Filter to only show students with at least 1 completed quiz
+      const activeStudents = studentsWithProgress.filter(s => s.totalQuizzes > 0);
+      res.json(activeStudents);
     } catch (error) {
       console.error("Error fetching students:", error);
       res.status(500).json({ error: "Failed to fetch students" });
@@ -1840,7 +1842,9 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         })
       );
       
-      res.json(studentsWithProgress);
+      // Filter to only show students with at least 1 completed quiz
+      const activeStudents = studentsWithProgress.filter(s => s.totalQuizzes > 0);
+      res.json(activeStudents);
     } catch (error) {
       console.error("Error fetching CPCT students:", error);
       res.status(500).json({ error: "Failed to fetch students" });
@@ -2459,7 +2463,9 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         })
       );
       
-      res.json(studentsWithProgress);
+      // Filter to only show students with at least 1 completed quiz
+      const activeStudents = studentsWithProgress.filter(s => s.totalQuizzes > 0);
+      res.json(activeStudents);
     } catch (error) {
       console.error("Error fetching Navodaya students:", error);
       res.status(500).json({ error: "Failed to fetch students" });
@@ -2505,7 +2511,9 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         })
       );
       
-      res.json(studentsWithProgress);
+      // Filter to only show students with at least 1 completed quiz
+      const activeStudents = studentsWithProgress.filter(s => s.totalQuizzes > 0);
+      res.json(activeStudents);
     } catch (error) {
       console.error("Error fetching Chapter Practice students:", error);
       res.status(500).json({ error: "Failed to fetch students" });
