@@ -938,6 +938,12 @@ function App() {
     }
   }, [chapterPracticeCurrentQuestionIndex, chapterPracticeQuestions.length, chapterPracticeAnswers, chapterPracticeSessionId]);
 
+  const handleChapterPracticePrevious = useCallback(() => {
+    if (chapterPracticeCurrentQuestionIndex > 0) {
+      setChapterPracticeCurrentQuestionIndex(prev => prev - 1);
+    }
+  }, [chapterPracticeCurrentQuestionIndex]);
+
   // ==================== UNIFIED AUTH HANDLERS ====================
 
   // Handle card click from landing page - show unified auth
@@ -2050,11 +2056,19 @@ function App() {
 
               {appState === "chapter-practice-quiz" && chapterPracticeQuestions.length > 0 && (
                 <QuizQuestion
+                  key={chapterPracticeCurrentQuestionIndex}
                   question={chapterPracticeQuestions[chapterPracticeCurrentQuestionIndex]}
                   currentQuestion={chapterPracticeCurrentQuestionIndex + 1}
                   totalQuestions={chapterPracticeQuestions.length}
                   onAnswer={handleChapterPracticeAnswer}
                   onNext={handleChapterPracticeNext}
+                  onPrevious={handleChapterPracticePrevious}
+                  canGoPrevious={chapterPracticeCurrentQuestionIndex > 0}
+                  previousAnswer={
+                    chapterPracticeAnswers.find(
+                      a => a.questionId === chapterPracticeQuestions[chapterPracticeCurrentQuestionIndex].id
+                    ) || null
+                  }
                 />
               )}
 

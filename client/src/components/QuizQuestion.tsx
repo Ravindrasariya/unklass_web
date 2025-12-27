@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle, XCircle, ChevronRight } from "lucide-react";
+import { CheckCircle, XCircle, ChevronRight, ChevronLeft } from "lucide-react";
 import { MathText } from "@/components/MathText";
 
 export interface Question {
@@ -19,6 +19,9 @@ interface QuizQuestionProps {
   totalQuestions: number;
   onAnswer: (selectedOption: number, isCorrect: boolean) => void;
   onNext: () => void;
+  onPrevious?: () => void;
+  canGoPrevious?: boolean;
+  previousAnswer?: { selectedOption: number; isCorrect: boolean } | null;
 }
 
 export default function QuizQuestion({
@@ -27,13 +30,24 @@ export default function QuizQuestion({
   totalQuestions,
   onAnswer,
   onNext,
+  onPrevious,
+  canGoPrevious = false,
+  previousAnswer = null,
 }: QuizQuestionProps) {
-  const [selectedOption, setSelectedOption] = useState<number | null>(null);
-  const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [selectedOption, setSelectedOption] = useState<number | null>(
+    previousAnswer?.selectedOption ?? null
+  );
+  const [hasSubmitted, setHasSubmitted] = useState(previousAnswer !== null);
 
   const handleOptionSelect = (index: number) => {
     if (hasSubmitted) return;
     setSelectedOption(index);
+  };
+
+  const handlePrevious = () => {
+    setSelectedOption(null);
+    setHasSubmitted(false);
+    onPrevious?.();
   };
 
   const handleSubmit = () => {
@@ -142,21 +156,35 @@ export default function QuizQuestion({
               </div>
             )}
 
-            <div className="mt-6 flex justify-end gap-4">
-              {!hasSubmitted ? (
-                <Button
-                  onClick={handleSubmit}
-                  disabled={selectedOption === null}
-                  data-testid="button-submit-answer"
-                >
-                  Submit Answer
-                </Button>
-              ) : (
-                <Button onClick={handleNext} data-testid="button-next-question">
-                  {currentQuestion === totalQuestions ? "See Results" : "Next Question"}
-                  <ChevronRight className="w-4 h-4 ml-2" />
-                </Button>
-              )}
+            <div className="mt-6 flex justify-between gap-4">
+              <div>
+                {canGoPrevious && onPrevious && (
+                  <Button
+                    variant="outline"
+                    onClick={handlePrevious}
+                    data-testid="button-previous-question"
+                  >
+                    <ChevronLeft className="w-4 h-4 mr-2" />
+                    Previous
+                  </Button>
+                )}
+              </div>
+              <div>
+                {!hasSubmitted ? (
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={selectedOption === null}
+                    data-testid="button-submit-answer"
+                  >
+                    Submit Answer
+                  </Button>
+                ) : (
+                  <Button onClick={handleNext} data-testid="button-next-question">
+                    {currentQuestion === totalQuestions ? "See Results" : "Next Question"}
+                    <ChevronRight className="w-4 h-4 ml-2" />
+                  </Button>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
