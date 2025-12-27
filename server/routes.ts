@@ -2728,6 +2728,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
   });
 
   // Generate chapter practice quiz (all questions from the chapter)
+  // Supports resume: if incomplete session exists for student+chapter, return it
   app.post("/api/chapter-practice/quiz/generate", async (req, res) => {
     try {
       const { studentId, grade, board, subject, chapter, medium } = req.body;
@@ -2739,6 +2740,21 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
       const student = await storage.getChapterPracticeStudent(studentId);
       if (!student) {
         return res.status(404).json({ error: "Student not found" });
+      }
+      
+      // Check for incomplete session (resume functionality)
+      const incompleteSession = await storage.getIncompleteChapterPracticeSession(studentId, chapter);
+      if (incompleteSession && incompleteSession.questions) {
+        console.log(`Resuming chapter practice quiz for student ${studentId}, chapter "${chapter}", currentIndex: ${incompleteSession.currentQuestionIndex}`);
+        return res.json({
+          sessionId: incompleteSession.id,
+          questions: incompleteSession.questions,
+          totalQuestions: incompleteSession.totalQuestions,
+          chapterName: chapter,
+          isResume: true,
+          currentQuestionIndex: incompleteSession.currentQuestionIndex || 0,
+          savedAnswers: incompleteSession.answers || {},
+        });
       }
       
       // IMPORTANT: Language-based subjects must be rendered in their native language
@@ -2811,10 +2827,44 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         questions: shuffledQuestions,
         totalQuestions: shuffledQuestions.length,
         chapterName: chapter,
+        isResume: false,
+        currentQuestionIndex: 0,
+        savedAnswers: {},
       });
     } catch (error) {
       console.error("Error generating chapter practice quiz:", error);
       res.status(500).json({ error: "Failed to generate quiz" });
+    }
+  });
+
+  // Save chapter practice quiz progress (for resume functionality)
+  app.post("/api/chapter-practice/quiz/save-progress", async (req, res) => {
+    try {
+      const { sessionId, currentQuestionIndex, answers } = req.body;
+      
+      if (!sessionId || currentQuestionIndex === undefined) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      
+      const session = await storage.getChapterPracticeQuizSession(sessionId);
+      if (!session) {
+        return res.status(404).json({ error: "Quiz session not found" });
+      }
+      
+      // Don't save progress if already completed
+      if (session.completedAt) {
+        return res.status(400).json({ error: "Quiz already completed" });
+      }
+      
+      await storage.updateChapterPracticeQuizSession(sessionId, {
+        currentQuestionIndex,
+        answers: answers || {},
+      });
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error saving chapter practice progress:", error);
+      res.status(500).json({ error: "Failed to save progress" });
     }
   });
 
