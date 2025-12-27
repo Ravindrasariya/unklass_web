@@ -1143,13 +1143,9 @@ export class DatabaseStorage implements IStorage {
         .where(eq(navodayaQuizSessions.unifiedStudentId, studentId))
         .orderBy(desc(navodayaQuizSessions.completedAt));
     } else if (examType === "chapter-practice") {
-      // Use raw SQL to avoid potential Drizzle ORM column mapping issues
-      const result = await db.execute(
-        sql`SELECT * FROM chapter_practice_quiz_sessions 
-            WHERE unified_student_id = ${studentId} 
-            ORDER BY created_at DESC`
-      );
-      return result.rows as any[];
+      // Temporarily return empty array to isolate the issue
+      console.log("Chapter practice quiz history requested for student:", studentId);
+      return [];
     }
     return [];
   }
