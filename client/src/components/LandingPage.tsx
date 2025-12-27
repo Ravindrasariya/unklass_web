@@ -545,30 +545,30 @@ export default function LandingPage({
 
               {/* 2. Chapter Practice - Light Violet - COMING SOON */}
               <div 
-                className="bg-white border border-gray-200 rounded-2xl p-6 text-center relative overflow-hidden flex flex-col opacity-60 grayscale cursor-not-allowed"
+                className="bg-white border border-violet-200 rounded-2xl p-6 text-center relative overflow-hidden flex flex-col opacity-70 cursor-not-allowed"
                 data-testid="card-chapter-practice"
               >
                 {/* Coming Soon Badge */}
                 <div className="absolute top-4 right-4 z-20 bg-amber-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md">
                   Coming Soon
                 </div>
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-gray-100 to-transparent rounded-full -translate-y-1/2 translate-x-1/2"></div>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-violet-100 to-transparent rounded-full -translate-y-1/2 translate-x-1/2"></div>
                 <div className="relative z-10 flex flex-col flex-1">
-                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-gray-100 to-gray-50 rounded-2xl flex items-center justify-center shadow-sm">
-                    <Library className="w-8 h-8 text-gray-400" />
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-violet-100 to-violet-50 rounded-2xl flex items-center justify-center shadow-sm">
+                    <Library className="w-8 h-8 text-violet-400" />
                   </div>
-                  <h3 className="text-lg md:text-xl font-bold text-gray-500 mb-1">
+                  <h3 className="text-lg md:text-xl font-bold text-gray-700 mb-1">
                     UNKLASS Chapter Practice - NCERT
                   </h3>
-                  <p className="text-gray-400 text-xs font-medium mb-2">
+                  <p className="text-violet-400 text-xs font-medium mb-2">
                     6th to 10th Grade
                   </p>
-                  <p className="text-gray-400 text-sm mb-4 flex-1">
+                  <p className="text-gray-500 text-sm mb-4 flex-1">
                     Practice chapter-wise questions from NCERT textbooks
                   </p>
                   <Button 
                     disabled
-                    className="w-full bg-gray-300 text-gray-500 font-medium py-5 rounded-xl mt-auto cursor-not-allowed"
+                    className="w-full bg-violet-300 text-white font-medium py-5 rounded-xl mt-auto cursor-not-allowed shadow-lg shadow-violet-100"
                     data-testid="button-chapter-practice"
                   >
                     Coming Soon
