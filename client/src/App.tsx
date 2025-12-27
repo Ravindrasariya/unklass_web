@@ -186,8 +186,6 @@ function App() {
   const [chapterPracticeCurrentQuestionIndex, setChapterPracticeCurrentQuestionIndex] = useState(0);
   const [chapterPracticeAnswers, setChapterPracticeAnswers] = useState<QuizAnswer[]>([]);
   const [chapterPracticeSessionId, setChapterPracticeSessionId] = useState<number | null>(null);
-  const [availableChapters, setAvailableChapters] = useState<string[]>([]);
-  const [availableChapterPracticeSubjects, setAvailableChapterPracticeSubjects] = useState<string[]>([]);
 
   // Unified auth state - restore from localStorage if available
   const [unifiedStudent, setUnifiedStudent] = useState<UnifiedStudent | null>(() => {
@@ -287,37 +285,6 @@ function App() {
         });
     }
   }, [navodayaStudentData, appState]);
-
-  // Fetch available subjects for chapter practice (unified flow)
-  useEffect(() => {
-    if (chapterPracticeStudentData && appState === "unified-chapter-options") {
-      fetch(`/api/chapter-practice/available-subjects?grade=${encodeURIComponent(chapterPracticeStudentData.grade)}&board=${encodeURIComponent(chapterPracticeStudentData.board)}`)
-        .then(res => res.json())
-        .then(data => {
-          setAvailableChapterPracticeSubjects(data.subjects || []);
-        })
-        .catch(err => {
-          console.error("Failed to fetch available subjects:", err);
-          setAvailableChapterPracticeSubjects([]);
-        });
-    }
-  }, [chapterPracticeStudentData, appState]);
-
-  // Fetch available chapters when subject is selected (unified flow)
-  useEffect(() => {
-    if (chapterPracticeStudentData && selectedChapterPracticeSubject && appState === "unified-chapter-options") {
-      fetch(`/api/chapter-practice/available-chapters?grade=${encodeURIComponent(chapterPracticeStudentData.grade)}&board=${encodeURIComponent(chapterPracticeStudentData.board)}&subject=${encodeURIComponent(selectedChapterPracticeSubject)}`)
-        .then(res => res.json())
-        .then(data => {
-          setAvailableChapters(data.chapters || []);
-          setSelectedChapter("");
-        })
-        .catch(err => {
-          console.error("Failed to fetch available chapters:", err);
-          setAvailableChapters([]);
-        });
-    }
-  }, [chapterPracticeStudentData, selectedChapterPracticeSubject, appState]);
 
   const handleOnboardingSubmit = useCallback(async (data: StudentData) => {
     try {
