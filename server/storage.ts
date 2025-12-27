@@ -1052,6 +1052,11 @@ export class DatabaseStorage implements IStorage {
     }
 
     if (unifiedStudent) {
+      // Delete quiz sessions that reference this unified student via unifiedStudentId
+      await db.delete(quizSessions).where(eq(quizSessions.unifiedStudentId, unifiedStudent.id));
+      await db.delete(cpctQuizSessions).where(eq(cpctQuizSessions.unifiedStudentId, unifiedStudent.id));
+      await db.delete(navodayaQuizSessions).where(eq(navodayaQuizSessions.unifiedStudentId, unifiedStudent.id));
+      await db.delete(chapterPracticeQuizSessions).where(eq(chapterPracticeQuizSessions.unifiedStudentId, unifiedStudent.id));
       // Delete exam profiles for this unified student
       await db.delete(studentExamProfiles).where(eq(studentExamProfiles.studentId, unifiedStudent.id));
       await db.delete(unifiedStudents).where(eq(unifiedStudents.id, unifiedStudent.id));
