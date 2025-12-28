@@ -72,15 +72,17 @@ export default function ChapterPracticeOptions({
   const selectedBoard = form.watch("board");
   const selectedSubject = form.watch("subject");
 
-  const { data: chapters, isLoading: chaptersLoading } = useQuery<{ chapters: string[] }>({
-    queryKey: [`/api/chapter-practice/available-chapters/${selectedGrade}/${selectedBoard}/${selectedSubject}`],
-    enabled: !!selectedGrade && !!selectedBoard && !!selectedSubject,
-  });
-
-  const { data: availableSubjects } = useQuery<{ subjects: string[] }>({
+  // Single API call that returns subjects with their chapters
+  type SubjectWithChapters = { name: string; chapters: string[]; pdfId: number };
+  const { data: availableSubjects, isLoading: subjectsLoading } = useQuery<{ subjects: SubjectWithChapters[] }>({
     queryKey: [`/api/chapter-practice/available-subjects/${selectedGrade}/${selectedBoard}`],
     enabled: !!selectedGrade && !!selectedBoard,
   });
+
+  // Derive chapters locally from selected subject (no extra API call)
+  const selectedSubjectData = availableSubjects?.subjects?.find(s => s.name === selectedSubject);
+  const chapters = selectedSubjectData ? { chapters: selectedSubjectData.chapters } : undefined;
+  const chaptersLoading = subjectsLoading;
 
   useEffect(() => {
     if (isFirstRender.current) {
@@ -208,9 +210,9 @@ export default function ChapterPracticeOptions({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {CHAPTER_PRACTICE_SUBJECTS.map((subject) => {
+                        {CHAPTER_PRACTICE_SUBJECTS.map((subject: string) => {
                           const isAvailable = availableSubjects === undefined || 
-                            (availableSubjects.subjects && availableSubjects.subjects.includes(subject));
+                            (availableSubjects.subjects && availableSubjects.subjects.some(s => s.name === subject));
                           return (
                             <SelectItem 
                               key={subject} 

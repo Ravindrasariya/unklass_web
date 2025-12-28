@@ -2575,7 +2575,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     }
   });
 
-  // Get available subjects for chapter practice
+  // Get available subjects for chapter practice (with chapters included)
   app.get("/api/chapter-practice/available-subjects/:grade/:board", async (req, res) => {
     try {
       const { grade, board } = req.params;
@@ -2585,16 +2585,34 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
       const normalizedGrade = grade.toLowerCase();
       const normalizedBoard = board.toUpperCase();
       
-      const subjects = new Set<string>();
+      const { parseQuestionsWithChapters } = await import("./questionParser");
+      
+      // Build subjects array with chapters included
+      const subjectsWithChapters: Array<{ name: string; chapters: string[]; pdfId: number }> = [];
       
       for (const pdf of chapterPdfs) {
         if (pdf.grade.toLowerCase() === normalizedGrade && 
             pdf.board.toUpperCase() === normalizedBoard) {
-          subjects.add(pdf.subject);
+          // Parse chapters for this PDF
+          const { chapters } = parseQuestionsWithChapters(pdf.content);
+          const chapterNames = chapters
+            .filter(c => c.questionCount > 0)
+            .map((c, index) => `${index + 1}. ${c.chapterName}`);
+          
+          subjectsWithChapters.push({
+            name: pdf.subject,
+            chapters: chapterNames,
+            pdfId: pdf.id
+          });
         }
       }
       
-      res.json({ subjects: Array.from(subjects) });
+      // Return both formats for backward compatibility
+      res.json({ 
+        subjects: subjectsWithChapters,
+        // Legacy format: just subject names as strings
+        subjectNames: subjectsWithChapters.map(s => s.name)
+      });
     } catch (error) {
       console.error("Error fetching available subjects:", error);
       res.status(500).json({ error: "Failed to fetch available subjects" });
@@ -2614,16 +2632,34 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
       const normalizedGrade = (grade as string).toLowerCase();
       const normalizedBoard = (board as string).toUpperCase();
       
-      const subjects = new Set<string>();
+      const { parseQuestionsWithChapters } = await import("./questionParser");
+      
+      // Build subjects array with chapters included
+      const subjectsWithChapters: Array<{ name: string; chapters: string[]; pdfId: number }> = [];
       
       for (const pdf of chapterPdfs) {
         if (pdf.grade.toLowerCase() === normalizedGrade && 
             pdf.board.toUpperCase() === normalizedBoard) {
-          subjects.add(pdf.subject);
+          // Parse chapters for this PDF
+          const { chapters } = parseQuestionsWithChapters(pdf.content);
+          const chapterNames = chapters
+            .filter(c => c.questionCount > 0)
+            .map((c, index) => `${index + 1}. ${c.chapterName}`);
+          
+          subjectsWithChapters.push({
+            name: pdf.subject,
+            chapters: chapterNames,
+            pdfId: pdf.id
+          });
         }
       }
       
-      res.json({ subjects: Array.from(subjects) });
+      // Return both formats for backward compatibility
+      res.json({ 
+        subjects: subjectsWithChapters,
+        // Legacy format: just subject names as strings
+        subjectNames: subjectsWithChapters.map(s => s.name)
+      });
     } catch (error) {
       console.error("Error fetching available subjects for chapter practice:", error);
       res.status(500).json({ error: "Failed to fetch subjects" });
