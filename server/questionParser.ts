@@ -253,6 +253,82 @@ function extractAnswerFromText(text: string): { questionText: string; answer: st
   return { questionText: text, answer: undefined };
 }
 
+// Detect text fragments that are not complete questions
+// These are typically partial sentences, continuation of answers, or truncated text
+function isFragment(text: string): boolean {
+  const trimmed = text.trim();
+  
+  // Too short to be a real question (less than 25 chars)
+  if (trimmed.length < 25) return true;
+  
+  // Starts with lowercase letter (likely continuation of previous text)
+  if (/^[a-z]/.test(trimmed)) return true;
+  
+  // Starts with common continuation patterns
+  const continuationPatterns = [
+    /^\(e\.g\./i,                          // "(e.g., ..."
+    /^\(i\.e\./i,                          // "(i.e., ..."
+    /^Step\s*:/i,                          // "Step: ..."
+    /^Reason\s*:/i,                        // "Reason: ..."
+    /^Note\s*:/i,                          // "Note: ..."
+    /^Hint\s*:/i,                          // "Hint: ..."
+    /^Where\s/i,                           // "Where x = ..."
+    /^Here\s/i,                            // "Here, we ..."
+    /^This\s+is\s/i,                       // "This is ..."
+    /^Since\s/i,                           // "Since ..."
+    /^Because\s/i,                         // "Because ..."
+    /^Therefore\s/i,                       // "Therefore ..."
+    /^Hence\s/i,                           // "Hence ..."
+    /^Thus\s/i,                            // "Thus ..."
+    /^So\s/i,                              // "So ..."
+    /^and\s/i,                             // "and ..."
+    /^or\s/i,                              // "or ..."
+    /^but\s/i,                             // "but ..."
+    /^with\s/i,                            // "with ..."
+    /^for\s/i,                             // "for ..."
+    /^to\s/i,                              // "to ..."
+    /^of\s/i,                              // "of ..."
+    /^in\s/i,                              // "in ..."
+    /^at\s/i,                              // "at ..."
+    /^by\s/i,                              // "by ..."
+    /^from\s/i,                            // "from ..."
+    /^₹\d/,                                // "₹100..." (currency continuation)
+    /^\d+\s*[×x]\s*\d+/,                   // "20×20×20" (calculation)
+    /^[=+\-×÷]/,                           // starts with math operator
+    /^\.\s/,                               // starts with period
+    /^,\s/,                                // starts with comma
+  ];
+  
+  for (const pattern of continuationPatterns) {
+    if (pattern.test(trimmed)) return true;
+  }
+  
+  // Only contains options without question stem (like "(a) 2πrh (b) πr")
+  // Real questions should have text before the options
+  if (/^\s*\(?[aA]\)?[\s.\):]/.test(trimmed)) return true;
+  
+  // Just a partial answer or explanation
+  if (/^Answer\s*:/i.test(trimmed) && trimmed.length < 100) return true;
+  
+  // Contains only a number pattern like "= 4.5." or "×4=300"
+  if (/^[=×÷+\-]?\s*\d+[\d.,\s×÷+\-=]*\.?\s*$/.test(trimmed)) return true;
+  
+  // Hindi continuation patterns
+  const hindiContinuationPatterns = [
+    /^अर्थात्/,                              // "i.e."
+    /^जैसे\s/,                              // "like"
+    /^क्योंकि/,                             // "because"
+    /^इसलिए/,                               // "therefore"
+    /^अतः/,                                 // "hence"
+  ];
+  
+  for (const pattern of hindiContinuationPatterns) {
+    if (pattern.test(trimmed)) return true;
+  }
+  
+  return false;
+}
+
 // Filter out instruction-like or notes entries that aren't real questions
 // IMPORTANT: Only use explicit pattern matching - avoid length-based filtering that may drop valid short questions
 function isInstructionOrNote(text: string): boolean {
@@ -334,8 +410,8 @@ export function parseQuestionsFromPdfContent(content: string): ParsedQuestion[] 
     bestQuestions = originalLineMatches;
   }
 
-  // Filter out instructions/notes before processing
-  bestQuestions = bestQuestions.filter(q => !isInstructionOrNote(q.text));
+  // Filter out instructions/notes and fragments before processing
+  bestQuestions = bestQuestions.filter(q => !isInstructionOrNote(q.text) && !isFragment(q.text));
 
   if (bestQuestions.length < 5) {
     const chunks = splitContentIntoChunks(normalizedContent, 150);
@@ -651,7 +727,7 @@ function parseChapterQuestions(chapterContent: string, chapterNum: number): Pars
         
         if (qNum > 0 && qNum <= 100 && text.length > 15) {
           const hasOptions = /[(\[]?\s*[aA]\s*[)\]\.:]/.test(text);
-          if (hasOptions) {
+          if (hasOptions && !isFragment(text)) {
             questions.push({
               index: questions.length,
               rawText: text,
@@ -662,7 +738,8 @@ function parseChapterQuestions(chapterContent: string, chapterNum: number): Pars
     }
   }
   
-  return questions;
+  // Final fragment filter
+  return questions.filter(q => !isFragment(q.rawText || ''));
 }
 
 export function getQuestionsForChapter(
