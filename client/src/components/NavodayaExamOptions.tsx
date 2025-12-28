@@ -52,12 +52,19 @@ export default function NavodayaExamOptions({
 }: NavodayaExamOptionsProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Validate saved section matches saved grade
+  const getValidatedSection = () => {
+    if (!savedSelections?.section || !savedSelections?.examGrade) return "";
+    const validSections = savedSelections.examGrade === "6th" ? NAVODAYA_SECTIONS_6TH : NAVODAYA_SECTIONS_9TH;
+    return validSections.includes(savedSelections.section) ? savedSelections.section : "";
+  };
+
   const form = useForm<NavodayaExamOptionsData>({
     resolver: zodResolver(optionsSchema),
     defaultValues: {
       medium: savedSelections?.medium || "",
       examGrade: savedSelections?.examGrade || "",
-      section: savedSelections?.section || "",
+      section: getValidatedSection(),
     },
   });
 
@@ -162,7 +169,7 @@ export default function NavodayaExamOptions({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Section</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger data-testid="select-navodaya-section">
                             <SelectValue placeholder="Select a section" />
