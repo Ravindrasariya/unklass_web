@@ -121,8 +121,9 @@ export default function ChapterPracticeOptions({
             <Library className="w-5 h-5 text-primary" />
             <span className="font-semibold">Chapter Practice - NCERT</span>
           </div>
-          <CardDescription className="text-base">
-            Welcome, {studentName}! Select your practice details
+          <CardDescription className="text-base flex flex-col gap-1">
+            <span>Welcome, {studentName}!</span>
+            <span>Select your practice details</span>
           </CardDescription>
         </CardHeader>
         <CardContent>
