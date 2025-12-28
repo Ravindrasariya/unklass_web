@@ -405,6 +405,8 @@ function App() {
         grade: studentData.grade,
         board: studentData.board,
         subject: selectedSubject,
+        medium: studentData.medium,
+        useUnifiedAuth: !!unifiedStudent,
       });
       
       const data = await response.json();
@@ -422,7 +424,7 @@ function App() {
       });
       setAppState("results");
     }
-  }, [selectedSubject, studentData, toast]);
+  }, [selectedSubject, studentData, unifiedStudent, toast]);
 
   const handleTryAnotherSubject = useCallback(() => {
     setSelectedSubject("");
