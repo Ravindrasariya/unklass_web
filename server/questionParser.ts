@@ -58,30 +58,81 @@ function normalizeContent(content: string): string {
   return normalized.trim();
 }
 
+// Check if a match position looks like a real question boundary vs mid-sentence number
+// Returns false for cases like "₹90. The discount" where 90 is a value, not question number
+function isLikelyQuestionBoundary(content: string, matchPos: number, matchedNum: number): boolean {
+  // Look at the ~50 chars before the match to check context
+  const lookbackStart = Math.max(0, matchPos - 50);
+  const textBefore = content.substring(lookbackStart, matchPos);
+  
+  // Find the line boundary before the match
+  const lastNewline = textBefore.lastIndexOf('\n');
+  const prevLineEnd = lastNewline >= 0 ? textBefore.substring(0, lastNewline) : '';
+  const currentLineStart = lastNewline >= 0 ? textBefore.substring(lastNewline + 1) : textBefore;
+  
+  // If there's non-whitespace text on the same line before the number, it's probably not a question start
+  // Exception: allow "Question 1" or "Q1" type prefixes
+  if (currentLineStart.trim().length > 0) {
+    const hasQuestionPrefix = /(?:Que?s?(?:tion)?|Q|प्रश्न|Qn)\s*$/i.test(currentLineStart.trim());
+    if (!hasQuestionPrefix) {
+      return false;
+    }
+  }
+  
+  // Check if the previous line ends with patterns that suggest continuation
+  const continuationEndings = [
+    /[₹$€£]\s*$/,                    // Currency symbols: "₹" or "₹ "
+    /\d+\s*$/,                        // Ends with a number
+    /[+\-×÷=<>]\s*$/,                // Math operators
+    /(?:is|are|was|were|for|and|or|of|to|in|at|by)\s*$/i,  // Prepositions/articles
+    /[:;,]\s*$/,                      // Punctuation that continues
+    /(?:है|का|की|के|को|में|से|पर)\s*$/,  // Hindi particles
+  ];
+  
+  const prevLineTrimmed = prevLineEnd.trim();
+  for (const pattern of continuationEndings) {
+    if (pattern.test(prevLineTrimmed)) {
+      return false;
+    }
+  }
+  
+  // Check if the matched number is suspiciously high and doesn't follow a sequential pattern
+  // Numbers like 90, 100, 500 appearing suddenly are likely values, not question numbers
+  // But this needs to be balanced - we do have PDFs with 50+ questions
+  
+  return true;
+}
+
 function extractQuestionsWithPatterns(content: string): { num: number; text: string; startPos: number }[] {
   // Step 1: Find ALL question start positions using multiple patterns
   // Pattern 1: "Question 1", "Question\t1", "Question | 1", "Q1.", "प्रश्न 1", etc.
   // Pattern 2: Just numbered questions like "81. What is..." (for PDFs that switch format mid-file)
   
   const patterns = [
-    // "Question N" format (with optional prefix word)
-    /(?:^|\n|[.\s])(?:Que?s?(?:tion)?|Q|प्रश्न|Qn)[\s.\-:\t|]*(\d+)[\s.\-:)\]\t|]*/gi,
-    // Just number followed by period at start of line: "81. What is..."
-    /(?:^|\n)(\d{1,3})\.\s+(?=[A-Z])/g,
-    // Hindi PDF format: ".-1." or "प्र-1." or "प्र.-1." patterns (period-dash-number-period)
-    /(?:^|\n|\|)\s*(?:प्र)?\.?\-(\d{1,3})\.\s*/gi,
-    // Format: "Q-1." or "प्र-1" without trailing period
-    /(?:^|\n|\|)\s*(?:Q|प्र)[\.\-](\d{1,3})[\.\s\|]/gi,
+    // "Question N" format (with optional prefix word) - these are reliable, don't need boundary check
+    { regex: /(?:^|\n|[.\s])(?:Que?s?(?:tion)?|Q|प्रश्न|Qn)[\s.\-:\t|]*(\d+)[\s.\-:)\]\t|]*/gi, needsBoundaryCheck: false },
+    // Just number followed by period at start of line: "81. What is..." - needs context check
+    { regex: /(?:^|\n)(\d{1,3})\.\s+(?=[A-Z])/g, needsBoundaryCheck: true },
+    // Hindi PDF format: ".-1." or "प्र-1." or "प्र.-1." patterns - reliable prefix
+    { regex: /(?:^|\n|\|)\s*(?:प्र)?\.?\-(\d{1,3})\.\s*/gi, needsBoundaryCheck: false },
+    // Format: "Q-1." or "प्र-1" without trailing period - reliable prefix
+    { regex: /(?:^|\n|\|)\s*(?:Q|प्र)[\.\-](\d{1,3})[\.\s\|]/gi, needsBoundaryCheck: false },
   ];
   
   const questionStarts: { num: number; startPos: number; matchEnd: number }[] = [];
   
-  for (const pattern of patterns) {
+  for (const { regex: pattern, needsBoundaryCheck } of patterns) {
     pattern.lastIndex = 0;
     let match;
     while ((match = pattern.exec(content)) !== null) {
       const num = parseInt(match[1], 10);
       if (num > 0 && num <= 500) {
+        // For simple number patterns, check if this looks like a real question boundary
+        if (needsBoundaryCheck && !isLikelyQuestionBoundary(content, match.index, num)) {
+          if (match.index === pattern.lastIndex) pattern.lastIndex++;
+          continue;
+        }
+        
         // Check if we already have this position (to avoid duplicates from different patterns)
         const exists = questionStarts.some(q => Math.abs(q.startPos - match!.index) < 10 && q.num === num);
         if (!exists) {
@@ -132,11 +183,63 @@ function extractQuestionsWithPatterns(content: string): { num: number; text: str
   return deduped.sort((a, b) => a.num - b.num);
 }
 
+// Check if a line-by-line match looks like a real question start vs mid-sentence number
+function isLikelyQuestionStartLine(lines: string[], lineIndex: number): boolean {
+  if (lineIndex === 0) return true; // First line is always valid
+  
+  // Find the previous non-empty line
+  let prevLineIdx = lineIndex - 1;
+  while (prevLineIdx >= 0 && !lines[prevLineIdx].trim()) {
+    prevLineIdx--;
+  }
+  
+  if (prevLineIdx < 0) return true; // No previous content
+  
+  const prevLine = lines[prevLineIdx].trim();
+  
+  // If previous line is empty or very short, this is likely a new question
+  if (prevLine.length < 3) return true;
+  
+  // Check if the previous line ends with patterns that suggest continuation
+  const continuationEndings = [
+    /[₹$€£]\s*$/,                    // Currency symbols
+    /\d+\s*$/,                        // Ends with a number
+    /[+\-×÷=<>]\s*$/,                // Math operators
+    /(?:is|are|was|were|for|and|or|of|to|in|at|by)\s*$/i,  // Prepositions/articles
+    /[:;,]\s*$/,                      // Punctuation that continues
+    /(?:है|का|की|के|को|में|से|पर)\s*$/,  // Hindi particles
+  ];
+  
+  for (const pattern of continuationEndings) {
+    if (pattern.test(prevLine)) {
+      return false;
+    }
+  }
+  
+  // If previous line ends with answer/option or section header, this is a new question
+  const boundaryEndings = [
+    /(?:Answer|Ans|उत्तर).*$/i,
+    /\([a-dA-D]\)\s*$/,               // Ends with option like "(a)"
+    /Section\s+[A-Z].*$/i,
+    /[.!?।]\s*$/,                     // Ends with sentence-ending punctuation
+  ];
+  
+  for (const pattern of boundaryEndings) {
+    if (pattern.test(prevLine)) {
+      return true;
+    }
+  }
+  
+  return true; // Default to accepting if no clear signal
+}
+
 function extractQuestionsLineByLine(content: string): { num: number; text: string }[] {
   const lines = content.split('\n');
   const questions: { num: number; text: string; lineIndex: number }[] = [];
   
-  const questionStartPattern = /^\s*(?:Que?s?(?:tion)?|Q|प्रश्न|Qn)?[\s.\-:]*(\d{1,3})[\s.\-:)\]]+(.+)/i;
+  // Pattern with explicit question prefix - reliable
+  const questionStartPattern = /^\s*(?:Que?s?(?:tion)?|Q|प्रश्न|Qn)[\s.\-:]*(\d{1,3})[\s.\-:)\]]+(.+)/i;
+  // Simple number pattern - needs context check
   const simpleNumberPattern = /^\s*(\d{1,3})\s*[.\):\-\]]\s*(.+)/;
   
   // Track preceding table context
@@ -158,11 +261,23 @@ function extractQuestionsLineByLine(content: string): { num: number; text: strin
       continue;
     }
     
-    let match = line.match(questionStartPattern) || line.match(simpleNumberPattern);
+    // Try explicit question pattern first (more reliable)
+    let match = line.match(questionStartPattern);
+    let usedSimplePattern = false;
+    
+    if (!match) {
+      match = line.match(simpleNumberPattern);
+      usedSimplePattern = true;
+    }
     
     if (match) {
       const num = parseInt(match[1], 10);
       let text = match[2]?.trim() || '';
+      
+      // For simple number patterns, check if this looks like a real question start
+      if (usedSimplePattern && !isLikelyQuestionStartLine(lines, i)) {
+        continue; // Skip - this is probably a value, not a question number
+      }
       
       if (num > 0 && num <= 500 && text.length > 5) {
         // Prepend any preceding table context
