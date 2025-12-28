@@ -29,10 +29,11 @@ interface UnifiedAuthFormProps {
   onLogin: (data: LoginData) => Promise<boolean>;
   onRegister: (data: RegisterData) => Promise<boolean | string>;
   onBack: () => void;
+  defaultMode?: "login" | "register";
 }
 
-export default function UnifiedAuthForm({ onLogin, onRegister, onBack }: UnifiedAuthFormProps) {
-  const [isNewStudent, setIsNewStudent] = useState(false);
+export default function UnifiedAuthForm({ onLogin, onRegister, onBack, defaultMode = "login" }: UnifiedAuthFormProps) {
+  const [isNewStudent, setIsNewStudent] = useState(defaultMode === "register");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [registerError, setRegisterError] = useState<string | null>(null);

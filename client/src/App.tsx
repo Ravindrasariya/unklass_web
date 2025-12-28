@@ -131,6 +131,7 @@ const NAVODAYA_SECTIONS_9TH = [
 
 function App() {
   const [appState, setAppState] = useState<AppState>("landing");
+  const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [studentData, setStudentData] = useState<RegisteredStudent | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<string>("");
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -1237,12 +1238,14 @@ function App() {
   // Handle login click from landing page (when not logged in)
   const handleLoginClick = useCallback(() => {
     setSelectedExamType(null);
+    setAuthMode("login");
     setAppState("unified-auth");
   }, []);
 
   // Handle signup click from landing page (when not logged in)
   const handleSignupClick = useCallback(() => {
     setSelectedExamType(null);
+    setAuthMode("register");
     setAppState("unified-auth");
   }, []);
 
@@ -1301,6 +1304,7 @@ function App() {
                   onLogin={handleUnifiedLogin}
                   onRegister={handleUnifiedRegister}
                   onBack={handleUnifiedBackToLanding}
+                  defaultMode={authMode}
                 />
               )}
 
