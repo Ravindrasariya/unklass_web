@@ -1211,9 +1211,9 @@ export class DatabaseStorage implements IStorage {
         .where(eq(navodayaQuizSessions.unifiedStudentId, studentId))
         .orderBy(desc(navodayaQuizSessions.completedAt));
     } else if (examType === "chapter-practice") {
-      // Temporarily return empty array to isolate the issue
-      console.log("Chapter practice quiz history requested for student:", studentId);
-      return [];
+      return await db.select().from(chapterPracticeQuizSessions)
+        .where(eq(chapterPracticeQuizSessions.unifiedStudentId, studentId))
+        .orderBy(desc(chapterPracticeQuizSessions.completedAt));
     }
     return [];
   }
