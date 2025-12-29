@@ -1412,25 +1412,50 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     }
   });
 
-  // Admin: Get all students with their progress
+  // Admin: Get all students with their progress (legacy + unified)
   app.get("/api/admin/students", async (req, res) => {
     try {
-      const allStudents = await storage.getAllStudents();
+      // Get legacy board exam students
+      const legacyStudents = await storage.getAllStudents();
       
-      // Get quiz data for each student
-      const studentsWithProgress = await Promise.all(
-        allStudents.map(async (student) => {
-          const sessions = await storage.getStudentQuizSessions(student.id);
-          const completedSessions = sessions.filter(s => s.completedAt);
-          const totalQuizzes = completedSessions.length;
+      // Get unified students who have taken board exam quizzes
+      const unifiedStudents = await storage.getAllUnifiedStudents();
+      
+      const allStudentsWithProgress: Array<{
+        id: number;
+        name: string;
+        grade: string | null;
+        board: string | null;
+        location: string | null;
+        mobileNumber: string;
+        totalQuizzes: number;
+        averageScore: number;
+        isUnified: boolean;
+        subjectsAttempted: string[];
+        sessions: Array<{
+          id: number;
+          subject: string;
+          grade: string | null;
+          board: string | null;
+          score: number | null;
+          totalQuestions: number | null;
+          completedAt: Date | null;
+        }>;
+      }> = [];
+      
+      // Process legacy students
+      for (const student of legacyStudents) {
+        const sessions = await storage.getStudentQuizSessions(student.id);
+        const completedSessions = sessions.filter(s => s.completedAt);
+        const totalQuizzes = completedSessions.length;
+        
+        if (totalQuizzes > 0) {
           const totalScore = completedSessions.reduce((sum, s) => sum + (s.score || 0), 0);
           const totalQuestions = completedSessions.reduce((sum, s) => sum + (s.totalQuestions || 10), 0);
-          const averageScore = totalQuizzes > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
-          
-          // Get subjects attempted
+          const averageScore = Math.round((totalScore / totalQuestions) * 100);
           const subjectsAttempted = Array.from(new Set(completedSessions.map(s => s.subject)));
           
-          return {
+          allStudentsWithProgress.push({
             id: student.id,
             name: student.name,
             grade: student.grade,
@@ -1439,21 +1464,58 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
             mobileNumber: student.mobileNumber,
             totalQuizzes,
             averageScore,
+            isUnified: false,
             subjectsAttempted,
             sessions: completedSessions.map(s => ({
               id: s.id,
               subject: s.subject,
+              grade: s.grade,
+              board: s.board,
               score: s.score,
               totalQuestions: s.totalQuestions,
               completedAt: s.completedAt,
             })),
-          };
-        })
-      );
+          });
+        }
+      }
       
-      // Filter to only show students with at least 1 completed quiz
-      const activeStudents = studentsWithProgress.filter(s => s.totalQuizzes > 0);
-      res.json(activeStudents);
+      // Process unified students - check for board exam sessions
+      for (const student of unifiedStudents) {
+        const sessions = await storage.getQuizSessionsByUnifiedStudentId(student.id);
+        const completedSessions = sessions.filter(s => s.completedAt);
+        const totalQuizzes = completedSessions.length;
+        
+        if (totalQuizzes > 0) {
+          const totalScore = completedSessions.reduce((sum, s) => sum + (s.score || 0), 0);
+          const totalQuestions = completedSessions.reduce((sum, s) => sum + (s.totalQuestions || 10), 0);
+          const averageScore = Math.round((totalScore / totalQuestions) * 100);
+          const subjectsAttempted = Array.from(new Set(completedSessions.map(s => s.subject)));
+          
+          allStudentsWithProgress.push({
+            id: student.id,
+            name: student.name,
+            grade: null,
+            board: null,
+            location: student.location,
+            mobileNumber: student.mobileNumber,
+            totalQuizzes,
+            averageScore,
+            isUnified: true,
+            subjectsAttempted,
+            sessions: completedSessions.map(s => ({
+              id: s.id,
+              subject: s.subject,
+              grade: s.grade,
+              board: s.board,
+              score: s.score,
+              totalQuestions: s.totalQuestions,
+              completedAt: s.completedAt,
+            })),
+          });
+        }
+      }
+      
+      res.json(allStudentsWithProgress);
     } catch (error) {
       console.error("Error fetching students:", error);
       res.status(500).json({ error: "Failed to fetch students" });
@@ -2087,21 +2149,45 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     }
   });
 
-  // Admin: Get all CPCT students with their progress
+  // Admin: Get all CPCT students with their progress (legacy + unified)
   app.get("/api/admin/cpct-students", async (req, res) => {
     try {
-      const allStudents = await storage.getAllCpctStudents();
+      // Get legacy CPCT students
+      const legacyStudents = await storage.getAllCpctStudents();
       
-      const studentsWithProgress = await Promise.all(
-        allStudents.map(async (student) => {
-          const sessions = await storage.getCpctStudentQuizSessions(student.id);
-          const completedSessions = sessions.filter(s => s.completedAt);
-          const totalQuizzes = completedSessions.length;
+      // Get unified students who have taken CPCT quizzes
+      const unifiedStudents = await storage.getAllUnifiedStudents();
+      
+      const allStudentsWithProgress: Array<{
+        id: number;
+        name: string;
+        medium: string | null;
+        location: string | null;
+        mobileNumber: string;
+        totalQuizzes: number;
+        averageScore: number;
+        isUnified: boolean;
+        sessions: Array<{
+          id: number;
+          section: string | null;
+          score: number | null;
+          totalQuestions: number | null;
+          completedAt: Date | null;
+        }>;
+      }> = [];
+      
+      // Process legacy students
+      for (const student of legacyStudents) {
+        const sessions = await storage.getCpctStudentQuizSessions(student.id);
+        const completedSessions = sessions.filter(s => s.completedAt);
+        const totalQuizzes = completedSessions.length;
+        
+        if (totalQuizzes > 0) {
           const totalScore = completedSessions.reduce((sum, s) => sum + (s.score || 0), 0);
           const totalQuestions = completedSessions.reduce((sum, s) => sum + (s.totalQuestions || 10), 0);
-          const averageScore = totalQuizzes > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
+          const averageScore = Math.round((totalScore / totalQuestions) * 100);
           
-          return {
+          allStudentsWithProgress.push({
             id: student.id,
             name: student.name,
             medium: student.medium,
@@ -2109,20 +2195,50 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
             mobileNumber: student.mobileNumber,
             totalQuizzes,
             averageScore,
+            isUnified: false,
             sessions: completedSessions.map(s => ({
               id: s.id,
-              year: s.year,
+              section: s.section,
               score: s.score,
               totalQuestions: s.totalQuestions,
               completedAt: s.completedAt,
             })),
-          };
-        })
-      );
+          });
+        }
+      }
       
-      // Filter to only show students with at least 1 completed quiz
-      const activeStudents = studentsWithProgress.filter(s => s.totalQuizzes > 0);
-      res.json(activeStudents);
+      // Process unified students - check for CPCT sessions
+      for (const student of unifiedStudents) {
+        const sessions = await storage.getCpctSessionsByUnifiedStudentId(student.id);
+        const completedSessions = sessions.filter(s => s.completedAt);
+        const totalQuizzes = completedSessions.length;
+        
+        if (totalQuizzes > 0) {
+          const totalScore = completedSessions.reduce((sum, s) => sum + (s.score || 0), 0);
+          const totalQuestions = completedSessions.reduce((sum, s) => sum + (s.totalQuestions || 10), 0);
+          const averageScore = Math.round((totalScore / totalQuestions) * 100);
+          
+          allStudentsWithProgress.push({
+            id: student.id,
+            name: student.name,
+            medium: null,
+            location: student.location,
+            mobileNumber: student.mobileNumber,
+            totalQuizzes,
+            averageScore,
+            isUnified: true,
+            sessions: completedSessions.map(s => ({
+              id: s.id,
+              section: s.section,
+              score: s.score,
+              totalQuestions: s.totalQuestions,
+              completedAt: s.completedAt,
+            })),
+          });
+        }
+      }
+      
+      res.json(allStudentsWithProgress);
     } catch (error) {
       console.error("Error fetching CPCT students:", error);
       res.status(500).json({ error: "Failed to fetch students" });
@@ -2709,21 +2825,47 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     }
   });
 
-  // Admin: Get all Navodaya students with their progress
+  // Admin: Get all Navodaya students with their progress (legacy + unified)
   app.get("/api/admin/navodaya-students", async (req, res) => {
     try {
-      const allStudents = await storage.getAllNavodayaStudents();
+      // Get legacy Navodaya students
+      const legacyStudents = await storage.getAllNavodayaStudents();
       
-      const studentsWithProgress = await Promise.all(
-        allStudents.map(async (student) => {
-          const sessions = await storage.getNavodayaStudentQuizSessions(student.id);
-          const completedSessions = sessions.filter(s => s.completedAt);
-          const totalQuizzes = completedSessions.length;
+      // Get unified students who have taken Navodaya quizzes
+      const unifiedStudents = await storage.getAllUnifiedStudents();
+      
+      const allStudentsWithProgress: Array<{
+        id: number;
+        name: string;
+        examGrade: string | null;
+        medium: string | null;
+        location: string | null;
+        mobileNumber: string;
+        totalQuizzes: number;
+        averageScore: number;
+        isUnified: boolean;
+        sessions: Array<{
+          id: number;
+          examGrade: string | null;
+          section: string | null;
+          score: number | null;
+          totalQuestions: number | null;
+          completedAt: Date | null;
+        }>;
+      }> = [];
+      
+      // Process legacy students
+      for (const student of legacyStudents) {
+        const sessions = await storage.getNavodayaStudentQuizSessions(student.id);
+        const completedSessions = sessions.filter(s => s.completedAt);
+        const totalQuizzes = completedSessions.length;
+        
+        if (totalQuizzes > 0) {
           const totalScore = completedSessions.reduce((sum, s) => sum + (s.score || 0), 0);
           const totalQuestions = completedSessions.reduce((sum, s) => sum + (s.totalQuestions || 10), 0);
-          const averageScore = totalQuizzes > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
+          const averageScore = Math.round((totalScore / totalQuestions) * 100);
           
-          return {
+          allStudentsWithProgress.push({
             id: student.id,
             name: student.name,
             examGrade: student.examGrade,
@@ -2732,20 +2874,53 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
             mobileNumber: student.mobileNumber,
             totalQuizzes,
             averageScore,
+            isUnified: false,
             sessions: completedSessions.map(s => ({
               id: s.id,
               examGrade: s.examGrade,
+              section: s.section,
               score: s.score,
               totalQuestions: s.totalQuestions,
               completedAt: s.completedAt,
             })),
-          };
-        })
-      );
+          });
+        }
+      }
       
-      // Filter to only show students with at least 1 completed quiz
-      const activeStudents = studentsWithProgress.filter(s => s.totalQuizzes > 0);
-      res.json(activeStudents);
+      // Process unified students - check for Navodaya sessions
+      for (const student of unifiedStudents) {
+        const sessions = await storage.getNavodayaSessionsByUnifiedStudentId(student.id);
+        const completedSessions = sessions.filter(s => s.completedAt);
+        const totalQuizzes = completedSessions.length;
+        
+        if (totalQuizzes > 0) {
+          const totalScore = completedSessions.reduce((sum, s) => sum + (s.score || 0), 0);
+          const totalQuestions = completedSessions.reduce((sum, s) => sum + (s.totalQuestions || 10), 0);
+          const averageScore = Math.round((totalScore / totalQuestions) * 100);
+          
+          allStudentsWithProgress.push({
+            id: student.id,
+            name: student.name,
+            examGrade: null,
+            medium: null,
+            location: student.location,
+            mobileNumber: student.mobileNumber,
+            totalQuizzes,
+            averageScore,
+            isUnified: true,
+            sessions: completedSessions.map(s => ({
+              id: s.id,
+              examGrade: s.examGrade,
+              section: s.section,
+              score: s.score,
+              totalQuestions: s.totalQuestions,
+              completedAt: s.completedAt,
+            })),
+          });
+        }
+      }
+      
+      res.json(allStudentsWithProgress);
     } catch (error) {
       console.error("Error fetching Navodaya students:", error);
       res.status(500).json({ error: "Failed to fetch students" });
@@ -2754,21 +2929,50 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
 
   // ==================== CHAPTER PRACTICE ROUTES ====================
 
-  // Admin: Get all Chapter Practice students with progress
+  // Admin: Get all Chapter Practice students with progress (legacy + unified)
   app.get("/api/admin/chapter-practice-students", async (req, res) => {
     try {
-      const allStudents = await storage.getAllChapterPracticeStudents();
+      // Get legacy chapter practice students
+      const legacyStudents = await storage.getAllChapterPracticeStudents();
       
-      const studentsWithProgress = await Promise.all(
-        allStudents.map(async (student) => {
-          const sessions = await storage.getChapterPracticeStudentQuizSessions(student.id);
-          const completedSessions = sessions.filter(s => s.completedAt);
-          const totalQuizzes = completedSessions.length;
-          const totalScore = completedSessions.reduce((sum, s) => sum + (s.score || 0), 0);
-          const totalQuestions = completedSessions.reduce((sum, s) => sum + (s.totalQuestions || 10), 0);
-          const averageScore = totalQuizzes > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
-          
-          return {
+      // Get unified students who have taken chapter practice quizzes
+      const unifiedStudents = await storage.getAllUnifiedStudents();
+      
+      const allStudentsWithProgress: Array<{
+        id: number;
+        name: string;
+        schoolName: string | null;
+        grade: string | null;
+        board: string | null;
+        medium: string | null;
+        location: string | null;
+        mobileNumber: string;
+        totalQuizzes: number;
+        averageScore: number;
+        isUnified: boolean;
+        sessions: Array<{
+          id: number;
+          subject: string | null;
+          chapterName: string | null;
+          grade: string | null;
+          board: string | null;
+          score: number | null;
+          totalQuestions: number | null;
+          completedAt: Date | null;
+        }>;
+      }> = [];
+      
+      // Process legacy students
+      for (const student of legacyStudents) {
+        const sessions = await storage.getChapterPracticeStudentQuizSessions(student.id);
+        const completedSessions = sessions.filter(s => s.completedAt);
+        const totalQuizzes = completedSessions.length;
+        const totalScore = completedSessions.reduce((sum, s) => sum + (s.score || 0), 0);
+        const totalQuestions = completedSessions.reduce((sum, s) => sum + (s.totalQuestions || 10), 0);
+        const averageScore = totalQuizzes > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
+        
+        if (totalQuizzes > 0) {
+          allStudentsWithProgress.push({
             id: student.id,
             name: student.name,
             schoolName: student.schoolName,
@@ -2779,6 +2983,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
             mobileNumber: student.mobileNumber,
             totalQuizzes,
             averageScore,
+            isUnified: false,
             sessions: completedSessions.map(s => ({
               id: s.id,
               subject: s.subject,
@@ -2789,13 +2994,48 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
               totalQuestions: s.totalQuestions,
               completedAt: s.completedAt,
             })),
-          };
-        })
-      );
+          });
+        }
+      }
       
-      // Filter to only show students with at least 1 completed quiz
-      const activeStudents = studentsWithProgress.filter(s => s.totalQuizzes > 0);
-      res.json(activeStudents);
+      // Process unified students - check for chapter practice sessions
+      for (const student of unifiedStudents) {
+        const sessions = await storage.getChapterPracticeSessionsByUnifiedStudentId(student.id);
+        const completedSessions = sessions.filter(s => s.completedAt);
+        const totalQuizzes = completedSessions.length;
+        
+        if (totalQuizzes > 0) {
+          const totalScore = completedSessions.reduce((sum, s) => sum + (s.score || 0), 0);
+          const totalQuestions = completedSessions.reduce((sum, s) => sum + (s.totalQuestions || 10), 0);
+          const averageScore = Math.round((totalScore / totalQuestions) * 100);
+          
+          allStudentsWithProgress.push({
+            id: student.id,
+            name: student.name,
+            schoolName: student.schoolName,
+            grade: null, // Unified students don't have fixed grade
+            board: null, // Unified students don't have fixed board
+            medium: null,
+            location: student.location,
+            mobileNumber: student.mobileNumber,
+            totalQuizzes,
+            averageScore,
+            isUnified: true,
+            sessions: completedSessions.map(s => ({
+              id: s.id,
+              subject: s.subject,
+              chapterName: s.chapterName,
+              grade: s.grade,
+              board: s.board,
+              score: s.score,
+              totalQuestions: s.totalQuestions,
+              completedAt: s.completedAt,
+            })),
+          });
+        }
+      }
+      
+      res.json(allStudentsWithProgress);
     } catch (error) {
       console.error("Error fetching Chapter Practice students:", error);
       res.status(500).json({ error: "Failed to fetch students" });

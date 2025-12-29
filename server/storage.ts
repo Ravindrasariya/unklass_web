@@ -57,6 +57,7 @@ export interface IStorage {
   updateQuizSession(id: number, updates: Partial<QuizSession>): Promise<QuizSession | undefined>;
   getQuizSession(id: number): Promise<QuizSession | undefined>;
   getStudentQuizSessions(studentId: number): Promise<QuizSession[]>;
+  getQuizSessionsByUnifiedStudentId(unifiedStudentId: number): Promise<QuizSession[]>;
   getStudentPreviousQuestions(studentId: number, subject: string): Promise<string[]>;
 
   // CPCT Students
@@ -72,6 +73,7 @@ export interface IStorage {
   updateCpctQuizSession(id: number, updates: Partial<CpctQuizSession>): Promise<CpctQuizSession | undefined>;
   getCpctQuizSession(id: number): Promise<CpctQuizSession | undefined>;
   getCpctStudentQuizSessions(studentId: number): Promise<CpctQuizSession[]>;
+  getCpctSessionsByUnifiedStudentId(unifiedStudentId: number): Promise<CpctQuizSession[]>;
   getCpctStudentPreviousQuestions(studentId: number): Promise<string[]>;
   getCpctPdf(year: string): Promise<Pdf | undefined>;
 
@@ -88,6 +90,7 @@ export interface IStorage {
   updateNavodayaQuizSession(id: number, updates: Partial<NavodayaQuizSession>): Promise<NavodayaQuizSession | undefined>;
   getNavodayaQuizSession(id: number): Promise<NavodayaQuizSession | undefined>;
   getNavodayaStudentQuizSessions(studentId: number): Promise<NavodayaQuizSession[]>;
+  getNavodayaSessionsByUnifiedStudentId(unifiedStudentId: number): Promise<NavodayaQuizSession[]>;
   getNavodayaStudentPreviousQuestions(studentId: number): Promise<string[]>;
   getNavodayaPdf(examGrade: string): Promise<Pdf | undefined>;
 
@@ -136,6 +139,7 @@ export interface IStorage {
   updateChapterPracticeQuizSession(id: number, updates: Partial<ChapterPracticeQuizSession>): Promise<ChapterPracticeQuizSession | undefined>;
   getChapterPracticeQuizSession(id: number): Promise<ChapterPracticeQuizSession | undefined>;
   getChapterPracticeStudentQuizSessions(studentId: number): Promise<ChapterPracticeQuizSession[]>;
+  getChapterPracticeSessionsByUnifiedStudentId(unifiedStudentId: number): Promise<ChapterPracticeQuizSession[]>;
   getIncompleteChapterPracticeSession(studentId: number, chapterName: string): Promise<ChapterPracticeQuizSession | undefined>;
 
   // Chapter Practice PDFs
@@ -343,6 +347,12 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(quizSessions).where(eq(quizSessions.studentId, studentId));
   }
 
+  async getQuizSessionsByUnifiedStudentId(unifiedStudentId: number): Promise<QuizSession[]> {
+    return await db.select().from(quizSessions)
+      .where(eq(quizSessions.unifiedStudentId, unifiedStudentId))
+      .orderBy(desc(quizSessions.createdAt));
+  }
+
   async getStudentPreviousQuestions(studentId: number, subject: string): Promise<string[]> {
     const sessions = await db.select().from(quizSessions).where(
       and(
@@ -421,6 +431,12 @@ export class DatabaseStorage implements IStorage {
 
   async getCpctStudentQuizSessions(studentId: number): Promise<CpctQuizSession[]> {
     return await db.select().from(cpctQuizSessions).where(eq(cpctQuizSessions.studentId, studentId));
+  }
+
+  async getCpctSessionsByUnifiedStudentId(unifiedStudentId: number): Promise<CpctQuizSession[]> {
+    return await db.select().from(cpctQuizSessions)
+      .where(eq(cpctQuizSessions.unifiedStudentId, unifiedStudentId))
+      .orderBy(desc(cpctQuizSessions.createdAt));
   }
 
   async getCpctStudentPreviousQuestions(studentId: number): Promise<string[]> {
@@ -503,6 +519,12 @@ export class DatabaseStorage implements IStorage {
 
   async getNavodayaStudentQuizSessions(studentId: number): Promise<NavodayaQuizSession[]> {
     return await db.select().from(navodayaQuizSessions).where(eq(navodayaQuizSessions.studentId, studentId));
+  }
+
+  async getNavodayaSessionsByUnifiedStudentId(unifiedStudentId: number): Promise<NavodayaQuizSession[]> {
+    return await db.select().from(navodayaQuizSessions)
+      .where(eq(navodayaQuizSessions.unifiedStudentId, unifiedStudentId))
+      .orderBy(desc(navodayaQuizSessions.createdAt));
   }
 
   async getNavodayaStudentPreviousQuestions(studentId: number): Promise<string[]> {
@@ -982,6 +1004,12 @@ export class DatabaseStorage implements IStorage {
   async getChapterPracticeStudentQuizSessions(studentId: number): Promise<ChapterPracticeQuizSession[]> {
     return await db.select().from(chapterPracticeQuizSessions)
       .where(eq(chapterPracticeQuizSessions.studentId, studentId))
+      .orderBy(desc(chapterPracticeQuizSessions.createdAt));
+  }
+
+  async getChapterPracticeSessionsByUnifiedStudentId(unifiedStudentId: number): Promise<ChapterPracticeQuizSession[]> {
+    return await db.select().from(chapterPracticeQuizSessions)
+      .where(eq(chapterPracticeQuizSessions.unifiedStudentId, unifiedStudentId))
       .orderBy(desc(chapterPracticeQuizSessions.createdAt));
   }
 
