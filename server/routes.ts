@@ -2783,7 +2783,30 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         return res.status(400).json({ error: "Missing required fields" });
       }
       
-      const student = await storage.getChapterPracticeStudent(studentId);
+      // Check both legacy chapterPracticeStudents and unified_students tables
+      let student = await storage.getChapterPracticeStudent(studentId);
+      let isUnifiedStudent = false;
+      
+      if (!student) {
+        // Try unified students table
+        const unifiedStudent = await storage.getUnifiedStudent(studentId);
+        if (unifiedStudent) {
+          isUnifiedStudent = true;
+          // Create a compatible student object from unified student
+          student = {
+            id: unifiedStudent.id,
+            name: unifiedStudent.name,
+            schoolName: unifiedStudent.schoolName || null,
+            grade: grade || "8th",
+            board: board || "MP",
+            medium: medium || "English",
+            location: unifiedStudent.location || "",
+            mobileNumber: unifiedStudent.mobileNumber,
+            createdAt: unifiedStudent.createdAt,
+          } as any;
+        }
+      }
+      
       if (!student) {
         return res.status(404).json({ error: "Student not found" });
       }
