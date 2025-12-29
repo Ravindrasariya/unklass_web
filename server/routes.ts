@@ -2829,13 +2829,40 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         return res.status(404).json({ error: "PDF not found" });
       }
       
+      console.log(`[DEBUG] PDF ${pdfId} content length: ${pdf.content?.length || 0}`);
+      
+      // Test chapter regex directly
+      const normalizedContent = pdf.content
+        .replace(/[\u200B-\u200D\uFEFF]/g, '')
+        .replace(/\r\n/g, '\n')
+        .replace(/\r/g, '\n')
+        .replace(/\t/g, ' ')
+        .replace(/[ ]{3,}/g, '  ');
+      
+      const chapterPattern = /(?:Chapter|अध्याय|Ch\.?)\s*(\d+)\s*[:\.\-–—]\s*(.+)/gi;
+      let match;
+      const foundChapters: string[] = [];
+      while ((match = chapterPattern.exec(normalizedContent)) !== null) {
+        const num = parseInt(match[1], 10);
+        const name = match[2].substring(0, 50);
+        foundChapters.push(`Ch${num}: ${name}`);
+      }
+      console.log(`[DEBUG] Regex found ${foundChapters.length} chapters:`, foundChapters);
+      
       const { parseQuestionsWithChapters } = await import("./questionParser");
       const { questions, chapters } = parseQuestionsWithChapters(pdf.content);
+      
+      console.log(`[DEBUG] Parser returned ${questions.length} questions, ${chapters.length} chapters`);
+      chapters.forEach(c => {
+        console.log(`[DEBUG]   Chapter ${c.chapterNumber}: ${c.chapterName} - ${c.questionCount} questions`);
+      });
       
       res.json({
         pdfId: pdf.id,
         filename: pdf.filename,
+        contentLength: pdf.content?.length || 0,
         totalQuestions: questions.length,
+        regexFoundChapters: foundChapters.length,
         chapters: chapters.map(c => ({
           chapterNumber: c.chapterNumber,
           chapterName: c.chapterName,

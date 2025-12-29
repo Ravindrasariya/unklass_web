@@ -32,18 +32,15 @@ function preserveTableStructure(content: string): string {
 }
 
 function normalizeContent(content: string): string {
-  // First preserve table structure before other normalization
-  let normalized = preserveTableStructure(content);
-  
-  normalized = normalized
+  // Simple normalization without table structure manipulation
+  // (preserveTableStructure was breaking chapter headers by converting tabs to pipes)
+  let normalized = content
     .replace(/[\u200B-\u200D\uFEFF]/g, '')
     .replace(/\r\n/g, '\n')
     .replace(/\r/g, '\n')
-    .replace(/\t/g, ' ')
-    // Only collapse spaces that are NOT part of table structure (already converted to |)
-    .replace(/[ ]{3,}/g, '  ')
+    .replace(/\t+/g, ' ')
+    .replace(/[ ]{2,}/g, ' ')
     .replace(/^\s*Page\s*\d+.*$/gim, '')
-    .replace(/^\s*\d+\s*$/gm, '')
     .replace(/^\s*[-_=]{3,}\s*$/gm, '')
     .replace(/\n{3,}/g, '\n\n');
 
@@ -677,11 +674,13 @@ export function parseQuestionsWithChapters(content: string): {
   const normalizedContent = normalizeContent(content);
   
   // Standard patterns for single-line chapter headings
+  // All patterns require chapter header to be at start of line (^) or after newline
   const chapterPatterns = [
-    /(?:Chapter|अध्याय|Ch\.?)\s*(\d+)\s*[:\.\-–—]\s*(.+)/gi,
-    /(?:Chapter|अध्याय)\s*(\d+)\s+(.+)/gi,
-    /^Unit\s*(\d+)\s*[:\.\-–—]\s*(.+)/gim,
-    /^पाठ\s*(\d+)\s*[:\.\-–—]?\s*(.+)/gim,
+    /(?:^|\n)\s*(?:Chapter|अध्याय)\s*(\d+)\s*[:\.\-–—]\s*(.+)/gi,
+    /(?:^|\n)\s*(?:Chapter|अध्याय)\s*(\d+)\s+(.+)/gi,
+    /(?:^|\n)\s*(?:Chapter|अध्याय)\s*[:\.\-–—]\s*(\d+)\s+(.+)/gi, // Handle "Chapter :10 Title" format
+    /(?:^|\n)\s*Unit\s*(\d+)\s*[:\.\-–—]\s*(.+)/gi,
+    /(?:^|\n)\s*पाठ\s*(\d+)\s*[:\.\-–—]?\s*(.+)/gi,
   ];
   
   const chapterPositions: { chapterNumber: number; chapterName: string; position: number }[] = [];
@@ -694,7 +693,13 @@ export function parseQuestionsWithChapters(content: string): {
       const chapterNumber = parseInt(match[1], 10);
       const chapterName = match[2]?.trim() || `Chapter ${chapterNumber}`;
       
-      if (chapterNumber > 0 && chapterNumber <= 50) {
+      // Validate: chapter name should be a proper title, not question text
+      const isValidChapterName = 
+        chapterName.length >= 3 && 
+        chapterName.length <= 100 &&
+        !/^(?:Explain|Describe|Define|What|Why|How|Calculate|State|Name|Write|List)/i.test(chapterName);
+      
+      if (chapterNumber > 0 && chapterNumber <= 20 && isValidChapterName) {
         const exists = chapterPositions.some(c => c.chapterNumber === chapterNumber);
         if (!exists) {
           chapterPositions.push({
@@ -758,6 +763,12 @@ export function parseQuestionsWithChapters(content: string): {
   
   chapterPositions.sort((a, b) => a.position - b.position);
   
+  // Debug: log detected chapters
+  console.log(`[Parser] Detected ${chapterPositions.length} chapter positions:`);
+  chapterPositions.forEach(c => {
+    console.log(`[Parser]   Ch${c.chapterNumber}: ${c.chapterName.substring(0, 40)} at pos ${c.position}`);
+  });
+  
   // If no chapters found, return all questions as a single chapter
   if (chapterPositions.length === 0) {
     const parsedQuestions = parseQuestionsFromPdfContent(content);
@@ -818,69 +829,68 @@ export function parseQuestionsWithChapters(content: string): {
 
 // Parse questions from a chapter's content without global deduplication
 function parseChapterQuestions(chapterContent: string, chapterNum: number): ParsedQuestion[] {
-  const questionPattern = /(?:^|\n)\s*(\d{1,3})\s*[.\):\-\]]\s+(.+?)(?=\n\s*\d{1,3}\s*[.\):\-\]]\s+|\n\s*(?:Chapter|अध्याय)\s*\d+|$)/gi;
-  
   const questions: ParsedQuestion[] = [];
-  let match;
   
-  // First try: regex-based extraction
-  while ((match = questionPattern.exec(chapterContent)) !== null) {
-    const questionNum = parseInt(match[1], 10);
-    let text = match[2]?.trim() || '';
+  // Line-by-line parsing with continuation collection
+  const lines = chapterContent.split('\n');
+  const questionStartPattern = /^\s*(?:Q|Que?s?(?:tion)?\.?)?\s*(\d{1,3})\s*[.\):\-\]]\s*(.+)/i;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const lineMatch = line.match(questionStartPattern);
     
-    if (questionNum > 0 && questionNum <= 100 && text.length > 10) {
-      // Check if text has MCQ pattern
-      const hasOptions = /[(\[]?\s*[aA]\s*[)\]\.:]/.test(text);
+    if (lineMatch) {
+      const qNum = parseInt(lineMatch[1], 10);
+      let text = lineMatch[2]?.trim() || '';
       
-      if (hasOptions) {
-        questions.push({
-          index: questions.length, // Sequential numbering across all chapters
-          rawText: text,
-        });
+      // Skip if this looks like a chapter header
+      if (/^(?:Chapter|अध्याय|Unit|पाठ)\s/i.test(text)) continue;
+      
+      // Collect continuation lines until next question or chapter
+      let j = i + 1;
+      while (j < lines.length) {
+        const nextLine = lines[j].trim();
+        
+        // Skip empty lines
+        if (!nextLine) { j++; continue; }
+        
+        // Stop at next question number
+        if (questionStartPattern.test(lines[j])) break;
+        
+        // Stop at chapter headers
+        if (/^(?:Chapter|अध्याय)\s*\d+/i.test(nextLine)) break;
+        
+        // Stop at section headers like "Very Short Answer Questions"
+        if (/^(?:MCQs?|Very\s+Short|Short\s+Answer|Long\s+Answer|Numerical)/i.test(nextLine)) break;
+        
+        text += ' ' + nextLine;
+        j++;
+        
+        // Limit text length
+        if (text.length > 3000) break;
+      }
+      
+      // Valid question: has reasonable length and is not a fragment
+      if (qNum > 0 && qNum <= 100 && text.length > 15 && !isFragment(text)) {
+        // Check for MCQ indicators (options or answer markers)
+        const hasMCQIndicators = 
+          /\([aA]\)|\([bB]\)|[aA]\.|[bB]\./i.test(text) ||  // Options
+          /Answer\s*[:=]/i.test(text) ||                     // Answer marker
+          /Options?\s*[:=]/i.test(text) ||                   // Options marker
+          /Correct\s*(?:Answer|Option)/i.test(text) ||       // Correct answer
+          /उत्तर|विकल्प/i.test(text);                        // Hindi markers
+        
+        if (hasMCQIndicators) {
+          questions.push({
+            index: questions.length,
+            rawText: text,
+          });
+        }
       }
     }
   }
   
-  // Fallback: line-by-line parsing if regex didn't find enough
-  if (questions.length === 0) {
-    const lines = chapterContent.split('\n');
-    const simplePattern = /^\s*(\d{1,3})\s*[.\):\-\]]\s*(.+)/;
-    
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const lineMatch = line.match(simplePattern);
-      
-      if (lineMatch) {
-        const qNum = parseInt(lineMatch[1], 10);
-        let text = lineMatch[2]?.trim() || '';
-        
-        // Collect continuation lines
-        let j = i + 1;
-        while (j < lines.length) {
-          const nextLine = lines[j].trim();
-          if (!nextLine) { j++; continue; }
-          if (simplePattern.test(lines[j])) break;
-          if (/^(?:Chapter|अध्याय)\s*\d+/i.test(nextLine)) break;
-          text += ' ' + nextLine;
-          j++;
-          if (text.length > 3000) break;
-        }
-        
-        if (qNum > 0 && qNum <= 100 && text.length > 15) {
-          const hasOptions = /[(\[]?\s*[aA]\s*[)\]\.:]/.test(text);
-          if (hasOptions && !isFragment(text)) {
-            questions.push({
-              index: questions.length,
-              rawText: text,
-            });
-          }
-        }
-      }
-    }
-  }
-  
-  // Final fragment filter
-  return questions.filter(q => !isFragment(q.rawText || ''));
+  return questions;
 }
 
 export function getQuestionsForChapter(
