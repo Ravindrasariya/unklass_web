@@ -61,7 +61,7 @@ export default function QuizResults({
   }, [score]);
 
   const getPerformanceData = () => {
-    if (score > 8) {
+    if (percentage >= 80) {
       return {
         icon: Trophy,
         message: "Excellent!",
@@ -70,7 +70,7 @@ export default function QuizResults({
         bgColor: "bg-yellow-100 dark:bg-yellow-900/30",
       };
     }
-    if (score > 6) {
+    if (percentage >= 60) {
       return {
         icon: Award,
         message: "Good Job!",
@@ -118,7 +118,7 @@ export default function QuizResults({
           <div className="w-full bg-muted rounded-full h-3 mb-6 overflow-hidden">
             <div 
               className={`h-full rounded-full transition-all duration-500 ${
-                score > 8 ? "bg-yellow-500" : score > 6 ? "bg-blue-500" : "bg-orange-500"
+                percentage >= 80 ? "bg-yellow-500" : percentage >= 60 ? "bg-blue-500" : "bg-orange-500"
               }`}
               style={{ width: `${percentage}%` }}
             />
