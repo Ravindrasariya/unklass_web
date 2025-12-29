@@ -7,11 +7,11 @@ import { z } from "zod";
 export const unifiedStudents = pgTable("unified_students", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  fatherName: text("father_name"),
-  location: text("location"),
+  fatherName: text("father_name"), // nullable for legacy users
+  location: text("location"), // nullable for legacy users
   mobileNumber: varchar("mobile_number", { length: 15 }).notNull().unique(),
-  schoolName: text("school_name"),
-  dateOfBirth: text("date_of_birth"),
+  schoolName: text("school_name"), // optional
+  dateOfBirth: text("date_of_birth"), // optional, stored as YYYY-MM-DD string
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -23,9 +23,51 @@ export type ExamType = typeof EXAM_TYPES[number];
 export const studentExamProfiles = pgTable("student_exam_profiles", {
   id: serial("id").primaryKey(),
   studentId: integer("student_id").notNull().references(() => unifiedStudents.id),
-  examType: varchar("exam_type", { length: 20 }).notNull(),
-  lastSelections: jsonb("last_selections"),
+  examType: varchar("exam_type", { length: 20 }).notNull(), // 'board', 'cpct', 'navodaya', 'chapter_practice'
+  lastSelections: jsonb("last_selections"), // Store last selected dropdown values
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Legacy: Students table - stores registered students (Board Exam) - kept for backward compatibility
+export const students = pgTable("students", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  grade: varchar("grade", { length: 10 }).notNull(), // 8th, 10th, 12th
+  board: varchar("board", { length: 10 }).notNull(), // MP, CBSE
+  medium: varchar("medium", { length: 10 }).notNull().default("English"), // Hindi, English
+  location: text("location").notNull(),
+  mobileNumber: varchar("mobile_number", { length: 15 }).notNull(),
+});
+
+// Legacy: CPCT Students table - stores CPCT exam candidates
+export const cpctStudents = pgTable("cpct_students", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  medium: varchar("medium", { length: 10 }).notNull(), // Hindi, English
+  location: text("location").notNull(),
+  mobileNumber: varchar("mobile_number", { length: 15 }).notNull(),
+});
+
+// Legacy: Navodaya Students table - stores JNV entrance exam candidates
+export const navodayaStudents = pgTable("navodaya_students", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  examGrade: varchar("exam_grade", { length: 10 }).notNull(), // 6th, 9th
+  medium: varchar("medium", { length: 10 }).notNull(), // Hindi, English
+  location: text("location").notNull(),
+  mobileNumber: varchar("mobile_number", { length: 15 }).notNull(),
+});
+
+// Legacy: Chapter Practice Students table - for NCERT chapter-wise practice
+export const chapterPracticeStudents = pgTable("chapter_practice_students", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  schoolName: text("school_name"),
+  grade: varchar("grade", { length: 10 }).notNull(),
+  board: varchar("board", { length: 10 }).notNull(),
+  medium: varchar("medium", { length: 10 }).notNull().default("English"),
+  location: text("location").notNull(),
+  mobileNumber: varchar("mobile_number", { length: 15 }).notNull(),
 });
 
 // PDFs table - stores uploaded PDF metadata (admin functionality)
@@ -44,10 +86,10 @@ export const pdfs = pgTable("pdfs", {
 });
 
 // Quiz sessions table - stores quiz attempts and results (Board Exam)
-// Note: studentId references unified_students but FK constraint removed for migration
 export const quizSessions = pgTable("quiz_sessions", {
   id: serial("id").primaryKey(),
-  studentId: integer("student_id").notNull(),
+  studentId: integer("student_id").notNull(), // Can reference unified_students or legacy students
+  unifiedStudentId: integer("unified_student_id").references(() => unifiedStudents.id), // New unified reference
   pdfId: integer("pdf_id").references(() => pdfs.id),
   subject: text("subject").notNull(),
   grade: varchar("grade", { length: 10 }).notNull(),
@@ -73,10 +115,10 @@ export const CPCT_SECTIONS = [
 export type CpctSection = typeof CPCT_SECTIONS[number];
 
 // CPCT Quiz sessions table
-// Note: studentId references unified_students but FK constraint removed for migration
 export const cpctQuizSessions = pgTable("cpct_quiz_sessions", {
   id: serial("id").primaryKey(),
   studentId: integer("student_id").notNull(),
+  unifiedStudentId: integer("unified_student_id").references(() => unifiedStudents.id),
   pdfId: integer("pdf_id").references(() => pdfs.id),
   year: varchar("year", { length: 10 }).notNull(),
   section: varchar("section", { length: 100 }),
@@ -107,10 +149,10 @@ export type NavodayaSection6th = typeof NAVODAYA_SECTIONS_6TH[number];
 export type NavodayaSection9th = typeof NAVODAYA_SECTIONS_9TH[number];
 
 // Navodaya Quiz sessions table
-// Note: studentId references unified_students but FK constraint removed for migration
 export const navodayaQuizSessions = pgTable("navodaya_quiz_sessions", {
   id: serial("id").primaryKey(),
   studentId: integer("student_id").notNull(),
+  unifiedStudentId: integer("unified_student_id").references(() => unifiedStudents.id),
   pdfId: integer("pdf_id").references(() => pdfs.id),
   examGrade: varchar("exam_grade", { length: 10 }).notNull(),
   section: varchar("section", { length: 100 }),
@@ -138,10 +180,10 @@ export type ChapterPracticeSubject = typeof CHAPTER_PRACTICE_SUBJECTS[number];
 export const CHAPTER_PRACTICE_GRADES = ["6th", "7th", "8th", "9th", "10th"] as const;
 
 // Chapter Practice Quiz sessions table
-// Note: studentId references unified_students but FK constraint removed for migration
 export const chapterPracticeQuizSessions = pgTable("chapter_practice_quiz_sessions", {
   id: serial("id").primaryKey(),
   studentId: integer("student_id").notNull(),
+  unifiedStudentId: integer("unified_student_id").references(() => unifiedStudents.id),
   pdfId: integer("pdf_id").references(() => pdfs.id),
   subject: text("subject").notNull(),
   chapterNumber: integer("chapter_number").notNull(),
@@ -151,7 +193,7 @@ export const chapterPracticeQuizSessions = pgTable("chapter_practice_quiz_sessio
   medium: varchar("medium", { length: 10 }).notNull(),
   score: integer("score"),
   totalQuestions: integer("total_questions"),
-  currentQuestionIndex: integer("current_question_index").default(0),
+  currentQuestionIndex: integer("current_question_index").default(0), // Track resume progress
   questions: jsonb("questions"),
   answers: jsonb("answers"),
   completedAt: timestamp("completed_at"),
@@ -161,10 +203,6 @@ export const chapterPracticeQuizSessions = pgTable("chapter_practice_quiz_sessio
 // Relations for unified students
 export const unifiedStudentsRelations = relations(unifiedStudents, ({ many }) => ({
   examProfiles: many(studentExamProfiles),
-  quizSessions: many(quizSessions),
-  cpctQuizSessions: many(cpctQuizSessions),
-  navodayaQuizSessions: many(navodayaQuizSessions),
-  chapterPracticeQuizSessions: many(chapterPracticeQuizSessions),
 }));
 
 export const studentExamProfilesRelations = relations(studentExamProfiles, ({ one }) => ({
@@ -174,16 +212,32 @@ export const studentExamProfilesRelations = relations(studentExamProfiles, ({ on
   }),
 }));
 
+// Legacy Relations
+export const studentsRelations = relations(students, ({ many }) => ({
+  quizSessions: many(quizSessions),
+}));
+
+export const cpctStudentsRelations = relations(cpctStudents, ({ many }) => ({
+  quizSessions: many(cpctQuizSessions),
+}));
+
+export const navodayaStudentsRelations = relations(navodayaStudents, ({ many }) => ({
+  quizSessions: many(navodayaQuizSessions),
+}));
+
 export const pdfsRelations = relations(pdfs, ({ many }) => ({
   quizSessions: many(quizSessions),
   cpctQuizSessions: many(cpctQuizSessions),
   navodayaQuizSessions: many(navodayaQuizSessions),
-  chapterPracticeQuizSessions: many(chapterPracticeQuizSessions),
 }));
 
 export const quizSessionsRelations = relations(quizSessions, ({ one }) => ({
-  student: one(unifiedStudents, {
+  student: one(students, {
     fields: [quizSessions.studentId],
+    references: [students.id],
+  }),
+  unifiedStudent: one(unifiedStudents, {
+    fields: [quizSessions.unifiedStudentId],
     references: [unifiedStudents.id],
   }),
   pdf: one(pdfs, {
@@ -193,8 +247,12 @@ export const quizSessionsRelations = relations(quizSessions, ({ one }) => ({
 }));
 
 export const cpctQuizSessionsRelations = relations(cpctQuizSessions, ({ one }) => ({
-  student: one(unifiedStudents, {
+  student: one(cpctStudents, {
     fields: [cpctQuizSessions.studentId],
+    references: [cpctStudents.id],
+  }),
+  unifiedStudent: one(unifiedStudents, {
+    fields: [cpctQuizSessions.unifiedStudentId],
     references: [unifiedStudents.id],
   }),
   pdf: one(pdfs, {
@@ -204,8 +262,12 @@ export const cpctQuizSessionsRelations = relations(cpctQuizSessions, ({ one }) =
 }));
 
 export const navodayaQuizSessionsRelations = relations(navodayaQuizSessions, ({ one }) => ({
-  student: one(unifiedStudents, {
+  student: one(navodayaStudents, {
     fields: [navodayaQuizSessions.studentId],
+    references: [navodayaStudents.id],
+  }),
+  unifiedStudent: one(unifiedStudents, {
+    fields: [navodayaQuizSessions.unifiedStudentId],
     references: [unifiedStudents.id],
   }),
   pdf: one(pdfs, {
@@ -214,9 +276,17 @@ export const navodayaQuizSessionsRelations = relations(navodayaQuizSessions, ({ 
   }),
 }));
 
+export const chapterPracticeStudentsRelations = relations(chapterPracticeStudents, ({ many }) => ({
+  quizSessions: many(chapterPracticeQuizSessions),
+}));
+
 export const chapterPracticeQuizSessionsRelations = relations(chapterPracticeQuizSessions, ({ one }) => ({
-  student: one(unifiedStudents, {
+  student: one(chapterPracticeStudents, {
     fields: [chapterPracticeQuizSessions.studentId],
+    references: [chapterPracticeStudents.id],
+  }),
+  unifiedStudent: one(unifiedStudents, {
+    fields: [chapterPracticeQuizSessions.unifiedStudentId],
     references: [unifiedStudents.id],
   }),
   pdf: one(pdfs, {
@@ -236,6 +306,15 @@ export const insertStudentExamProfileSchema = createInsertSchema(studentExamProf
   updatedAt: true,
 });
 
+// Legacy insert schemas
+export const insertStudentSchema = createInsertSchema(students).omit({
+  id: true,
+});
+
+export const insertCpctStudentSchema = createInsertSchema(cpctStudents).omit({
+  id: true,
+});
+
 export const insertPdfSchema = createInsertSchema(pdfs).omit({
   id: true,
   uploadedAt: true,
@@ -251,9 +330,17 @@ export const insertCpctQuizSessionSchema = createInsertSchema(cpctQuizSessions).
   createdAt: true,
 });
 
+export const insertNavodayaStudentSchema = createInsertSchema(navodayaStudents).omit({
+  id: true,
+});
+
 export const insertNavodayaQuizSessionSchema = createInsertSchema(navodayaQuizSessions).omit({
   id: true,
   createdAt: true,
+});
+
+export const insertChapterPracticeStudentSchema = createInsertSchema(chapterPracticeStudents).omit({
+  id: true,
 });
 
 export const insertChapterPracticeQuizSessionSchema = createInsertSchema(chapterPracticeQuizSessions).omit({
@@ -268,6 +355,16 @@ export type UnifiedStudent = typeof unifiedStudents.$inferSelect;
 export type InsertStudentExamProfile = z.infer<typeof insertStudentExamProfileSchema>;
 export type StudentExamProfile = typeof studentExamProfiles.$inferSelect;
 
+// Legacy types
+export type InsertStudent = z.infer<typeof insertStudentSchema>;
+export type Student = typeof students.$inferSelect;
+
+export type InsertCpctStudent = z.infer<typeof insertCpctStudentSchema>;
+export type CpctStudent = typeof cpctStudents.$inferSelect;
+
+export type InsertNavodayaStudent = z.infer<typeof insertNavodayaStudentSchema>;
+export type NavodayaStudent = typeof navodayaStudents.$inferSelect;
+
 export type InsertPdf = z.infer<typeof insertPdfSchema>;
 export type Pdf = typeof pdfs.$inferSelect;
 
@@ -279,6 +376,9 @@ export type CpctQuizSession = typeof cpctQuizSessions.$inferSelect;
 
 export type InsertNavodayaQuizSession = z.infer<typeof insertNavodayaQuizSessionSchema>;
 export type NavodayaQuizSession = typeof navodayaQuizSessions.$inferSelect;
+
+export type InsertChapterPracticeStudent = z.infer<typeof insertChapterPracticeStudentSchema>;
+export type ChapterPracticeStudent = typeof chapterPracticeStudents.$inferSelect;
 
 export type InsertChapterPracticeQuizSession = z.infer<typeof insertChapterPracticeQuizSessionSchema>;
 export type ChapterPracticeQuizSession = typeof chapterPracticeQuizSessions.$inferSelect;
@@ -303,10 +403,10 @@ export const contactSubmissions = pgTable("contact_submissions", {
 });
 
 // Question pointers table - tracks last question index per student + PDF for sequential picking
-// Note: FK constraints removed for migration - studentId references unified_students
 export const questionPointers = pgTable("question_pointers", {
   id: serial("id").primaryKey(),
   studentId: integer("student_id").notNull(),
+  studentType: varchar("student_type", { length: 20 }).notNull(),
   pdfId: integer("pdf_id").notNull().references(() => pdfs.id),
   lastQuestionIndex: integer("last_question_index").notNull().default(0),
   updatedAt: timestamp("updated_at").defaultNow(),

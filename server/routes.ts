@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertContactSubmissionSchema, insertNoticeSchema, insertUnifiedStudentSchema, NAVODAYA_SECTIONS_6TH, NAVODAYA_SECTIONS_9TH, type Question, type ParsedQuestion, type ExamType } from "@shared/schema";
+import { insertStudentSchema, insertCpctStudentSchema, insertNavodayaStudentSchema, insertContactSubmissionSchema, insertNoticeSchema, insertUnifiedStudentSchema, NAVODAYA_SECTIONS_6TH, NAVODAYA_SECTIONS_9TH, type Question, type ParsedQuestion, type ExamType } from "@shared/schema";
 import { generateQuizQuestions, generateAnswerFeedback, generateCpctQuizQuestions, generateNavodayaQuizQuestions, shuffleAllQuestionOptions } from "./openai";
 import { parseQuestionsFromPdfContent, getSequentialQuestions } from "./questionParser";
 import multer from "multer";
@@ -94,14 +94,23 @@ export async function registerRoutes(
       // First try to find by mobile number only in unified_students
       let student = await storage.getUnifiedStudentByMobile(normalizedMobile);
       
-      if (!student) {
-        return res.status(404).json({ error: "Student not found. Please check your name and mobile number, or register if you're new." });
+      if (student) {
+        // Verify name matches (case-insensitive, trimmed)
+        if (student.name.trim().toLowerCase() !== normalizedName.toLowerCase()) {
+          console.log(`Login name mismatch: entered "${normalizedName}", stored "${student.name}"`);
+          return res.status(401).json({ error: "Name does not match the registered name for this mobile number." });
+        }
+      } else {
+        // Check legacy tables and auto-migrate if found
+        student = await storage.findAndMigrateLegacyUser(normalizedName, normalizedMobile);
+        
+        if (student) {
+          console.log(`Migrated legacy user ${normalizedName} to unified_students (ID: ${student.id})`);
+        }
       }
       
-      // Verify name matches (case-insensitive, trimmed)
-      if (student.name.trim().toLowerCase() !== normalizedName.toLowerCase()) {
-        console.log(`Login name mismatch: entered "${normalizedName}", stored "${student.name}"`);
-        return res.status(401).json({ error: "Name does not match the registered name for this mobile number." });
+      if (!student) {
+        return res.status(404).json({ error: "Student not found. Please check your name and mobile number, or register if you're new." });
       }
       
       // Include flag indicating if profile needs completion
@@ -242,7 +251,7 @@ export async function registerRoutes(
   app.get("/api/unified/students/:studentId/chapter-practice-quiz-history", async (req, res) => {
     try {
       const studentId = parseInt(req.params.studentId);
-      const sessions = await storage.getUnifiedStudentQuizHistory(studentId, "chapter_practice");
+      const sessions = await storage.getUnifiedStudentQuizHistory(studentId, "chapter-practice");
       res.json(sessions);
     } catch (error) {
       console.error("Error fetching unified Chapter Practice quiz history:", error);
@@ -250,8 +259,67 @@ export async function registerRoutes(
     }
   });
 
-  // ==================== LEGACY STUDENT ROUTES REMOVED ====================
-  // All student operations now use unified auth routes (/api/auth/*)
+  // ==================== LEGACY STUDENT ROUTES ====================
+
+  // Student registration
+  app.post("/api/students/register", async (req, res) => {
+    try {
+      const validatedData = insertStudentSchema.parse(req.body);
+      
+      // Check if student already exists by mobile number
+      const existingStudent = await storage.getStudentByMobile(validatedData.mobileNumber);
+      if (existingStudent) {
+        return res.json(existingStudent);
+      }
+      
+      const student = await storage.createStudent(validatedData);
+      res.json(student);
+    } catch (error: unknown) {
+      console.error("Error registering student:", error);
+      const message = error instanceof Error ? error.message : "Failed to register student";
+      res.status(400).json({ error: message });
+    }
+  });
+
+  // Student login (for returning students)
+  app.post("/api/students/login", async (req, res) => {
+    try {
+      const { name, mobileNumber } = req.body;
+      
+      if (!name || !mobileNumber) {
+        return res.status(400).json({ error: "Name and mobile number are required" });
+      }
+      
+      const student = await storage.getStudentByMobile(mobileNumber);
+      if (!student) {
+        return res.status(404).json({ error: "Student not found. Please check your name and mobile number." });
+      }
+      
+      // Verify name matches (case-insensitive, trimmed)
+      if (student.name.trim().toLowerCase() !== name.trim().toLowerCase()) {
+        return res.status(404).json({ error: "Student not found. Please check your name and mobile number." });
+      }
+      
+      res.json(student);
+    } catch (error) {
+      console.error("Error logging in student:", error);
+      res.status(500).json({ error: "Failed to login" });
+    }
+  });
+
+  // Get student by ID
+  app.get("/api/students/:id", async (req, res) => {
+    try {
+      const student = await storage.getStudent(parseInt(req.params.id));
+      if (!student) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+      res.json(student);
+    } catch (error) {
+      console.error("Error fetching student:", error);
+      res.status(500).json({ error: "Failed to fetch student" });
+    }
+  });
 
   // Get available subjects for a grade and board (subjects that have PDFs uploaded)
   app.get("/api/available-subjects", async (req, res) => {
@@ -614,11 +682,19 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Missing required fields" });
       }
 
-      // Verify student exists in unified_students
+      // Verify student exists - check unified_students if useUnifiedAuth is true
       let studentMedium = medium || "English";
-      const unifiedStudent = await storage.getUnifiedStudent(studentId);
-      if (!unifiedStudent) {
-        return res.status(404).json({ error: "Student not found" });
+      if (useUnifiedAuth) {
+        const unifiedStudent = await storage.getUnifiedStudent(studentId);
+        if (!unifiedStudent) {
+          return res.status(404).json({ error: "Student not found" });
+        }
+      } else {
+        const student = await storage.getStudent(studentId);
+        if (!student) {
+          return res.status(404).json({ error: "Student not found" });
+        }
+        studentMedium = medium || student.medium || "English";
       }
       
       // IMPORTANT: Language-based subjects must be rendered in their native language
@@ -655,7 +731,7 @@ export async function registerRoutes(
         
         if (parsedQuestions.length === 0) {
           console.log(`PDF ${pdf.id} has no valid questions after filtering, using fallback`);
-          const previousQuestions = await storage.getUnifiedStudentPreviousQuestions(studentId, subject, "board");
+          const previousQuestions = await storage.getStudentPreviousQuestions(studentId, subject);
           questions = await generateQuizQuestions(
             pdf.content,
             subject,
@@ -667,7 +743,7 @@ export async function registerRoutes(
           );
         } else {
         // Get current question pointer for this student + PDF
-        const pointer = await storage.getQuestionPointer(studentId, pdf.id);
+        const pointer = await storage.getQuestionPointer(studentId, 'board', pdf.id);
         const startIndex = pointer ? (pointer.lastQuestionIndex + 1) % parsedQuestions.length : 0;
         
         console.log(`Student ${studentId} - PDF ${pdf.id}: Starting from index ${startIndex} of ${parsedQuestions.length} questions`);
@@ -706,13 +782,13 @@ export async function registerRoutes(
         const actualNewIndex = (startIndex + questionsUsed - 1) % parsedQuestions.length;
         
         // Update question pointer for next quiz
-        await storage.updateQuestionPointer(studentId, pdf.id, actualNewIndex);
+        await storage.updateQuestionPointer(studentId, 'board', pdf.id, actualNewIndex);
         console.log(`Generated ${generatedQuestions.length} questions, using ${questions.length}. Updated pointer to index ${actualNewIndex} for next quiz`);
         }
       } else if (pdf) {
         // Fallback: PDF exists but no parsed questions - use full content
         console.log(`PDF ${pdf.id} has no parsed questions, using full content`);
-        const previousQuestions = await storage.getUnifiedStudentPreviousQuestions(studentId, subject, "board");
+        const previousQuestions = await storage.getStudentPreviousQuestions(studentId, subject);
         questions = await generateQuizQuestions(
           pdf.content,
           subject,
@@ -773,6 +849,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
       // Create quiz session
       const session = await storage.createQuizSession({
         studentId,
+        unifiedStudentId: useUnifiedAuth ? studentId : null,
         pdfId: pdf?.id || null,
         subject,
         grade,
@@ -855,11 +932,11 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     }
   });
 
-  // Get student's quiz history (unified)
+  // Get student's quiz history
   app.get("/api/students/:studentId/quiz-history", async (req, res) => {
     try {
       const studentId = parseInt(req.params.studentId);
-      const sessions = await storage.getUnifiedStudentQuizHistory(studentId, "board");
+      const sessions = await storage.getStudentQuizSessions(studentId);
       
       res.json(sessions.map(s => ({
         id: s.id,
@@ -914,36 +991,106 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     }
   });
 
-  // Admin: Get ALL students (now unified only)
+  // Admin: Get ALL students (unified + legacy) combined with exam type info
   app.get("/api/admin/all-registered-students", async (req, res) => {
     try {
-      const unifiedStudents = await storage.getAllUnifiedStudents();
+      // Get all students from all tables
+      const [unifiedStudents, boardStudents, cpctStudents, navodayaStudents] = await Promise.all([
+        storage.getAllUnifiedStudents(),
+        storage.getAllStudents(),
+        storage.getAllCpctStudents(),
+        storage.getAllNavodayaStudents(),
+      ]);
 
-      // Get exam profiles for each student to determine their exam types
-      const studentsWithExamTypes = await Promise.all(
-        unifiedStudents.map(async (student) => {
-          const profiles = await storage.getStudentAllExamProfiles(student.id);
-          const examTypes = profiles.map(p => p.examType);
-          
-          return {
+      // Create a map to track unique students by mobile number
+      const studentMap = new Map<string, {
+        id: number;
+        name: string;
+        mobileNumber: string;
+        location: string | null;
+        fatherName?: string | null;
+        schoolName?: string | null;
+        examTypes: string[];
+        source: string;
+      }>();
+
+      // Add unified students first (they take priority)
+      for (const student of unifiedStudents) {
+        studentMap.set(student.mobileNumber, {
+          id: student.id,
+          name: student.name,
+          mobileNumber: student.mobileNumber,
+          location: student.location,
+          fatherName: student.fatherName,
+          schoolName: student.schoolName,
+          examTypes: ['Unified'],
+          source: 'unified',
+        });
+      }
+
+      // Add legacy board students (if not already in unified)
+      for (const student of boardStudents) {
+        const existing = studentMap.get(student.mobileNumber);
+        if (existing) {
+          if (!existing.examTypes.includes('Board Exam')) {
+            existing.examTypes.push('Board Exam');
+          }
+        } else {
+          studentMap.set(student.mobileNumber, {
             id: student.id,
             name: student.name,
             mobileNumber: student.mobileNumber,
             location: student.location,
-            fatherName: student.fatherName,
-            schoolName: student.schoolName,
-            examTypes: examTypes.length > 0 ? examTypes : ['Unified'],
-            source: 'unified',
-          };
-        })
-      );
+            examTypes: ['Board Exam'],
+            source: 'board',
+          });
+        }
+      }
 
-      // Sort by name
-      const sortedStudents = studentsWithExamTypes.sort((a, b) => 
+      // Add legacy CPCT students
+      for (const student of cpctStudents) {
+        const existing = studentMap.get(student.mobileNumber);
+        if (existing) {
+          if (!existing.examTypes.includes('CPCT')) {
+            existing.examTypes.push('CPCT');
+          }
+        } else {
+          studentMap.set(student.mobileNumber, {
+            id: student.id,
+            name: student.name,
+            mobileNumber: student.mobileNumber,
+            location: student.location,
+            examTypes: ['CPCT'],
+            source: 'cpct',
+          });
+        }
+      }
+
+      // Add legacy Navodaya students
+      for (const student of navodayaStudents) {
+        const existing = studentMap.get(student.mobileNumber);
+        if (existing) {
+          if (!existing.examTypes.includes('Navodaya')) {
+            existing.examTypes.push('Navodaya');
+          }
+        } else {
+          studentMap.set(student.mobileNumber, {
+            id: student.id,
+            name: student.name,
+            mobileNumber: student.mobileNumber,
+            location: student.location,
+            examTypes: ['Navodaya'],
+            source: 'navodaya',
+          });
+        }
+      }
+
+      // Convert map to array and sort by name
+      const allStudents = Array.from(studentMap.values()).sort((a, b) => 
         a.name.localeCompare(b.name)
       );
 
-      res.json(sortedStudents);
+      res.json(allStudents);
     } catch (error) {
       console.error("Error fetching all registered students:", error);
       res.status(500).json({ error: "Failed to fetch students" });
@@ -960,6 +1107,15 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
       const unifiedStudent = await storage.getUnifiedStudentByMobile(mobileNumber);
       if (unifiedStudent) {
         const updated = await storage.updateUnifiedStudent(unifiedStudent.id, updates);
+        if (updated) {
+          return res.json(updated);
+        }
+      }
+
+      // If not in unified, check legacy tables and update there
+      const boardStudent = await storage.getStudentByMobile(mobileNumber);
+      if (boardStudent) {
+        const updated = await storage.updateStudent(boardStudent.id, updates);
         if (updated) {
           return res.json(updated);
         }
@@ -989,15 +1145,15 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     }
   });
 
-  // Admin: Get all students with their progress (unified)
+  // Admin: Get all students with their progress
   app.get("/api/admin/students", async (req, res) => {
     try {
-      const allStudents = await storage.getAllUnifiedStudents();
+      const allStudents = await storage.getAllStudents();
       
       // Get quiz data for each student
       const studentsWithProgress = await Promise.all(
         allStudents.map(async (student) => {
-          const sessions = await storage.getUnifiedStudentQuizHistory(student.id, "board");
+          const sessions = await storage.getStudentQuizSessions(student.id);
           const completedSessions = sessions.filter(s => s.completedAt);
           const totalQuizzes = completedSessions.length;
           const totalScore = completedSessions.reduce((sum, s) => sum + (s.score || 0), 0);
@@ -1007,14 +1163,11 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
           // Get subjects attempted
           const subjectsAttempted = Array.from(new Set(completedSessions.map(s => s.subject)));
           
-          // Get profile for grade/board info
-          const profile = await storage.getStudentExamProfile(student.id, "board");
-          
           return {
             id: student.id,
             name: student.name,
-            grade: profile?.grade || null,
-            board: profile?.board || null,
+            grade: student.grade,
+            board: student.board,
             location: student.location,
             mobileNumber: student.mobileNumber,
             totalQuizzes,
@@ -1040,12 +1193,12 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     }
   });
 
-  // Admin: Download student progress as CSV (unified)
+  // Admin: Download student progress as CSV
   app.get("/api/admin/students/csv", async (req, res) => {
     try {
       const { studentIds } = req.query;
       
-      const allStudents = await storage.getAllUnifiedStudents();
+      const allStudents = await storage.getAllStudents();
       
       // Filter by student IDs if provided
       let filteredStudents = allStudents;
@@ -1059,14 +1212,13 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
       csvRows.push("Student Name,Grade,Board,Location,Mobile,Subject,Quiz Date,Score,Total Questions,Percentage");
       
       for (const student of filteredStudents) {
-        const sessions = await storage.getUnifiedStudentQuizHistory(student.id, "board");
+        const sessions = await storage.getStudentQuizSessions(student.id);
         const completedSessions = sessions.filter(s => s.completedAt);
-        const profile = await storage.getStudentExamProfile(student.id, "board");
         
         if (completedSessions.length === 0) {
           // Include student even if no quizzes taken
           csvRows.push(
-            `"${student.name}","${profile?.grade || ''}","${profile?.board || ''}","${student.location || ''}","${student.mobileNumber}","No quizzes taken","","","",""`
+            `"${student.name}","${student.grade}","${student.board}","${student.location}","${student.mobileNumber}","No quizzes taken","","","",""`
           );
         } else {
           for (const session of completedSessions) {
@@ -1077,7 +1229,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
               ? new Date(session.completedAt).toLocaleDateString("en-IN")
               : "";
             csvRows.push(
-              `"${student.name}","${profile?.grade || ''}","${profile?.board || ''}","${student.location || ''}","${student.mobileNumber}","${session.subject}","${dateStr}","${session.score || 0}","${session.totalQuestions}","${percentage}%"`
+              `"${student.name}","${student.grade}","${student.board}","${student.location}","${student.mobileNumber}","${session.subject}","${dateStr}","${session.score || 0}","${session.totalQuestions}","${percentage}%"`
             );
           }
         }
@@ -1094,7 +1246,11 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     }
   });
 
-  // Admin: Update unified student by ID
+  // Admin: Update board exam student
+  const VALID_GRADES = ["8th", "10th"];
+  const VALID_BOARDS = ["MP", "CBSE"];
+  const VALID_MEDIUMS = ["Hindi", "English"];
+  
   app.patch("/api/admin/students/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -1102,20 +1258,31 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         return res.status(400).json({ error: "Invalid student ID" });
       }
       
-      const { name, location, mobileNumber, fatherName, schoolName } = req.body;
+      const { name, grade, board, medium, location, mobileNumber } = req.body;
+      
+      if (grade !== undefined && !VALID_GRADES.includes(grade)) {
+        return res.status(400).json({ error: `Invalid grade. Must be one of: ${VALID_GRADES.join(", ")}` });
+      }
+      if (board !== undefined && !VALID_BOARDS.includes(board)) {
+        return res.status(400).json({ error: `Invalid board. Must be one of: ${VALID_BOARDS.join(", ")}` });
+      }
+      if (medium !== undefined && !VALID_MEDIUMS.includes(medium)) {
+        return res.status(400).json({ error: `Invalid medium. Must be one of: ${VALID_MEDIUMS.join(", ")}` });
+      }
       
       const updates: any = {};
       if (name !== undefined && typeof name === "string" && name.trim()) updates.name = name.trim();
+      if (grade !== undefined) updates.grade = grade;
+      if (board !== undefined) updates.board = board;
+      if (medium !== undefined) updates.medium = medium;
       if (location !== undefined && typeof location === "string") updates.location = location.trim();
       if (mobileNumber !== undefined && typeof mobileNumber === "string") updates.mobileNumber = mobileNumber.trim();
-      if (fatherName !== undefined && typeof fatherName === "string") updates.fatherName = fatherName.trim();
-      if (schoolName !== undefined && typeof schoolName === "string") updates.schoolName = schoolName.trim();
       
       if (Object.keys(updates).length === 0) {
         return res.status(400).json({ error: "No valid fields to update" });
       }
       
-      const student = await storage.updateUnifiedStudent(id, updates);
+      const student = await storage.updateStudent(id, updates);
       if (!student) {
         return res.status(404).json({ error: "Student not found" });
       }
@@ -1126,23 +1293,16 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     }
   });
 
-  // Admin: Delete unified student by ID
+  // Admin: Delete board exam student
   app.delete("/api/admin/students/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
         return res.status(400).json({ error: "Invalid student ID" });
       }
-      
-      // Get the student's mobile number first
-      const student = await storage.getUnifiedStudent(id);
-      if (!student) {
-        return res.status(404).json({ error: "Student not found" });
-      }
-      
-      const success = await storage.deleteUnifiedStudentCascade(student.mobileNumber);
+      const success = await storage.deleteStudent(id);
       if (!success) {
-        return res.status(404).json({ error: "Failed to delete student" });
+        return res.status(404).json({ error: "Student not found" });
       }
       res.json({ success: true });
     } catch (error) {
@@ -1151,9 +1311,181 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     }
   });
 
+  // Admin: Update CPCT student
+  app.patch("/api/admin/cpct-students/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid student ID" });
+      }
+      
+      const { name, medium, location, mobileNumber } = req.body;
+      
+      if (medium !== undefined && !VALID_MEDIUMS.includes(medium)) {
+        return res.status(400).json({ error: `Invalid medium. Must be one of: ${VALID_MEDIUMS.join(", ")}` });
+      }
+      
+      const updates: any = {};
+      if (name !== undefined && typeof name === "string" && name.trim()) updates.name = name.trim();
+      if (medium !== undefined) updates.medium = medium;
+      if (location !== undefined && typeof location === "string") updates.location = location.trim();
+      if (mobileNumber !== undefined && typeof mobileNumber === "string") updates.mobileNumber = mobileNumber.trim();
+      
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: "No valid fields to update" });
+      }
+      
+      const student = await storage.updateCpctStudent(id, updates);
+      if (!student) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+      res.json(student);
+    } catch (error) {
+      console.error("Error updating CPCT student:", error);
+      res.status(500).json({ error: "Failed to update student" });
+    }
+  });
+
+  // Admin: Delete CPCT student
+  app.delete("/api/admin/cpct-students/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid student ID" });
+      }
+      const success = await storage.deleteCpctStudent(id);
+      if (!success) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting CPCT student:", error);
+      res.status(500).json({ error: "Failed to delete student" });
+    }
+  });
+
+  // Admin: Update Navodaya student
+  const VALID_NAVODAYA_GRADES = ["6th", "9th"];
+  
+  app.patch("/api/admin/navodaya-students/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid student ID" });
+      }
+      
+      const { name, examGrade, medium, location, mobileNumber } = req.body;
+      
+      if (examGrade !== undefined && !VALID_NAVODAYA_GRADES.includes(examGrade)) {
+        return res.status(400).json({ error: `Invalid exam grade. Must be one of: ${VALID_NAVODAYA_GRADES.join(", ")}` });
+      }
+      if (medium !== undefined && !VALID_MEDIUMS.includes(medium)) {
+        return res.status(400).json({ error: `Invalid medium. Must be one of: ${VALID_MEDIUMS.join(", ")}` });
+      }
+      
+      const updates: any = {};
+      if (name !== undefined && typeof name === "string" && name.trim()) updates.name = name.trim();
+      if (examGrade !== undefined) updates.examGrade = examGrade;
+      if (medium !== undefined) updates.medium = medium;
+      if (location !== undefined && typeof location === "string") updates.location = location.trim();
+      if (mobileNumber !== undefined && typeof mobileNumber === "string") updates.mobileNumber = mobileNumber.trim();
+      
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: "No valid fields to update" });
+      }
+      
+      const student = await storage.updateNavodayaStudent(id, updates);
+      if (!student) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+      res.json(student);
+    } catch (error) {
+      console.error("Error updating Navodaya student:", error);
+      res.status(500).json({ error: "Failed to update student" });
+    }
+  });
+
+  // Admin: Delete Navodaya student
+  app.delete("/api/admin/navodaya-students/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid student ID" });
+      }
+      const success = await storage.deleteNavodayaStudent(id);
+      if (!success) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting Navodaya student:", error);
+      res.status(500).json({ error: "Failed to delete student" });
+    }
+  });
+
   // ============================================
-  // CPCT EXAM PREP ROUTES (Legacy student routes removed - use unified auth)
+  // CPCT EXAM PREP ROUTES
   // ============================================
+
+  // CPCT Student registration
+  app.post("/api/cpct/students/register", async (req, res) => {
+    try {
+      const validatedData = insertCpctStudentSchema.parse(req.body);
+      
+      // Check if student already exists by mobile number
+      const existingStudent = await storage.getCpctStudentByMobile(validatedData.mobileNumber);
+      if (existingStudent) {
+        return res.json(existingStudent);
+      }
+      
+      const student = await storage.createCpctStudent(validatedData);
+      res.json(student);
+    } catch (error: unknown) {
+      console.error("Error registering CPCT student:", error);
+      const message = error instanceof Error ? error.message : "Failed to register student";
+      res.status(400).json({ error: message });
+    }
+  });
+
+  // CPCT Student login
+  app.post("/api/cpct/students/login", async (req, res) => {
+    try {
+      const { name, mobileNumber } = req.body;
+      
+      if (!name || !mobileNumber) {
+        return res.status(400).json({ error: "Name and mobile number are required" });
+      }
+      
+      const student = await storage.getCpctStudentByMobile(mobileNumber);
+      if (!student) {
+        return res.status(404).json({ error: "Student not found. Please check your name and mobile number." });
+      }
+      
+      // Verify name matches (case-insensitive, trimmed)
+      if (student.name.trim().toLowerCase() !== name.trim().toLowerCase()) {
+        return res.status(404).json({ error: "Student not found. Please check your name and mobile number." });
+      }
+      
+      res.json(student);
+    } catch (error) {
+      console.error("Error logging in CPCT student:", error);
+      res.status(500).json({ error: "Failed to login" });
+    }
+  });
+
+  // Get CPCT student by ID
+  app.get("/api/cpct/students/:id", async (req, res) => {
+    try {
+      const student = await storage.getCpctStudent(parseInt(req.params.id));
+      if (!student) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+      res.json(student);
+    } catch (error) {
+      console.error("Error fetching CPCT student:", error);
+      res.status(500).json({ error: "Failed to fetch student" });
+    }
+  });
 
   // CPCT Section constants
   const CPCT_SECTIONS = [
@@ -1255,16 +1587,25 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         return res.status(400).json({ error: "Invalid section. Please select a valid CPCT section." });
       }
 
-      // Verify student exists in unified_students
+      // Verify student exists - check unified_students if useUnifiedAuth is true
       let studentMedium: "Hindi" | "English" = "Hindi";
-      const unifiedStudent = await storage.getUnifiedStudent(studentId);
-      if (!unifiedStudent) {
-        return res.status(404).json({ error: "Student not found" });
-      }
-      // Get medium from exam profile
-      const profile = await storage.getStudentExamProfile(studentId, "cpct");
-      if (profile?.lastSelections && typeof profile.lastSelections === 'object' && 'medium' in profile.lastSelections) {
-        studentMedium = (profile.lastSelections as { medium?: string }).medium as "Hindi" | "English" || "Hindi";
+      if (useUnifiedAuth) {
+        const unifiedStudent = await storage.getUnifiedStudent(studentId);
+        if (!unifiedStudent) {
+          return res.status(404).json({ error: "Student not found" });
+        }
+        // For unified auth, get medium from exam profile
+        const profile = await storage.getStudentExamProfile(studentId, "cpct");
+        if (profile?.lastSelections && typeof profile.lastSelections === 'object' && 'medium' in profile.lastSelections) {
+          studentMedium = (profile.lastSelections as { medium?: string }).medium as "Hindi" | "English" || "Hindi";
+        }
+      } else {
+        // Verify legacy CPCT student exists
+        const student = await storage.getCpctStudent(studentId);
+        if (!student) {
+          return res.status(404).json({ error: "Student not found" });
+        }
+        studentMedium = student.medium as "Hindi" | "English";
       }
 
       // Get all available CPCT PDFs (only active, not archived)
@@ -1290,7 +1631,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
           const parsedQuestions = matchingPdf.parsedQuestions as ParsedQuestion[];
           
           // Get current question pointer for this student + PDF
-          const pointer = await storage.getQuestionPointer(studentId, matchingPdf.id);
+          const pointer = await storage.getQuestionPointer(studentId, 'cpct', matchingPdf.id);
           const startIndex = pointer ? (pointer.lastQuestionIndex + 1) % parsedQuestions.length : 0;
           
           console.log(`CPCT Student ${studentId} - PDF ${matchingPdf.id} (${section}): Starting from index ${startIndex} of ${parsedQuestions.length} questions`);
@@ -1327,12 +1668,12 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
           const actualNewIndex = (startIndex + questionsUsed - 1) % parsedQuestions.length;
           
           // Update question pointer for next quiz
-          await storage.updateQuestionPointer(studentId, matchingPdf.id, actualNewIndex);
+          await storage.updateQuestionPointer(studentId, 'cpct', matchingPdf.id, actualNewIndex);
           console.log(`Generated ${generatedQuestions.length} questions, using ${questions.length}. Updated CPCT pointer to index ${actualNewIndex} for next quiz`);
         } else {
           // Fallback: PDF exists but no parsed questions - use full content
           console.log(`CPCT PDF ${matchingPdf.id} has no parsed questions, using full content`);
-          const previousQuestions = await storage.getUnifiedStudentPreviousQuestions(studentId, section, "cpct");
+          const previousQuestions = await storage.getCpctStudentPreviousQuestions(studentId);
           questions = await generateCpctQuizQuestions(
             matchingPdf.content,
             usedYear,
@@ -1344,7 +1685,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
       } else {
         // Generate section-specific CPCT questions (fallback when no matching PDF uploaded)
         console.log(`No matching PDF found for section: ${section}, using fallback questions`);
-        const previousQuestions = await storage.getUnifiedStudentPreviousQuestions(studentId, section, "cpct");
+        const previousQuestions = await storage.getCpctStudentPreviousQuestions(studentId);
         
         // Section-specific curriculum descriptions
         const sectionCurriculum: Record<string, string> = {
@@ -1372,6 +1713,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
       // Create CPCT quiz session
       const session = await storage.createCpctQuizSession({
         studentId,
+        unifiedStudentId: useUnifiedAuth ? studentId : null,
         pdfId: usedPdfId,
         year: usedYear,
         section: section,
@@ -1431,11 +1773,11 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     }
   });
 
-  // Get CPCT student's quiz history (unified)
+  // Get CPCT student's quiz history
   app.get("/api/cpct/students/:studentId/quiz-history", async (req, res) => {
     try {
       const studentId = parseInt(req.params.studentId);
-      const sessions = await storage.getUnifiedStudentQuizHistory(studentId, "cpct");
+      const sessions = await storage.getCpctStudentQuizSessions(studentId);
       
       res.json(sessions.map(s => ({
         id: s.id,
@@ -1477,27 +1819,24 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     }
   });
 
-  // Admin: Get all CPCT students with their progress (unified)
+  // Admin: Get all CPCT students with their progress
   app.get("/api/admin/cpct-students", async (req, res) => {
     try {
-      // Get all unified students who have CPCT exam profiles
-      const allStudents = await storage.getAllUnifiedStudents();
+      const allStudents = await storage.getAllCpctStudents();
       
       const studentsWithProgress = await Promise.all(
         allStudents.map(async (student) => {
-          const sessions = await storage.getUnifiedStudentQuizHistory(student.id, "cpct");
+          const sessions = await storage.getCpctStudentQuizSessions(student.id);
           const completedSessions = sessions.filter(s => s.completedAt);
           const totalQuizzes = completedSessions.length;
           const totalScore = completedSessions.reduce((sum, s) => sum + (s.score || 0), 0);
           const totalQuestions = completedSessions.reduce((sum, s) => sum + (s.totalQuestions || 10), 0);
           const averageScore = totalQuizzes > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
           
-          const profile = await storage.getStudentExamProfile(student.id, "cpct");
-          
           return {
             id: student.id,
             name: student.name,
-            medium: profile?.lastSelections && typeof profile.lastSelections === 'object' ? (profile.lastSelections as any).medium : "Hindi",
+            medium: student.medium,
             location: student.location,
             mobileNumber: student.mobileNumber,
             totalQuizzes,
@@ -1659,8 +1998,54 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
   });
 
   // ============================================
-  // NAVODAYA EXAM PREP ROUTES (Legacy student routes removed - use unified auth)
+  // NAVODAYA EXAM PREP ROUTES
   // ============================================
+
+  // Navodaya Student registration
+  app.post("/api/navodaya/students/register", async (req, res) => {
+    try {
+      const validatedData = insertNavodayaStudentSchema.parse(req.body);
+      
+      // Check if student already exists by mobile number
+      const existingStudent = await storage.getNavodayaStudentByMobile(validatedData.mobileNumber);
+      if (existingStudent) {
+        return res.json(existingStudent);
+      }
+      
+      const student = await storage.createNavodayaStudent(validatedData);
+      res.json(student);
+    } catch (error: unknown) {
+      console.error("Error registering Navodaya student:", error);
+      const message = error instanceof Error ? error.message : "Failed to register student";
+      res.status(400).json({ error: message });
+    }
+  });
+
+  // Navodaya Student login
+  app.post("/api/navodaya/students/login", async (req, res) => {
+    try {
+      const { name, mobileNumber } = req.body;
+      
+      if (!name || !mobileNumber) {
+        return res.status(400).json({ error: "Name and mobile number are required" });
+      }
+      
+      const student = await storage.getNavodayaStudentByMobile(mobileNumber);
+      if (!student) {
+        return res.status(404).json({ error: "Student not found. Please check your name and mobile number." });
+      }
+      
+      // Verify name matches (case-insensitive, trimmed)
+      if (student.name.trim().toLowerCase() !== name.trim().toLowerCase()) {
+        return res.status(404).json({ error: "Student not found. Please check your name and mobile number." });
+      }
+      
+      res.json(student);
+    } catch (error) {
+      console.error("Error logging in Navodaya student:", error);
+      res.status(500).json({ error: "Failed to login" });
+    }
+  });
 
   // Helper function to find Navodaya PDF for a section
   const findNavodayaPdfForSection = (
@@ -1778,20 +2163,30 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         return res.status(400).json({ error: "Missing required fields: studentId and section are required" });
       }
 
-      // Verify student exists in unified_students
+      // Verify student exists - check unified_students if useUnifiedAuth is true
       let studentMedium: "Hindi" | "English" = "Hindi";
       let studentExamGrade: "6th" | "9th" = "6th";
       
-      const unifiedStudent = await storage.getUnifiedStudent(studentId);
-      if (!unifiedStudent) {
-        return res.status(404).json({ error: "Student not found" });
-      }
-      // Get settings from exam profile
-      const navodayaProfile = await storage.getStudentExamProfile(studentId, "navodaya");
-      if (navodayaProfile?.lastSelections && typeof navodayaProfile.lastSelections === 'object') {
-        const selections = navodayaProfile.lastSelections as { medium?: string; examGrade?: string };
-        studentMedium = (selections.medium as "Hindi" | "English") || "Hindi";
-        studentExamGrade = (selections.examGrade as "6th" | "9th") || "6th";
+      if (useUnifiedAuth) {
+        const unifiedStudent = await storage.getUnifiedStudent(studentId);
+        if (!unifiedStudent) {
+          return res.status(404).json({ error: "Student not found" });
+        }
+        // For unified auth, get settings from exam profile
+        const profile = await storage.getStudentExamProfile(studentId, "navodaya");
+        if (profile?.lastSelections && typeof profile.lastSelections === 'object') {
+          const selections = profile.lastSelections as { medium?: string; examGrade?: string };
+          studentMedium = (selections.medium as "Hindi" | "English") || "Hindi";
+          studentExamGrade = (selections.examGrade as "6th" | "9th") || "6th";
+        }
+      } else {
+        // Verify legacy Navodaya student exists
+        const student = await storage.getNavodayaStudent(studentId);
+        if (!student) {
+          return res.status(404).json({ error: "Student not found" });
+        }
+        studentMedium = student.medium as "Hindi" | "English";
+        studentExamGrade = student.examGrade as "6th" | "9th";
       }
 
       // Validate section based on grade
@@ -1834,7 +2229,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         const parsedQuestions = pdf.parsedQuestions as ParsedQuestion[];
         
         // Get current question pointer for this student + PDF
-        const pointer = await storage.getQuestionPointer(studentId, pdf.id);
+        const pointer = await storage.getQuestionPointer(studentId, 'navodaya', pdf.id);
         const startIndex = pointer ? (pointer.lastQuestionIndex + 1) % parsedQuestions.length : 0;
         
         console.log(`Navodaya Student ${studentId} - PDF ${pdf.id}: Starting from index ${startIndex} of ${parsedQuestions.length} questions`);
@@ -1871,13 +2266,13 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         const actualNewIndex = (startIndex + questionsUsed - 1) % parsedQuestions.length;
         
         // Update question pointer for next quiz
-        await storage.updateQuestionPointer(studentId, pdf.id, actualNewIndex);
+        await storage.updateQuestionPointer(studentId, 'navodaya', pdf.id, actualNewIndex);
         console.log(`Generated ${generatedQuestions.length} Navodaya questions, using ${questions.length}. Updated pointer to index ${actualNewIndex} for next quiz`);
         
       } else if (pdf) {
         // Fallback: PDF exists but no parsed questions - use full content
         console.log(`Navodaya PDF ${pdf.id} has no parsed questions, using full content`);
-        const previousQuestions = await storage.getUnifiedStudentPreviousQuestions(studentId, section, "navodaya");
+        const previousQuestions = await storage.getNavodayaStudentPreviousQuestions(studentId);
         questions = await generateNavodayaQuizQuestions(
           pdf.content,
           examGrade,
@@ -1922,7 +2317,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
           }
         }
         
-        const previousQuestions = await storage.getUnifiedStudentPreviousQuestions(studentId, section, "navodaya");
+        const previousQuestions = await storage.getNavodayaStudentPreviousQuestions(studentId);
         questions = await generateNavodayaQuizQuestions(
           fallbackContent,
           examGrade,
@@ -1938,6 +2333,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
       // Create Navodaya quiz session with section
       const session = await storage.createNavodayaQuizSession({
         studentId,
+        unifiedStudentId: useUnifiedAuth ? studentId : null,
         pdfId: pdf?.id || null,
         examGrade: studentExamGrade,
         section,
@@ -1997,11 +2393,11 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     }
   });
 
-  // Get Navodaya student's quiz history (unified)
+  // Get Navodaya student's quiz history
   app.get("/api/navodaya/students/:studentId/quiz-history", async (req, res) => {
     try {
       const studentId = parseInt(req.params.studentId);
-      const sessions = await storage.getUnifiedStudentQuizHistory(studentId, "navodaya");
+      const sessions = await storage.getNavodayaStudentQuizSessions(studentId);
       
       res.json(sessions.map(s => ({
         id: s.id,
@@ -2043,27 +2439,25 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     }
   });
 
-  // Admin: Get all Navodaya students with their progress (unified)
+  // Admin: Get all Navodaya students with their progress
   app.get("/api/admin/navodaya-students", async (req, res) => {
     try {
-      const allStudents = await storage.getAllUnifiedStudents();
+      const allStudents = await storage.getAllNavodayaStudents();
       
       const studentsWithProgress = await Promise.all(
         allStudents.map(async (student) => {
-          const sessions = await storage.getUnifiedStudentQuizHistory(student.id, "navodaya");
+          const sessions = await storage.getNavodayaStudentQuizSessions(student.id);
           const completedSessions = sessions.filter(s => s.completedAt);
           const totalQuizzes = completedSessions.length;
           const totalScore = completedSessions.reduce((sum, s) => sum + (s.score || 0), 0);
           const totalQuestions = completedSessions.reduce((sum, s) => sum + (s.totalQuestions || 10), 0);
           const averageScore = totalQuizzes > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
           
-          const profile = await storage.getStudentExamProfile(student.id, "navodaya");
-          
           return {
             id: student.id,
             name: student.name,
-            examGrade: profile?.lastSelections && typeof profile.lastSelections === 'object' ? (profile.lastSelections as any).examGrade : "6th",
-            medium: profile?.lastSelections && typeof profile.lastSelections === 'object' ? (profile.lastSelections as any).medium : "Hindi",
+            examGrade: student.examGrade,
+            medium: student.medium,
             location: student.location,
             mobileNumber: student.mobileNumber,
             totalQuizzes,
@@ -2088,31 +2482,29 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     }
   });
 
-  // ==================== CHAPTER PRACTICE ROUTES (Legacy student routes removed - use unified auth) ====================
+  // ==================== CHAPTER PRACTICE ROUTES ====================
 
-  // Admin: Get all Chapter Practice students with progress (unified)
+  // Admin: Get all Chapter Practice students with progress
   app.get("/api/admin/chapter-practice-students", async (req, res) => {
     try {
-      const allStudents = await storage.getAllUnifiedStudents();
+      const allStudents = await storage.getAllChapterPracticeStudents();
       
       const studentsWithProgress = await Promise.all(
         allStudents.map(async (student) => {
-          const sessions = await storage.getUnifiedStudentQuizHistory(student.id, "chapter_practice");
+          const sessions = await storage.getChapterPracticeStudentQuizSessions(student.id);
           const completedSessions = sessions.filter(s => s.completedAt);
           const totalQuizzes = completedSessions.length;
           const totalScore = completedSessions.reduce((sum, s) => sum + (s.score || 0), 0);
           const totalQuestions = completedSessions.reduce((sum, s) => sum + (s.totalQuestions || 10), 0);
           const averageScore = totalQuizzes > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
           
-          const profile = await storage.getStudentExamProfile(student.id, "chapter_practice");
-          
           return {
             id: student.id,
             name: student.name,
             schoolName: student.schoolName,
-            grade: profile?.grade || null,
-            board: profile?.board || null,
-            medium: profile?.lastSelections && typeof profile.lastSelections === 'object' ? (profile.lastSelections as any).medium : "English",
+            grade: student.grade,
+            board: student.board,
+            medium: student.medium,
             location: student.location,
             mobileNumber: student.mobileNumber,
             totalQuizzes,
@@ -2135,6 +2527,61 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     } catch (error) {
       console.error("Error fetching Chapter Practice students:", error);
       res.status(500).json({ error: "Failed to fetch students" });
+    }
+  });
+
+  // Chapter Practice Student registration
+  app.post("/api/chapter-practice/students/register", async (req, res) => {
+    try {
+      const { name, schoolName, grade, board, medium, location, mobileNumber } = req.body;
+      
+      if (!name || !grade || !board || !location || !mobileNumber) {
+        return res.status(400).json({ error: "All fields are required" });
+      }
+      
+      const existingStudent = await storage.getChapterPracticeStudentByMobile(mobileNumber);
+      if (existingStudent) {
+        return res.json(existingStudent);
+      }
+      
+      const student = await storage.createChapterPracticeStudent({
+        name,
+        schoolName: schoolName || null,
+        grade,
+        board,
+        medium: medium || "English",
+        location,
+        mobileNumber,
+      });
+      res.json(student);
+    } catch (error) {
+      console.error("Error registering chapter practice student:", error);
+      res.status(400).json({ error: "Failed to register student" });
+    }
+  });
+
+  // Chapter Practice Student login
+  app.post("/api/chapter-practice/students/login", async (req, res) => {
+    try {
+      const { name, mobileNumber } = req.body;
+      
+      if (!name || !mobileNumber) {
+        return res.status(400).json({ error: "Name and mobile number are required" });
+      }
+      
+      const student = await storage.getChapterPracticeStudentByMobile(mobileNumber);
+      if (!student) {
+        return res.status(404).json({ error: "Student not found. Please register first." });
+      }
+      
+      if (student.name.trim().toLowerCase() !== name.trim().toLowerCase()) {
+        return res.status(404).json({ error: "Student not found. Please check your name and mobile number." });
+      }
+      
+      res.json(student);
+    } catch (error) {
+      console.error("Error logging in chapter practice student:", error);
+      res.status(500).json({ error: "Failed to login" });
     }
   });
 
@@ -2336,25 +2783,33 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         return res.status(400).json({ error: "Missing required fields" });
       }
       
-      // Get student from unified_students table
-      const unifiedStudent = await storage.getUnifiedStudent(studentId);
-      if (!unifiedStudent) {
-        return res.status(404).json({ error: "Student not found" });
+      // Check both legacy chapterPracticeStudents and unified_students tables
+      let student = await storage.getChapterPracticeStudent(studentId);
+      let isUnifiedStudent = false;
+      
+      if (!student) {
+        // Try unified students table
+        const unifiedStudent = await storage.getUnifiedStudent(studentId);
+        if (unifiedStudent) {
+          isUnifiedStudent = true;
+          // Create a compatible student object from unified student
+          student = {
+            id: unifiedStudent.id,
+            name: unifiedStudent.name,
+            schoolName: unifiedStudent.schoolName || null,
+            grade: grade || "8th",
+            board: board || "MP",
+            medium: medium || "English",
+            location: unifiedStudent.location || "",
+            mobileNumber: unifiedStudent.mobileNumber,
+            createdAt: unifiedStudent.createdAt,
+          } as any;
+        }
       }
       
-      // Get profile for grade/board info
-      const profile = await storage.getStudentExamProfile(studentId, "chapter_practice");
-      const student = {
-        id: unifiedStudent.id,
-        name: unifiedStudent.name,
-        schoolName: unifiedStudent.schoolName || null,
-        grade: grade || profile?.grade || "8th",
-        board: board || profile?.board || "MP",
-        medium: medium || (profile?.lastSelections as any)?.medium || "English",
-        location: unifiedStudent.location || "",
-        mobileNumber: unifiedStudent.mobileNumber,
-        createdAt: unifiedStudent.createdAt,
-      };
+      if (!student) {
+        return res.status(404).json({ error: "Student not found" });
+      }
       
       // Check for incomplete session (resume functionality)
       const incompleteSession = await storage.getIncompleteChapterPracticeSession(studentId, chapter);
@@ -2516,7 +2971,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     }
   });
 
-  // Get chapter practice quiz history (unified)
+  // Get chapter practice quiz history
   app.get("/api/chapter-practice/students/:studentId/quiz-history", async (req, res) => {
     try {
       const studentId = parseInt(req.params.studentId, 10);
@@ -2524,7 +2979,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         return res.status(400).json({ error: "Invalid student ID" });
       }
       
-      const sessions = await storage.getUnifiedStudentQuizHistory(studentId, "chapter_practice");
+      const sessions = await storage.getChapterPracticeStudentQuizSessions(studentId);
       
       res.json(sessions.map(s => ({
         id: s.id,

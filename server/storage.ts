@@ -1,28 +1,45 @@
 import { 
-  pdfs, quizSessions, cpctQuizSessions, navodayaQuizSessions, chapterPracticeQuizSessions,
+  students, pdfs, quizSessions, cpctStudents, cpctQuizSessions,
+  navodayaStudents, navodayaQuizSessions, chapterPracticeStudents, chapterPracticeQuizSessions,
   contactSubmissions, visitorStats, uniqueVisitors, questionPointers, notices,
   unifiedStudents, studentExamProfiles,
+  type Student, type InsertStudent,
   type Pdf, type InsertPdf,
   type QuizSession, type InsertQuizSession,
+  type CpctStudent, type InsertCpctStudent,
   type CpctQuizSession, type InsertCpctQuizSession,
+  type NavodayaStudent, type InsertNavodayaStudent,
   type NavodayaQuizSession, type InsertNavodayaQuizSession,
+  type ChapterPracticeStudent, type InsertChapterPracticeStudent,
   type ChapterPracticeQuizSession, type InsertChapterPracticeQuizSession,
   type ContactSubmission, type InsertContactSubmission,
   type VisitorStats,
-  type QuestionPointer, type ParsedQuestion,
+  type QuestionPointer, type ParsedQuestion, type ChapterMetadata,
   type Notice, type InsertNotice,
   type UnifiedStudent, type InsertUnifiedStudent,
   type StudentExamProfile, type InsertStudentExamProfile,
+  type ExamType
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, sql, desc, gte, lte, isNotNull, or } from "drizzle-orm";
+import { eq, and, like, sql, desc, gte, lte, isNotNull, or } from "drizzle-orm";
 
+// Normalize grade to handle "8th" vs "8", "10th" vs "10", etc.
 function normalizeGrade(grade: string): string[] {
+  // Remove ordinal suffixes and get base number
   const base = grade.replace(/(st|nd|rd|th)$/i, '').trim();
+  // Return both formats for matching
   return [base, `${base}th`];
 }
 
 export interface IStorage {
+  // Students
+  getStudent(id: number): Promise<Student | undefined>;
+  getStudentByMobile(mobileNumber: string): Promise<Student | undefined>;
+  createStudent(student: InsertStudent): Promise<Student>;
+  updateStudent(id: number, updates: Partial<InsertStudent>): Promise<Student | undefined>;
+  deleteStudent(id: number): Promise<boolean>;
+  getAllStudents(): Promise<Student[]>;
+
   // PDFs
   getPdf(id: number): Promise<Pdf | undefined>;
   getPdfByFilename(filename: string): Promise<Pdf | undefined>;
@@ -35,12 +52,20 @@ export interface IStorage {
   deletePdf(id: number): Promise<boolean>;
   restorePdf(id: number): Promise<boolean>;
 
-  // Quiz Sessions (Board Exam)
+  // Quiz Sessions
   createQuizSession(session: InsertQuizSession): Promise<QuizSession>;
   updateQuizSession(id: number, updates: Partial<QuizSession>): Promise<QuizSession | undefined>;
   getQuizSession(id: number): Promise<QuizSession | undefined>;
   getStudentQuizSessions(studentId: number): Promise<QuizSession[]>;
   getStudentPreviousQuestions(studentId: number, subject: string): Promise<string[]>;
+
+  // CPCT Students
+  getCpctStudent(id: number): Promise<CpctStudent | undefined>;
+  getCpctStudentByMobile(mobileNumber: string): Promise<CpctStudent | undefined>;
+  createCpctStudent(student: InsertCpctStudent): Promise<CpctStudent>;
+  updateCpctStudent(id: number, updates: Partial<InsertCpctStudent>): Promise<CpctStudent | undefined>;
+  deleteCpctStudent(id: number): Promise<boolean>;
+  getAllCpctStudents(): Promise<CpctStudent[]>;
 
   // CPCT Quiz Sessions
   createCpctQuizSession(session: InsertCpctQuizSession): Promise<CpctQuizSession>;
@@ -49,6 +74,14 @@ export interface IStorage {
   getCpctStudentQuizSessions(studentId: number): Promise<CpctQuizSession[]>;
   getCpctStudentPreviousQuestions(studentId: number): Promise<string[]>;
   getCpctPdf(year: string): Promise<Pdf | undefined>;
+
+  // Navodaya Students
+  getNavodayaStudent(id: number): Promise<NavodayaStudent | undefined>;
+  getNavodayaStudentByMobile(mobileNumber: string): Promise<NavodayaStudent | undefined>;
+  createNavodayaStudent(student: InsertNavodayaStudent): Promise<NavodayaStudent>;
+  updateNavodayaStudent(id: number, updates: Partial<InsertNavodayaStudent>): Promise<NavodayaStudent | undefined>;
+  deleteNavodayaStudent(id: number): Promise<boolean>;
+  getAllNavodayaStudents(): Promise<NavodayaStudent[]>;
 
   // Navodaya Quiz Sessions
   createNavodayaQuizSession(session: InsertNavodayaQuizSession): Promise<NavodayaQuizSession>;
@@ -77,8 +110,8 @@ export interface IStorage {
   }>;
 
   // Question Pointers (for sequential question picking)
-  getQuestionPointer(studentId: number, pdfId: number): Promise<QuestionPointer | undefined>;
-  updateQuestionPointer(studentId: number, pdfId: number, lastQuestionIndex: number): Promise<QuestionPointer>;
+  getQuestionPointer(studentId: number, studentType: string, pdfId: number): Promise<QuestionPointer | undefined>;
+  updateQuestionPointer(studentId: number, studentType: string, pdfId: number, lastQuestionIndex: number): Promise<QuestionPointer>;
   
   // PDF parsed questions
   updatePdfParsedQuestions(pdfId: number, parsedQuestions: ParsedQuestion[], totalQuestions: number): Promise<Pdf | undefined>;
@@ -89,6 +122,14 @@ export interface IStorage {
   deleteNotice(id: number): Promise<boolean>;
   getActiveNotices(): Promise<Notice[]>;
   getAllNotices(): Promise<Notice[]>;
+
+  // Chapter Practice Students
+  getChapterPracticeStudent(id: number): Promise<ChapterPracticeStudent | undefined>;
+  getChapterPracticeStudentByMobile(mobileNumber: string): Promise<ChapterPracticeStudent | undefined>;
+  createChapterPracticeStudent(student: InsertChapterPracticeStudent): Promise<ChapterPracticeStudent>;
+  updateChapterPracticeStudent(id: number, updates: Partial<InsertChapterPracticeStudent>): Promise<ChapterPracticeStudent | undefined>;
+  deleteChapterPracticeStudent(id: number): Promise<boolean>;
+  getAllChapterPracticeStudents(): Promise<ChapterPracticeStudent[]>;
 
   // Chapter Practice Quiz Sessions
   createChapterPracticeQuizSession(session: InsertChapterPracticeQuizSession): Promise<ChapterPracticeQuizSession>;
@@ -102,7 +143,7 @@ export interface IStorage {
   getChapterPracticePdfs(): Promise<Pdf[]>;
   getChapterPracticePdfsForSubject(subject: string): Promise<Pdf[]>;
 
-  // Unified Students (single auth system)
+  // Unified Students (new auth system)
   getUnifiedStudent(id: number): Promise<UnifiedStudent | undefined>;
   getUnifiedStudentByMobile(mobileNumber: string): Promise<UnifiedStudent | undefined>;
   getUnifiedStudentByNameAndMobile(name: string, mobileNumber: string): Promise<UnifiedStudent | undefined>;
@@ -115,6 +156,9 @@ export interface IStorage {
   getStudentExamProfile(studentId: number, examType: string): Promise<StudentExamProfile | undefined>;
   upsertStudentExamProfile(studentId: number, examType: string, lastSelections: any): Promise<StudentExamProfile>;
   getStudentAllExamProfiles(studentId: number): Promise<StudentExamProfile[]>;
+  
+  // Legacy user lookup and auto-migration
+  findAndMigrateLegacyUser(name: string, mobileNumber: string): Promise<UnifiedStudent | null>;
   
   // Unified Quiz History
   getUnifiedStudentQuizHistory(studentId: number, examType: string): Promise<any[]>;
@@ -131,6 +175,41 @@ export interface LeaderboardEntry {
 }
 
 export class DatabaseStorage implements IStorage {
+  // Students
+  async getStudent(id: number): Promise<Student | undefined> {
+    const [student] = await db.select().from(students).where(eq(students.id, id));
+    return student || undefined;
+  }
+
+  async getStudentByMobile(mobileNumber: string): Promise<Student | undefined> {
+    const [student] = await db.select().from(students).where(eq(students.mobileNumber, mobileNumber));
+    return student || undefined;
+  }
+
+  async createStudent(insertStudent: InsertStudent): Promise<Student> {
+    const [student] = await db.insert(students).values(insertStudent).returning();
+    return student;
+  }
+
+  async getAllStudents(): Promise<Student[]> {
+    return await db.select().from(students);
+  }
+
+  async updateStudent(id: number, updates: Partial<InsertStudent>): Promise<Student | undefined> {
+    const [student] = await db
+      .update(students)
+      .set(updates)
+      .where(eq(students.id, id))
+      .returning();
+    return student || undefined;
+  }
+
+  async deleteStudent(id: number): Promise<boolean> {
+    await db.delete(quizSessions).where(eq(quizSessions.studentId, id));
+    const result = await db.delete(students).where(eq(students.id, id)).returning();
+    return result.length > 0;
+  }
+
   // PDFs
   async getPdf(id: number): Promise<Pdf | undefined> {
     const [pdf] = await db.select().from(pdfs).where(eq(pdfs.id, id));
@@ -138,6 +217,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPdfByFilename(filename: string): Promise<Pdf | undefined> {
+    // Only check active (non-archived) PDFs to allow re-uploading after archive
     const [pdf] = await db.select().from(pdfs).where(
       and(
         eq(pdfs.filename, filename),
@@ -148,11 +228,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAnyPdfByFilename(filename: string): Promise<Pdf | undefined> {
+    // Get any PDF by filename, including archived ones (for replacement logic)
     const [pdf] = await db.select().from(pdfs).where(eq(pdfs.filename, filename));
     return pdf || undefined;
   }
 
   async replacePdf(id: number, content: string, grade: string, board: string, subject: string): Promise<Pdf | undefined> {
+    // Replace an archived PDF with new content and restore it
     const [pdf] = await db.update(pdfs)
       .set({ 
         content, 
@@ -170,8 +252,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPdfByGradeBoardSubject(grade: string, board: string, subject: string): Promise<Pdf | undefined> {
+    // Get normalized grade variants (e.g., "12th" -> ["12", "12th"])
     const gradeVariants = normalizeGrade(grade);
     
+    // Only return active (non-archived) PDFs for quiz generation
+    // Exclude Chapter Practice PDFs (those have "chapter_plan" in filename)
     const [pdf] = await db.select().from(pdfs).where(
       and(
         or(
@@ -193,23 +278,30 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllPdfs(): Promise<Pdf[]> {
+    // Exclude Chapter Practice PDFs (those with "chapter_plan" in filename)
+    // They are shown in a separate section
     return await db.select().from(pdfs).where(
       sql`${pdfs.filename} NOT ILIKE '%chapter_plan%'`
     );
   }
 
   async deletePdf(id: number): Promise<boolean> {
+    // Soft delete: archive the PDF instead of deleting it
+    // This preserves quiz history and leaderboard data
     const result = await db.update(pdfs)
       .set({ isArchived: true, archivedAt: new Date() })
       .where(eq(pdfs.id, id))
       .returning();
     
+    // Only delete question pointers (not quiz sessions - those are history)
     await db.delete(questionPointers).where(eq(questionPointers.pdfId, id));
     
     return result.length > 0;
   }
   
   async getActivePdfs(): Promise<Pdf[]> {
+    // Get only non-archived PDFs for quiz generation
+    // Exclude Chapter Practice PDFs (they have their own dedicated section)
     return await db.select().from(pdfs).where(
       and(
         eq(pdfs.isArchived, false),
@@ -219,6 +311,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async restorePdf(id: number): Promise<boolean> {
+    // Restore an archived PDF - clear archivedAt timestamp
     const result = await db.update(pdfs)
       .set({ isArchived: false, archivedAt: null })
       .where(eq(pdfs.id, id))
@@ -226,7 +319,7 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0;
   }
 
-  // Quiz Sessions (Board Exam)
+  // Quiz Sessions
   async createQuizSession(insertSession: InsertQuizSession): Promise<QuizSession> {
     const [session] = await db.insert(quizSessions).values(insertSession).returning();
     return session;
@@ -271,6 +364,41 @@ export class DatabaseStorage implements IStorage {
     return previousQuestions;
   }
 
+  // CPCT Students
+  async getCpctStudent(id: number): Promise<CpctStudent | undefined> {
+    const [student] = await db.select().from(cpctStudents).where(eq(cpctStudents.id, id));
+    return student || undefined;
+  }
+
+  async getCpctStudentByMobile(mobileNumber: string): Promise<CpctStudent | undefined> {
+    const [student] = await db.select().from(cpctStudents).where(eq(cpctStudents.mobileNumber, mobileNumber));
+    return student || undefined;
+  }
+
+  async createCpctStudent(insertStudent: InsertCpctStudent): Promise<CpctStudent> {
+    const [student] = await db.insert(cpctStudents).values(insertStudent).returning();
+    return student;
+  }
+
+  async getAllCpctStudents(): Promise<CpctStudent[]> {
+    return await db.select().from(cpctStudents);
+  }
+
+  async updateCpctStudent(id: number, updates: Partial<InsertCpctStudent>): Promise<CpctStudent | undefined> {
+    const [student] = await db
+      .update(cpctStudents)
+      .set(updates)
+      .where(eq(cpctStudents.id, id))
+      .returning();
+    return student || undefined;
+  }
+
+  async deleteCpctStudent(id: number): Promise<boolean> {
+    await db.delete(cpctQuizSessions).where(eq(cpctQuizSessions.studentId, id));
+    const result = await db.delete(cpctStudents).where(eq(cpctStudents.id, id)).returning();
+    return result.length > 0;
+  }
+
   // CPCT Quiz Sessions
   async createCpctQuizSession(insertSession: InsertCpctQuizSession): Promise<CpctQuizSession> {
     const [session] = await db.insert(cpctQuizSessions).values(insertSession).returning();
@@ -312,9 +440,45 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCpctPdf(year: string): Promise<Pdf | undefined> {
+    // Look for CPCT_Year.pdf format
     const filename = `CPCT_${year}.pdf`;
     const [pdf] = await db.select().from(pdfs).where(eq(pdfs.filename, filename));
     return pdf || undefined;
+  }
+
+  // Navodaya Students
+  async getNavodayaStudent(id: number): Promise<NavodayaStudent | undefined> {
+    const [student] = await db.select().from(navodayaStudents).where(eq(navodayaStudents.id, id));
+    return student || undefined;
+  }
+
+  async getNavodayaStudentByMobile(mobileNumber: string): Promise<NavodayaStudent | undefined> {
+    const [student] = await db.select().from(navodayaStudents).where(eq(navodayaStudents.mobileNumber, mobileNumber));
+    return student || undefined;
+  }
+
+  async createNavodayaStudent(insertStudent: InsertNavodayaStudent): Promise<NavodayaStudent> {
+    const [student] = await db.insert(navodayaStudents).values(insertStudent).returning();
+    return student;
+  }
+
+  async getAllNavodayaStudents(): Promise<NavodayaStudent[]> {
+    return await db.select().from(navodayaStudents);
+  }
+
+  async updateNavodayaStudent(id: number, updates: Partial<InsertNavodayaStudent>): Promise<NavodayaStudent | undefined> {
+    const [student] = await db
+      .update(navodayaStudents)
+      .set(updates)
+      .where(eq(navodayaStudents.id, id))
+      .returning();
+    return student || undefined;
+  }
+
+  async deleteNavodayaStudent(id: number): Promise<boolean> {
+    await db.delete(navodayaQuizSessions).where(eq(navodayaQuizSessions.studentId, id));
+    const result = await db.delete(navodayaStudents).where(eq(navodayaStudents.id, id)).returning();
+    return result.length > 0;
   }
 
   // Navodaya Quiz Sessions
@@ -358,11 +522,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getNavodayaPdf(examGrade: string): Promise<Pdf | undefined> {
+    // Look for {grade}_navodaya.pdf format (e.g., 6th_navodaya.pdf, 9th_navodaya.pdf)
+    // Also try without ordinal suffix (e.g., 6_navodaya.pdf)
+    // Only return active (non-archived) PDFs
     const filename = `${examGrade}_navodaya.pdf`;
     let [pdf] = await db.select().from(pdfs).where(
       and(eq(pdfs.filename, filename), eq(pdfs.isArchived, false))
     );
     
+    // Fallback: try without ordinal suffix (6th -> 6)
     if (!pdf) {
       const numericGrade = examGrade.replace(/(?:st|nd|rd|th)$/i, '');
       const fallbackFilename = `${numericGrade}_navodaya.pdf`;
@@ -388,36 +556,39 @@ export class DatabaseStorage implements IStorage {
   async incrementVisitorCount(date: string, ipAddress?: string): Promise<VisitorStats> {
     let isUniqueVisit = false;
     
+    // Check if this IP has visited today (if IP provided)
     if (ipAddress) {
       const existingVisit = await db.select().from(uniqueVisitors)
         .where(and(eq(uniqueVisitors.ipAddress, ipAddress), eq(uniqueVisitors.date, date)));
       
       if (existingVisit.length === 0) {
-        isUniqueVisit = true;
+        // New unique visitor for today
         await db.insert(uniqueVisitors).values({ ipAddress, date });
+        isUniqueVisit = true;
       }
     }
     
-    const existingStats = await db.select().from(visitorStats).where(eq(visitorStats.date, date));
+    // Try to update existing record first
+    const existing = await db.select().from(visitorStats).where(eq(visitorStats.date, date));
     
-    if (existingStats.length === 0) {
-      const [newStats] = await db.insert(visitorStats).values({
-        date,
-        totalVisitors: 1,
-        uniqueVisitors: isUniqueVisit ? 1 : 0,
-      }).returning();
-      return newStats;
-    } else {
-      const [updatedStats] = await db.update(visitorStats)
-        .set({
-          totalVisitors: sql`${visitorStats.totalVisitors} + 1`,
-          uniqueVisitors: isUniqueVisit 
-            ? sql`${visitorStats.uniqueVisitors} + 1` 
-            : visitorStats.uniqueVisitors,
-        })
+    if (existing.length > 0) {
+      const updateData: any = { totalVisitors: sql`${visitorStats.totalVisitors} + 1` };
+      if (isUniqueVisit) {
+        updateData.uniqueVisitors = sql`${visitorStats.uniqueVisitors} + 1`;
+      }
+      const [updated] = await db
+        .update(visitorStats)
+        .set(updateData)
         .where(eq(visitorStats.date, date))
         .returning();
-      return updatedStats;
+      return updated;
+    } else {
+      const [created] = await db.insert(visitorStats).values({ 
+        date, 
+        totalVisitors: 1,
+        uniqueVisitors: isUniqueVisit ? 1 : 0
+      }).returning();
+      return created;
     }
   }
 
@@ -426,14 +597,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTotalVisitors(): Promise<number> {
-    const result = await db.select({ total: sql<number>`COALESCE(SUM(${visitorStats.totalVisitors}), 0)` })
-      .from(visitorStats);
+    const result = await db.select({ total: sql<number>`COALESCE(SUM(${visitorStats.totalVisitors}), 0)` }).from(visitorStats);
     return result[0]?.total || 0;
   }
 
   async getTotalUniqueVisitors(): Promise<number> {
-    const result = await db.select({ total: sql<number>`COALESCE(SUM(${visitorStats.uniqueVisitors}), 0)` })
-      .from(visitorStats);
+    const result = await db.select({ total: sql<number>`COALESCE(SUM(${visitorStats.uniqueVisitors}), 0)` }).from(visitorStats);
     return result[0]?.total || 0;
   }
 
@@ -444,100 +613,174 @@ export class DatabaseStorage implements IStorage {
     navodaya: LeaderboardEntry[];
     chapterPractice: LeaderboardEntry[];
   }> {
-    const buildLeaderboard = async (
-      sessionTable: any,
-      getStudentName: (id: number) => Promise<string>
-    ): Promise<LeaderboardEntry[]> => {
-      const sessions = await db.select().from(sessionTable).where(
+    // Board Exam Leaderboard (top 3)
+    const boardExamResults = await db
+      .select({
+        studentId: quizSessions.studentId,
+        studentName: students.name,
+        totalScore: sql<number>`COALESCE(SUM(${quizSessions.score}), 0)`,
+        totalQuestions: sql<number>`COALESCE(SUM(${quizSessions.totalQuestions}), 0)`,
+        testsCompleted: sql<number>`COUNT(*)`,
+      })
+      .from(quizSessions)
+      .innerJoin(students, eq(quizSessions.studentId, students.id))
+      .where(
         and(
-          isNotNull(sessionTable.completedAt),
-          gte(sessionTable.completedAt, weekStartUtc),
-          lte(sessionTable.completedAt, weekEndUtc)
+          isNotNull(quizSessions.score),
+          isNotNull(quizSessions.completedAt),
+          sql`${quizSessions.totalQuestions} > 0`,
+          gte(quizSessions.completedAt, weekStartUtc),
+          lte(quizSessions.completedAt, weekEndUtc)
         )
-      );
+      )
+      .groupBy(quizSessions.studentId, students.name)
+      .orderBy(sql`(COALESCE(SUM(${quizSessions.score}), 0)::float / NULLIF(SUM(${quizSessions.totalQuestions}), 0)) DESC NULLS LAST`)
+      .limit(3);
 
-      const studentStats: Record<number, { totalScore: number; totalQuestions: number; testsCompleted: number }> = {};
+    const boardExam: LeaderboardEntry[] = boardExamResults.map((row, index) => ({
+      rank: index + 1,
+      studentId: row.studentId,
+      studentName: row.studentName,
+      totalScore: Number(row.totalScore),
+      totalQuestions: Number(row.totalQuestions),
+      accuracy: row.totalQuestions > 0 ? Math.round((Number(row.totalScore) / Number(row.totalQuestions)) * 100) : 0,
+      testsCompleted: Number(row.testsCompleted),
+    }));
 
-      for (const session of sessions) {
-        const studentId = session.studentId;
-        if (!studentStats[studentId]) {
-          studentStats[studentId] = { totalScore: 0, totalQuestions: 0, testsCompleted: 0 };
-        }
-        studentStats[studentId].totalScore += session.score || 0;
-        studentStats[studentId].totalQuestions += session.totalQuestions || 0;
-        studentStats[studentId].testsCompleted += 1;
-      }
+    // CPCT Leaderboard (top 3)
+    const cpctResults = await db
+      .select({
+        studentId: cpctQuizSessions.studentId,
+        studentName: cpctStudents.name,
+        totalScore: sql<number>`COALESCE(SUM(${cpctQuizSessions.score}), 0)`,
+        totalQuestions: sql<number>`COALESCE(SUM(${cpctQuizSessions.totalQuestions}), 0)`,
+        testsCompleted: sql<number>`COUNT(*)`,
+      })
+      .from(cpctQuizSessions)
+      .innerJoin(cpctStudents, eq(cpctQuizSessions.studentId, cpctStudents.id))
+      .where(
+        and(
+          isNotNull(cpctQuizSessions.score),
+          isNotNull(cpctQuizSessions.completedAt),
+          sql`${cpctQuizSessions.totalQuestions} > 0`,
+          gte(cpctQuizSessions.completedAt, weekStartUtc),
+          lte(cpctQuizSessions.completedAt, weekEndUtc)
+        )
+      )
+      .groupBy(cpctQuizSessions.studentId, cpctStudents.name)
+      .orderBy(sql`(COALESCE(SUM(${cpctQuizSessions.score}), 0)::float / NULLIF(SUM(${cpctQuizSessions.totalQuestions}), 0)) DESC NULLS LAST`)
+      .limit(3);
 
-      const leaderboard: LeaderboardEntry[] = [];
-      for (const [studentIdStr, stats] of Object.entries(studentStats)) {
-        const studentId = parseInt(studentIdStr);
-        const studentName = await getStudentName(studentId);
-        const accuracy = stats.totalQuestions > 0 
-          ? Math.round((stats.totalScore / stats.totalQuestions) * 100) 
-          : 0;
-        
-        leaderboard.push({
-          rank: 0,
-          studentId,
-          studentName,
-          accuracy,
-          totalScore: stats.totalScore,
-          totalQuestions: stats.totalQuestions,
-          testsCompleted: stats.testsCompleted,
-        });
-      }
+    const cpct: LeaderboardEntry[] = cpctResults.map((row, index) => ({
+      rank: index + 1,
+      studentId: row.studentId,
+      studentName: row.studentName,
+      totalScore: Number(row.totalScore),
+      totalQuestions: Number(row.totalQuestions),
+      accuracy: row.totalQuestions > 0 ? Math.round((Number(row.totalScore) / Number(row.totalQuestions)) * 100) : 0,
+      testsCompleted: Number(row.testsCompleted),
+    }));
 
-      leaderboard.sort((a, b) => {
-        if (b.accuracy !== a.accuracy) return b.accuracy - a.accuracy;
-        if (b.testsCompleted !== a.testsCompleted) return b.testsCompleted - a.testsCompleted;
-        return b.totalScore - a.totalScore;
-      });
+    // Navodaya Leaderboard (top 3)
+    const navodayaResults = await db
+      .select({
+        studentId: navodayaQuizSessions.studentId,
+        studentName: navodayaStudents.name,
+        totalScore: sql<number>`COALESCE(SUM(${navodayaQuizSessions.score}), 0)`,
+        totalQuestions: sql<number>`COALESCE(SUM(${navodayaQuizSessions.totalQuestions}), 0)`,
+        testsCompleted: sql<number>`COUNT(*)`,
+      })
+      .from(navodayaQuizSessions)
+      .innerJoin(navodayaStudents, eq(navodayaQuizSessions.studentId, navodayaStudents.id))
+      .where(
+        and(
+          isNotNull(navodayaQuizSessions.score),
+          isNotNull(navodayaQuizSessions.completedAt),
+          sql`${navodayaQuizSessions.totalQuestions} > 0`,
+          gte(navodayaQuizSessions.completedAt, weekStartUtc),
+          lte(navodayaQuizSessions.completedAt, weekEndUtc)
+        )
+      )
+      .groupBy(navodayaQuizSessions.studentId, navodayaStudents.name)
+      .orderBy(sql`(COALESCE(SUM(${navodayaQuizSessions.score}), 0)::float / NULLIF(SUM(${navodayaQuizSessions.totalQuestions}), 0)) DESC NULLS LAST`)
+      .limit(3);
 
-      leaderboard.forEach((entry, index) => {
-        entry.rank = index + 1;
-      });
+    const navodaya: LeaderboardEntry[] = navodayaResults.map((row, index) => ({
+      rank: index + 1,
+      studentId: row.studentId,
+      studentName: row.studentName,
+      totalScore: Number(row.totalScore),
+      totalQuestions: Number(row.totalQuestions),
+      accuracy: row.totalQuestions > 0 ? Math.round((Number(row.totalScore) / Number(row.totalQuestions)) * 100) : 0,
+      testsCompleted: Number(row.testsCompleted),
+    }));
 
-      return leaderboard.slice(0, 10);
-    };
+    // Chapter Practice Leaderboard (top 3)
+    const chapterPracticeResults = await db
+      .select({
+        studentId: chapterPracticeQuizSessions.studentId,
+        studentName: chapterPracticeStudents.name,
+        totalScore: sql<number>`COALESCE(SUM(${chapterPracticeQuizSessions.score}), 0)`,
+        totalQuestions: sql<number>`COALESCE(SUM(${chapterPracticeQuizSessions.totalQuestions}), 0)`,
+        testsCompleted: sql<number>`COUNT(*)`,
+      })
+      .from(chapterPracticeQuizSessions)
+      .innerJoin(chapterPracticeStudents, eq(chapterPracticeQuizSessions.studentId, chapterPracticeStudents.id))
+      .where(
+        and(
+          isNotNull(chapterPracticeQuizSessions.score),
+          isNotNull(chapterPracticeQuizSessions.completedAt),
+          sql`${chapterPracticeQuizSessions.totalQuestions} > 0`,
+          gte(chapterPracticeQuizSessions.completedAt, weekStartUtc),
+          lte(chapterPracticeQuizSessions.completedAt, weekEndUtc)
+        )
+      )
+      .groupBy(chapterPracticeQuizSessions.studentId, chapterPracticeStudents.name)
+      .orderBy(sql`(COALESCE(SUM(${chapterPracticeQuizSessions.score}), 0)::float / NULLIF(SUM(${chapterPracticeQuizSessions.totalQuestions}), 0)) DESC NULLS LAST`)
+      .limit(3);
 
-    const getUnifiedStudentName = async (id: number): Promise<string> => {
-      const student = await this.getUnifiedStudent(id);
-      return student?.name || "Unknown";
-    };
-
-    const [boardExam, cpct, navodaya, chapterPractice] = await Promise.all([
-      buildLeaderboard(quizSessions, getUnifiedStudentName),
-      buildLeaderboard(cpctQuizSessions, getUnifiedStudentName),
-      buildLeaderboard(navodayaQuizSessions, getUnifiedStudentName),
-      buildLeaderboard(chapterPracticeQuizSessions, getUnifiedStudentName),
-    ]);
+    const chapterPractice: LeaderboardEntry[] = chapterPracticeResults.map((row, index) => ({
+      rank: index + 1,
+      studentId: row.studentId,
+      studentName: row.studentName,
+      totalScore: Number(row.totalScore),
+      totalQuestions: Number(row.totalQuestions),
+      accuracy: row.totalQuestions > 0 ? Math.round((Number(row.totalScore) / Number(row.totalQuestions)) * 100) : 0,
+      testsCompleted: Number(row.testsCompleted),
+    }));
 
     return { boardExam, cpct, navodaya, chapterPractice };
   }
 
-  // Question Pointers
-  async getQuestionPointer(studentId: number, pdfId: number): Promise<QuestionPointer | undefined> {
+  // Question Pointers (for sequential question picking)
+  async getQuestionPointer(studentId: number, studentType: string, pdfId: number): Promise<QuestionPointer | undefined> {
     const [pointer] = await db.select().from(questionPointers).where(
       and(
         eq(questionPointers.studentId, studentId),
+        eq(questionPointers.studentType, studentType),
         eq(questionPointers.pdfId, pdfId)
       )
     );
     return pointer || undefined;
   }
 
-  async updateQuestionPointer(studentId: number, pdfId: number, lastQuestionIndex: number): Promise<QuestionPointer> {
-    const existing = await this.getQuestionPointer(studentId, pdfId);
+  async updateQuestionPointer(studentId: number, studentType: string, pdfId: number, lastQuestionIndex: number): Promise<QuestionPointer> {
+    // Try to find existing pointer
+    const existing = await this.getQuestionPointer(studentId, studentType, pdfId);
     
     if (existing) {
-      const [updated] = await db.update(questionPointers)
+      // Update existing pointer
+      const [updated] = await db
+        .update(questionPointers)
         .set({ lastQuestionIndex, updatedAt: new Date() })
         .where(eq(questionPointers.id, existing.id))
         .returning();
       return updated;
     } else {
-      const [created] = await db.insert(questionPointers)
-        .values({ studentId, pdfId, lastQuestionIndex })
+      // Create new pointer
+      const [created] = await db
+        .insert(questionPointers)
+        .values({ studentId, studentType, pdfId, lastQuestionIndex })
         .returning();
       return created;
     }
@@ -545,25 +788,27 @@ export class DatabaseStorage implements IStorage {
 
   // PDF parsed questions
   async updatePdfParsedQuestions(pdfId: number, parsedQuestions: ParsedQuestion[], totalQuestions: number): Promise<Pdf | undefined> {
-    const [pdf] = await db.update(pdfs)
+    const [updated] = await db
+      .update(pdfs)
       .set({ parsedQuestions, totalQuestions })
       .where(eq(pdfs.id, pdfId))
       .returning();
-    return pdf || undefined;
+    return updated || undefined;
   }
 
   // Notices
-  async createNotice(insertNotice: InsertNotice): Promise<Notice> {
-    const [notice] = await db.insert(notices).values(insertNotice).returning();
-    return notice;
+  async createNotice(notice: InsertNotice): Promise<Notice> {
+    const [created] = await db.insert(notices).values(notice).returning();
+    return created;
   }
 
   async updateNotice(id: number, updates: Partial<InsertNotice>): Promise<Notice | undefined> {
-    const [notice] = await db.update(notices)
+    const [updated] = await db
+      .update(notices)
       .set(updates)
       .where(eq(notices.id, id))
       .returning();
-    return notice || undefined;
+    return updated || undefined;
   }
 
   async deleteNotice(id: number): Promise<boolean> {
@@ -572,19 +817,55 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getActiveNotices(): Promise<Notice[]> {
+    const now = new Date();
     return await db.select().from(notices).where(
       and(
         eq(notices.isActive, true),
         or(
           sql`${notices.expiresAt} IS NULL`,
-          gte(notices.expiresAt, new Date())
+          gte(notices.expiresAt, now)
         )
       )
     ).orderBy(desc(notices.priority), desc(notices.createdAt));
   }
 
   async getAllNotices(): Promise<Notice[]> {
-    return await db.select().from(notices).orderBy(desc(notices.createdAt));
+    return await db.select().from(notices).orderBy(desc(notices.priority), desc(notices.createdAt));
+  }
+
+  // Chapter Practice Students
+  async getChapterPracticeStudent(id: number): Promise<ChapterPracticeStudent | undefined> {
+    const [student] = await db.select().from(chapterPracticeStudents).where(eq(chapterPracticeStudents.id, id));
+    return student || undefined;
+  }
+
+  async getChapterPracticeStudentByMobile(mobileNumber: string): Promise<ChapterPracticeStudent | undefined> {
+    const [student] = await db.select().from(chapterPracticeStudents).where(eq(chapterPracticeStudents.mobileNumber, mobileNumber));
+    return student || undefined;
+  }
+
+  async createChapterPracticeStudent(insertStudent: InsertChapterPracticeStudent): Promise<ChapterPracticeStudent> {
+    const [student] = await db.insert(chapterPracticeStudents).values(insertStudent).returning();
+    return student;
+  }
+
+  async updateChapterPracticeStudent(id: number, updates: Partial<InsertChapterPracticeStudent>): Promise<ChapterPracticeStudent | undefined> {
+    const [student] = await db
+      .update(chapterPracticeStudents)
+      .set(updates)
+      .where(eq(chapterPracticeStudents.id, id))
+      .returning();
+    return student || undefined;
+  }
+
+  async deleteChapterPracticeStudent(id: number): Promise<boolean> {
+    await db.delete(chapterPracticeQuizSessions).where(eq(chapterPracticeQuizSessions.studentId, id));
+    const result = await db.delete(chapterPracticeStudents).where(eq(chapterPracticeStudents.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getAllChapterPracticeStudents(): Promise<ChapterPracticeStudent[]> {
+    return await db.select().from(chapterPracticeStudents);
   }
 
   // Chapter Practice Quiz Sessions
@@ -594,7 +875,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateChapterPracticeQuizSession(id: number, updates: Partial<ChapterPracticeQuizSession>): Promise<ChapterPracticeQuizSession | undefined> {
-    const [session] = await db.update(chapterPracticeQuizSessions)
+    const [session] = await db
+      .update(chapterPracticeQuizSessions)
       .set(updates)
       .where(eq(chapterPracticeQuizSessions.id, id))
       .returning();
@@ -613,6 +895,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getIncompleteChapterPracticeSession(studentId: number, chapterName: string): Promise<ChapterPracticeQuizSession | undefined> {
+    // Find the most recent incomplete session for this student + chapter
     const [session] = await db.select().from(chapterPracticeQuizSessions)
       .where(
         and(
@@ -626,41 +909,56 @@ export class DatabaseStorage implements IStorage {
     return session || undefined;
   }
 
-  // Chapter Practice PDFs
+  // Chapter Practice PDFs - look for {grade}_{board}_chapter_plan_{subject}.pdf format
   async getChapterPracticePdf(grade: string, board: string, subject: string): Promise<Pdf | undefined> {
     const gradeVariants = normalizeGrade(grade);
-    const boardPattern = `${board}_Chapter_Plan`;
     
-    const [pdf] = await db.select().from(pdfs).where(
+    // Look for PDFs with "chapter_plan" in filename that match grade, board, and subject
+    // Use ILIKE for case-insensitive matching (handles Chapter_Plan, chapter_plan, etc.)
+    const allChapterPdfs = await db.select().from(pdfs).where(
       and(
-        or(
-          eq(pdfs.grade, gradeVariants[0]),
-          eq(pdfs.grade, gradeVariants[1])
-        ),
-        eq(pdfs.board, boardPattern),
-        eq(pdfs.subject, subject),
+        sql`${pdfs.filename} ILIKE '%chapter_plan%'`,
         eq(pdfs.isArchived, false)
       )
     );
-    return pdf || undefined;
+    
+    // Find matching PDF by grade, board, and subject
+    const pdf = allChapterPdfs.find(p => 
+      gradeVariants.includes(p.grade.toLowerCase()) &&
+      p.board.toLowerCase() === board.toLowerCase() &&
+      p.subject.toLowerCase() === subject.toLowerCase()
+    );
+    
+    if (pdf) return pdf;
+    
+    return undefined;
   }
 
+  // Get all Chapter Practice PDFs (for admin section)
   async getChapterPracticePdfs(): Promise<Pdf[]> {
+    // Chapter Practice PDFs have "chapter_plan" in their filename
+    // Use ILIKE for case-insensitive matching (handles Chapter_Plan, chapter_plan, etc.)
     return await db.select().from(pdfs).where(
-      sql`${pdfs.filename} ILIKE '%chapter_plan%'`
+      and(
+        sql`${pdfs.filename} ILIKE '%chapter_plan%'`,
+        eq(pdfs.isArchived, false)
+      )
     );
   }
 
   async getChapterPracticePdfsForSubject(subject: string): Promise<Pdf[]> {
+    // Get all active Chapter Practice PDFs for a subject
+    // Use ILIKE for case-insensitive matching
     return await db.select().from(pdfs).where(
       and(
+        sql`${pdfs.filename} ILIKE '%chapter_plan%'`,
         eq(pdfs.subject, subject),
-        sql`${pdfs.filename} ILIKE '%chapter_plan%'`
+        eq(pdfs.isArchived, false)
       )
     );
   }
 
-  // Unified Students
+  // Unified Students (new auth system)
   async getUnifiedStudent(id: number): Promise<UnifiedStudent | undefined> {
     const [student] = await db.select().from(unifiedStudents).where(eq(unifiedStudents.id, id));
     return student || undefined;
@@ -687,33 +985,66 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUnifiedStudent(id: number, updates: Partial<InsertUnifiedStudent>): Promise<UnifiedStudent | undefined> {
-    const [student] = await db.update(unifiedStudents)
+    const [student] = await db
+      .update(unifiedStudents)
       .set(updates)
       .where(eq(unifiedStudents.id, id))
       .returning();
     return student || undefined;
   }
 
-  async deleteUnifiedStudentCascade(mobileNumber: string): Promise<boolean> {
-    const student = await this.getUnifiedStudentByMobile(mobileNumber);
-    if (!student) return false;
-
-    await db.delete(studentExamProfiles).where(eq(studentExamProfiles.studentId, student.id));
-    await db.delete(quizSessions).where(eq(quizSessions.studentId, student.id));
-    await db.delete(cpctQuizSessions).where(eq(cpctQuizSessions.studentId, student.id));
-    await db.delete(navodayaQuizSessions).where(eq(navodayaQuizSessions.studentId, student.id));
-    await db.delete(chapterPracticeQuizSessions).where(eq(chapterPracticeQuizSessions.studentId, student.id));
-    await db.delete(questionPointers).where(eq(questionPointers.studentId, student.id));
-    
-    const result = await db.delete(unifiedStudents).where(eq(unifiedStudents.id, student.id)).returning();
-    return result.length > 0;
-  }
-
   async getAllUnifiedStudents(): Promise<UnifiedStudent[]> {
     return await db.select().from(unifiedStudents).orderBy(desc(unifiedStudents.createdAt));
   }
 
-  // Student Exam Profiles
+  async deleteUnifiedStudentCascade(mobileNumber: string): Promise<boolean> {
+    // Find all students with this mobile number across all tables
+    const [unifiedStudent] = await db.select().from(unifiedStudents).where(eq(unifiedStudents.mobileNumber, mobileNumber));
+    const [boardStudent] = await db.select().from(students).where(eq(students.mobileNumber, mobileNumber));
+    const [cpctStudent] = await db.select().from(cpctStudents).where(eq(cpctStudents.mobileNumber, mobileNumber));
+    const [navodayaStudent] = await db.select().from(navodayaStudents).where(eq(navodayaStudents.mobileNumber, mobileNumber));
+    const [chapterStudent] = await db.select().from(chapterPracticeStudents).where(eq(chapterPracticeStudents.mobileNumber, mobileNumber));
+
+    // Delete related quiz sessions first, then students
+    if (boardStudent) {
+      await db.delete(quizSessions).where(eq(quizSessions.studentId, boardStudent.id));
+      await db.delete(questionPointers).where(and(eq(questionPointers.studentId, boardStudent.id), eq(questionPointers.studentType, 'board')));
+      await db.delete(students).where(eq(students.id, boardStudent.id));
+    }
+
+    if (cpctStudent) {
+      await db.delete(cpctQuizSessions).where(eq(cpctQuizSessions.studentId, cpctStudent.id));
+      await db.delete(questionPointers).where(and(eq(questionPointers.studentId, cpctStudent.id), eq(questionPointers.studentType, 'cpct')));
+      await db.delete(cpctStudents).where(eq(cpctStudents.id, cpctStudent.id));
+    }
+
+    if (navodayaStudent) {
+      await db.delete(navodayaQuizSessions).where(eq(navodayaQuizSessions.studentId, navodayaStudent.id));
+      await db.delete(questionPointers).where(and(eq(questionPointers.studentId, navodayaStudent.id), eq(questionPointers.studentType, 'navodaya')));
+      await db.delete(navodayaStudents).where(eq(navodayaStudents.id, navodayaStudent.id));
+    }
+
+    if (chapterStudent) {
+      await db.delete(chapterPracticeQuizSessions).where(eq(chapterPracticeQuizSessions.studentId, chapterStudent.id));
+      await db.delete(questionPointers).where(and(eq(questionPointers.studentId, chapterStudent.id), eq(questionPointers.studentType, 'chapter_practice')));
+      await db.delete(chapterPracticeStudents).where(eq(chapterPracticeStudents.id, chapterStudent.id));
+    }
+
+    if (unifiedStudent) {
+      // Delete quiz sessions that reference this unified student via unifiedStudentId
+      await db.delete(quizSessions).where(eq(quizSessions.unifiedStudentId, unifiedStudent.id));
+      await db.delete(cpctQuizSessions).where(eq(cpctQuizSessions.unifiedStudentId, unifiedStudent.id));
+      await db.delete(navodayaQuizSessions).where(eq(navodayaQuizSessions.unifiedStudentId, unifiedStudent.id));
+      await db.delete(chapterPracticeQuizSessions).where(eq(chapterPracticeQuizSessions.unifiedStudentId, unifiedStudent.id));
+      // Delete exam profiles for this unified student
+      await db.delete(studentExamProfiles).where(eq(studentExamProfiles.studentId, unifiedStudent.id));
+      await db.delete(unifiedStudents).where(eq(unifiedStudents.id, unifiedStudent.id));
+    }
+
+    return !!(unifiedStudent || boardStudent || cpctStudent || navodayaStudent || chapterStudent);
+  }
+
+  // Student Exam Profiles (preferences per exam type)
   async getStudentExamProfile(studentId: number, examType: string): Promise<StudentExamProfile | undefined> {
     const [profile] = await db.select().from(studentExamProfiles).where(
       and(
@@ -728,13 +1059,15 @@ export class DatabaseStorage implements IStorage {
     const existing = await this.getStudentExamProfile(studentId, examType);
     
     if (existing) {
-      const [updated] = await db.update(studentExamProfiles)
+      const [updated] = await db
+        .update(studentExamProfiles)
         .set({ lastSelections, updatedAt: new Date() })
         .where(eq(studentExamProfiles.id, existing.id))
         .returning();
       return updated;
     } else {
-      const [created] = await db.insert(studentExamProfiles)
+      const [created] = await db
+        .insert(studentExamProfiles)
         .values({ studentId, examType, lastSelections })
         .returning();
       return created;
@@ -745,20 +1078,107 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(studentExamProfiles).where(eq(studentExamProfiles.studentId, studentId));
   }
 
-  // Unified Quiz History
-  async getUnifiedStudentQuizHistory(studentId: number, examType: string): Promise<any[]> {
-    switch (examType) {
-      case 'board':
-        return await this.getStudentQuizSessions(studentId);
-      case 'cpct':
-        return await this.getCpctStudentQuizSessions(studentId);
-      case 'navodaya':
-        return await this.getNavodayaStudentQuizSessions(studentId);
-      case 'chapter_practice':
-        return await this.getChapterPracticeStudentQuizSessions(studentId);
-      default:
-        return [];
+  async findAndMigrateLegacyUser(name: string, mobileNumber: string): Promise<UnifiedStudent | null> {
+    // Search in legacy tables for existing user
+    // Check students (board exam)
+    const [boardStudent] = await db.select().from(students).where(
+      and(
+        sql`LOWER(${students.name}) = LOWER(${name})`,
+        eq(students.mobileNumber, mobileNumber)
+      )
+    );
+    if (boardStudent) {
+      // Create unified student from board student data
+      const newUnified = await this.createUnifiedStudent({
+        name: boardStudent.name,
+        fatherName: null, // Not available in legacy
+        location: boardStudent.location,
+        mobileNumber: boardStudent.mobileNumber,
+        schoolName: null,
+        dateOfBirth: null,
+      });
+      return newUnified;
     }
+
+    // Check cpctStudents
+    const [cpctStudent] = await db.select().from(cpctStudents).where(
+      and(
+        sql`LOWER(${cpctStudents.name}) = LOWER(${name})`,
+        eq(cpctStudents.mobileNumber, mobileNumber)
+      )
+    );
+    if (cpctStudent) {
+      const newUnified = await this.createUnifiedStudent({
+        name: cpctStudent.name,
+        fatherName: null,
+        location: cpctStudent.location,
+        mobileNumber: cpctStudent.mobileNumber,
+        schoolName: null,
+        dateOfBirth: null,
+      });
+      return newUnified;
+    }
+
+    // Check navodayaStudents
+    const [navodayaStudent] = await db.select().from(navodayaStudents).where(
+      and(
+        sql`LOWER(${navodayaStudents.name}) = LOWER(${name})`,
+        eq(navodayaStudents.mobileNumber, mobileNumber)
+      )
+    );
+    if (navodayaStudent) {
+      const newUnified = await this.createUnifiedStudent({
+        name: navodayaStudent.name,
+        fatherName: null,
+        location: navodayaStudent.location,
+        mobileNumber: navodayaStudent.mobileNumber,
+        schoolName: null,
+        dateOfBirth: null,
+      });
+      return newUnified;
+    }
+
+    // Check chapterPracticeStudents
+    const [chapterStudent] = await db.select().from(chapterPracticeStudents).where(
+      and(
+        sql`LOWER(${chapterPracticeStudents.name}) = LOWER(${name})`,
+        eq(chapterPracticeStudents.mobileNumber, mobileNumber)
+      )
+    );
+    if (chapterStudent) {
+      const newUnified = await this.createUnifiedStudent({
+        name: chapterStudent.name,
+        fatherName: null,
+        location: chapterStudent.location,
+        mobileNumber: chapterStudent.mobileNumber,
+        schoolName: chapterStudent.schoolName || null,
+        dateOfBirth: null,
+      });
+      return newUnified;
+    }
+
+    return null;
+  }
+
+  async getUnifiedStudentQuizHistory(studentId: number, examType: string): Promise<any[]> {
+    if (examType === "board") {
+      return await db.select().from(quizSessions)
+        .where(eq(quizSessions.unifiedStudentId, studentId))
+        .orderBy(desc(quizSessions.completedAt));
+    } else if (examType === "cpct") {
+      return await db.select().from(cpctQuizSessions)
+        .where(eq(cpctQuizSessions.unifiedStudentId, studentId))
+        .orderBy(desc(cpctQuizSessions.completedAt));
+    } else if (examType === "navodaya") {
+      return await db.select().from(navodayaQuizSessions)
+        .where(eq(navodayaQuizSessions.unifiedStudentId, studentId))
+        .orderBy(desc(navodayaQuizSessions.completedAt));
+    } else if (examType === "chapter-practice") {
+      return await db.select().from(chapterPracticeQuizSessions)
+        .where(eq(chapterPracticeQuizSessions.unifiedStudentId, studentId))
+        .orderBy(desc(chapterPracticeQuizSessions.completedAt));
+    }
+    return [];
   }
 }
 
