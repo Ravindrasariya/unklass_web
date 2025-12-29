@@ -111,6 +111,8 @@ interface ChapterPracticeStudentSession {
   id: number;
   subject: string;
   chapterName: string;
+  grade?: string;
+  board?: string;
   score: number | null;
   totalQuestions: number | null;
   completedAt: string | null;
@@ -173,6 +175,19 @@ interface UnifiedStudent {
   sessions: UnifiedStudentSession[];
 }
 
+interface CombinedSession {
+  id: number;
+  examType: string;
+  subject: string;
+  grade?: string | null;
+  board?: string | null;
+  section?: string | null;
+  chapterName?: string | null;
+  score: number | null;
+  totalQuestions: number | null;
+  completedAt: string | null;
+}
+
 interface CombinedStudent {
   id: number;
   name: string;
@@ -184,6 +199,7 @@ interface CombinedStudent {
   source: string;
   totalQuizzes: number;
   averageScore: number;
+  sessions?: CombinedSession[];
 }
 
 export default function AdminPage() {
@@ -211,6 +227,7 @@ export default function AdminPage() {
   const [expandedChapterPracticeStudent, setExpandedChapterPracticeStudent] = useState<number | null>(null);
   const [expandedCpctStudent, setExpandedCpctStudent] = useState<number | null>(null);
   const [expandedNavodayaStudent, setExpandedNavodayaStudent] = useState<number | null>(null);
+  const [expandedCombinedStudent, setExpandedCombinedStudent] = useState<string | null>(null);
   const [showNoticeForm, setShowNoticeForm] = useState(false);
   const [noticeForm, setNoticeForm] = useState({ title: "", subtitle: "", description: "", priority: 0 });
   const [editingNotice, setEditingNotice] = useState<Notice | null>(null);
@@ -1271,26 +1288,59 @@ export default function AdminPage() {
                   </p>
                 ) : (
                   <div className="space-y-2">
-                    <div className="grid grid-cols-1 gap-2">
-                      {allRegisteredStudents.map((student, index) => (
+                    {allRegisteredStudents.map((student, index) => {
+                      const studentKey = `${student.source}-${student.mobileNumber}`;
+                      const isExpanded = expandedCombinedStudent === studentKey;
+                      return (
                         <div
                           key={`${student.source}-${student.id}-${index}`}
-                          className="border rounded-lg p-4"
+                          className="border rounded-lg overflow-hidden"
                           data-testid={`combined-student-row-${student.mobileNumber}`}
                         >
-                          <div className="flex items-start justify-between gap-4 flex-wrap">
+                          <div 
+                            className="flex items-center gap-3 p-3 bg-muted/50 cursor-pointer"
+                            onClick={() => setExpandedCombinedStudent(isExpanded ? null : studentKey)}
+                          >
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap mb-1">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <p className="font-medium">{student.name}</p>
-                                {student.examTypes.map((examType, i) => (
-                                  <Badge key={i} variant="secondary" className="text-xs">{examType}</Badge>
-                                ))}
                               </div>
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-                                <div>
-                                  <span className="text-muted-foreground">Mobile:</span>{" "}
-                                  {student.mobileNumber}
-                                </div>
+                              <p className="text-sm text-muted-foreground">{student.mobileNumber}</p>
+                            </div>
+                            <div className="text-right mr-2">
+                              <p className="font-medium">{student.totalQuizzes} quizzes</p>
+                              <p className={`text-sm ${
+                                student.averageScore >= 80 ? 'text-green-600 dark:text-green-400' :
+                                student.averageScore >= 60 ? 'text-yellow-600 dark:text-yellow-400' :
+                                student.averageScore > 0 ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'
+                              }`}>
+                                {student.totalQuizzes > 0 ? `${student.averageScore}% avg` : 'N/A'}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={(e) => { e.stopPropagation(); handleEditCombinedStudent(student); }}
+                                data-testid={`button-edit-student-${student.mobileNumber}`}
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={(e) => { e.stopPropagation(); setDeletingCombinedStudent(student); }}
+                                data-testid={`button-delete-student-${student.mobileNumber}`}
+                              >
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </Button>
+                              <ChevronDown className={`h-5 w-5 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                            </div>
+                          </div>
+                          
+                          {isExpanded && (
+                            <div className="p-3 border-t bg-background">
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm mb-3">
                                 <div>
                                   <span className="text-muted-foreground">Father:</span>{" "}
                                   {student.fatherName || "N/A"}
@@ -1304,45 +1354,49 @@ export default function AdminPage() {
                                   {student.schoolName || "N/A"}
                                 </div>
                               </div>
-                              <div className="flex items-center gap-4 mt-2 text-sm">
-                                <div className="flex items-center gap-1">
-                                  <span className="text-muted-foreground">Quizzes:</span>
-                                  <span className="font-medium">{student.totalQuizzes}</span>
+                              
+                              {student.sessions && student.sessions.length > 0 ? (
+                                <div className="space-y-1">
+                                  <p className="text-sm font-medium mb-2">Quiz History:</p>
+                                  {student.sessions.map((session) => (
+                                    <div 
+                                      key={session.id}
+                                      className="flex items-center justify-between text-sm p-2 bg-muted rounded gap-2 flex-wrap"
+                                    >
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <Badge variant="outline" className="text-xs">{session.examType}</Badge>
+                                        {session.grade && <Badge variant="secondary" className="text-xs">{session.grade}</Badge>}
+                                        {session.board && <Badge variant="secondary" className="text-xs">{session.board}</Badge>}
+                                        <span>{session.chapterName || session.section || session.subject}</span>
+                                      </div>
+                                      <div className="flex items-center gap-4">
+                                        <span className={`font-medium ${
+                                          session.totalQuestions && session.score !== null
+                                            ? (session.score / session.totalQuestions) >= 0.8 ? 'text-green-600 dark:text-green-400' :
+                                              (session.score / session.totalQuestions) >= 0.6 ? 'text-yellow-600 dark:text-yellow-400' :
+                                              'text-red-600 dark:text-red-400'
+                                            : ''
+                                        }`}>
+                                          {session.score}/{session.totalQuestions} 
+                                          ({session.totalQuestions ? Math.round((session.score || 0) / session.totalQuestions * 100) : 0}%)
+                                        </span>
+                                        <span className="text-muted-foreground">
+                                          {session.completedAt 
+                                            ? new Date(session.completedAt).toLocaleDateString("en-IN")
+                                            : "In progress"}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  ))}
                                 </div>
-                                <div className="flex items-center gap-1">
-                                  <span className="text-muted-foreground">Avg Score:</span>
-                                  <span className={`font-medium ${
-                                    student.averageScore >= 80 ? 'text-green-600 dark:text-green-400' :
-                                    student.averageScore >= 60 ? 'text-yellow-600 dark:text-yellow-400' :
-                                    student.averageScore > 0 ? 'text-red-600 dark:text-red-400' : ''
-                                  }`}>
-                                    {student.totalQuizzes > 0 ? `${student.averageScore}%` : 'N/A'}
-                                  </span>
-                                </div>
-                              </div>
+                              ) : (
+                                <p className="text-sm text-muted-foreground">No quizzes completed yet.</p>
+                              )}
                             </div>
-                            <div className="flex gap-2">
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() => handleEditCombinedStudent(student)}
-                                data-testid={`button-edit-student-${student.mobileNumber}`}
-                              >
-                                <Pencil className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() => setDeletingCombinedStudent(student)}
-                                data-testid={`button-delete-student-${student.mobileNumber}`}
-                              >
-                                <Trash2 className="w-4 h-4 text-destructive" />
-                              </Button>
-                            </div>
-                          </div>
+                          )}
                         </div>
-                      ))}
-                    </div>
+                      );
+                    })}
                   </div>
                 )}
               </>
@@ -1780,11 +1834,21 @@ export default function AdminPage() {
                                 {student.sessions.map((session) => (
                                   <div 
                                     key={session.id}
-                                    className="flex items-center justify-between text-sm p-2 bg-violet-50 dark:bg-violet-950/30 rounded"
+                                    className="flex items-center justify-between text-sm p-2 bg-violet-50 dark:bg-violet-950/30 rounded gap-2 flex-wrap"
                                   >
-                                    <span>{session.subject} - {session.chapterName}</span>
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      {session.grade && <Badge variant="secondary" className="text-xs bg-violet-100 dark:bg-violet-900 text-violet-700 dark:text-violet-300">{session.grade}</Badge>}
+                                      {session.board && <Badge variant="secondary" className="text-xs">{session.board}</Badge>}
+                                      <span>{session.subject} - {session.chapterName}</span>
+                                    </div>
                                     <div className="flex items-center gap-4">
-                                      <span>
+                                      <span className={`font-medium ${
+                                        session.totalQuestions && session.score !== null
+                                          ? (session.score / session.totalQuestions) >= 0.8 ? 'text-green-600 dark:text-green-400' :
+                                            (session.score / session.totalQuestions) >= 0.6 ? 'text-yellow-600 dark:text-yellow-400' :
+                                            'text-red-600 dark:text-red-400'
+                                          : ''
+                                      }`}>
                                         {session.score}/{session.totalQuestions} 
                                         ({session.totalQuestions ? Math.round((session.score || 0) / session.totalQuestions * 100) : 0}%)
                                       </span>

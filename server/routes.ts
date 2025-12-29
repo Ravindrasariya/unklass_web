@@ -1080,6 +1080,10 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
               id: s.id,
               examType: s.examType,
               subject: s.subject || s.section || 'N/A',
+              grade: s.grade || s.examGrade,
+              board: s.board,
+              section: s.section,
+              chapterName: s.chapterName,
               score: s.score,
               totalQuestions: s.totalQuestions,
               completedAt: s.completedAt,
@@ -1106,6 +1110,20 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         storage.getAllNavodayaStudents(),
       ]);
 
+      // Session type for combined view
+      interface CombinedSession {
+        id: number;
+        examType: string;
+        subject: string;
+        grade?: string | null;
+        board?: string | null;
+        section?: string | null;
+        chapterName?: string | null;
+        score: number | null;
+        totalQuestions: number | null;
+        completedAt: string | null;
+      }
+
       // Create a map to track unique students by mobile number
       const studentMap = new Map<string, {
         id: number;
@@ -1118,6 +1136,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         source: string;
         totalQuizzes: number;
         averageScore: number;
+        sessions: CombinedSession[];
       }>();
 
       // Add unified students first (they take priority) - with quiz progress
@@ -1149,6 +1168,50 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         if (navodayaSessions.filter((s: any) => s.completedAt).length > 0) examTypesFromSessions.push('Navodaya');
         if (chapterPracticeSessions.filter((s: any) => s.completedAt).length > 0) examTypesFromSessions.push('Chapter Practice');
         
+        // Combine all sessions with exam type and details
+        const combinedSessions: CombinedSession[] = [
+          ...boardSessions.filter((s: any) => s.completedAt).map((s: any) => ({
+            id: s.id,
+            examType: 'Board Exam',
+            subject: s.subject || 'N/A',
+            grade: s.grade,
+            board: s.board,
+            score: s.score,
+            totalQuestions: s.totalQuestions,
+            completedAt: s.completedAt,
+          })),
+          ...cpctSessions.filter((s: any) => s.completedAt).map((s: any) => ({
+            id: s.id,
+            examType: 'CPCT',
+            subject: s.section || 'N/A',
+            section: s.section,
+            score: s.score,
+            totalQuestions: s.totalQuestions,
+            completedAt: s.completedAt,
+          })),
+          ...navodayaSessions.filter((s: any) => s.completedAt).map((s: any) => ({
+            id: s.id,
+            examType: 'Navodaya',
+            subject: s.section || 'N/A',
+            grade: s.examGrade,
+            section: s.section,
+            score: s.score,
+            totalQuestions: s.totalQuestions,
+            completedAt: s.completedAt,
+          })),
+          ...chapterPracticeSessions.filter((s: any) => s.completedAt).map((s: any) => ({
+            id: s.id,
+            examType: 'Chapter Practice',
+            subject: s.subject || 'N/A',
+            grade: s.grade,
+            board: s.board,
+            chapterName: s.chapterName,
+            score: s.score,
+            totalQuestions: s.totalQuestions,
+            completedAt: s.completedAt,
+          })),
+        ].sort((a, b) => new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime());
+        
         studentMap.set(student.mobileNumber, {
           id: student.id,
           name: student.name,
@@ -1160,6 +1223,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
           source: 'unified',
           totalQuizzes,
           averageScore,
+          sessions: combinedSessions.slice(0, 20),
         });
       }
 
@@ -1179,6 +1243,18 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
           const totalQuestions = completedSessions.reduce((sum, s) => sum + (s.totalQuestions || 10), 0);
           const averageScore = totalQuizzes > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
           
+          // Map sessions with grade/board from student registration
+          const mappedSessions: CombinedSession[] = completedSessions.map(s => ({
+            id: s.id,
+            examType: 'Board Exam',
+            subject: s.subject || 'N/A',
+            grade: student.grade,
+            board: student.board,
+            score: s.score,
+            totalQuestions: s.totalQuestions,
+            completedAt: s.completedAt ? s.completedAt.toISOString() : null,
+          })).sort((a, b) => new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime());
+          
           studentMap.set(student.mobileNumber, {
             id: student.id,
             name: student.name,
@@ -1188,6 +1264,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
             source: 'board',
             totalQuizzes,
             averageScore,
+            sessions: mappedSessions.slice(0, 20),
           });
         }
       }
@@ -1208,6 +1285,17 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
           const totalQuestions = completedSessions.reduce((sum, s) => sum + (s.totalQuestions || 10), 0);
           const averageScore = totalQuizzes > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
           
+          // Map sessions with section info
+          const mappedSessions: CombinedSession[] = completedSessions.map(s => ({
+            id: s.id,
+            examType: 'CPCT',
+            subject: s.section || 'N/A',
+            section: s.section,
+            score: s.score,
+            totalQuestions: s.totalQuestions,
+            completedAt: s.completedAt ? s.completedAt.toISOString() : null,
+          })).sort((a, b) => new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime());
+          
           studentMap.set(student.mobileNumber, {
             id: student.id,
             name: student.name,
@@ -1217,6 +1305,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
             source: 'cpct',
             totalQuizzes,
             averageScore,
+            sessions: mappedSessions.slice(0, 20),
           });
         }
       }
@@ -1237,6 +1326,18 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
           const totalQuestions = completedSessions.reduce((sum, s) => sum + (s.totalQuestions || 10), 0);
           const averageScore = totalQuizzes > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
           
+          // Map sessions with exam grade info
+          const mappedSessions: CombinedSession[] = completedSessions.map(s => ({
+            id: s.id,
+            examType: 'Navodaya',
+            subject: s.section || 'N/A',
+            grade: s.examGrade,
+            section: s.section,
+            score: s.score,
+            totalQuestions: s.totalQuestions,
+            completedAt: s.completedAt ? s.completedAt.toISOString() : null,
+          })).sort((a, b) => new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime());
+          
           studentMap.set(student.mobileNumber, {
             id: student.id,
             name: student.name,
@@ -1246,6 +1347,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
             source: 'navodaya',
             totalQuizzes,
             averageScore,
+            sessions: mappedSessions.slice(0, 20),
           });
         }
       }
@@ -1948,6 +2050,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         id: s.id,
         year: s.year,
         medium: s.medium,
+        section: s.section,
         score: s.score,
         totalQuestions: s.totalQuestions,
         completedAt: s.completedAt,
@@ -2567,7 +2670,9 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
       res.json(sessions.map(s => ({
         id: s.id,
         examGrade: s.examGrade,
+        section: s.section,
         medium: s.medium,
+        grade: s.examGrade,
         score: s.score,
         totalQuestions: s.totalQuestions,
         completedAt: s.completedAt,
@@ -2678,6 +2783,8 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
               id: s.id,
               subject: s.subject,
               chapterName: s.chapterName,
+              grade: s.grade,
+              board: s.board,
               score: s.score,
               totalQuestions: s.totalQuestions,
               completedAt: s.completedAt,
@@ -3227,6 +3334,8 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         subject: s.subject,
         chapterNumber: s.chapterNumber,
         chapterName: s.chapterName,
+        grade: s.grade,
+        board: s.board,
         score: s.score,
         totalQuestions: s.totalQuestions,
         completedAt: s.completedAt,

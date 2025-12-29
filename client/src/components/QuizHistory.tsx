@@ -14,6 +14,8 @@ interface QuizSession {
   year?: string;
   medium?: string;
   examGrade?: string;
+  section?: string;
+  chapterName?: string;
   score: number | null;
   totalQuestions: number;
   completedAt: string | null;
@@ -285,28 +287,34 @@ export default function QuizHistory({ studentId, onBack, isCpct = false, isNavod
                     data-testid={`card-quiz-session-${session.id}`}
                   >
                     <div className="flex-1">
-                      <p className="font-medium">
-                        {effectiveIsNavodaya 
-                          ? `Navodaya ${session.examGrade}` 
-                          : effectiveIsCpct 
-                            ? `CPCT ${session.year}` 
-                            : session.subject}
-                      </p>
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        {session.grade && <Badge variant="secondary" className="text-xs">{session.grade}</Badge>}
+                        {session.board && <Badge variant="secondary" className="text-xs">{session.board}</Badge>}
+                        <p className="font-medium">
+                          {effectiveIsNavodaya 
+                            ? session.section || `Navodaya ${session.examGrade}` 
+                            : effectiveIsCpct 
+                              ? session.section || `CPCT ${session.year}` 
+                              : effectiveIsChapterPractice
+                                ? `${session.subject} - ${session.chapterName}`
+                                : session.subject}
+                        </p>
+                      </div>
                       <p className="text-sm text-muted-foreground">
                         {effectiveIsNavodaya
                           ? `Medium: ${session.medium}`
                           : effectiveIsCpct 
                             ? `Medium: ${session.medium}`
-                            : `${session.grade} | ${session.board}`
+                            : null
                         }
                         {session.completedAt && (
-                          <span> | {new Date(session.completedAt).toLocaleDateString()}</span>
+                          <span>{new Date(session.completedAt).toLocaleDateString()}</span>
                         )}
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
                       {session.score !== null && (
-                        <Badge variant={session.score >= 7 ? "default" : "secondary"}>
+                        <Badge variant={session.totalQuestions && (session.score / session.totalQuestions) >= 0.7 ? "default" : "secondary"}>
                           {session.score}/{session.totalQuestions}
                         </Badge>
                       )}
