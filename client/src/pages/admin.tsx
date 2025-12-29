@@ -482,6 +482,30 @@ export default function AdminPage() {
     },
   });
 
+  const reparseChapterPracticeMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/admin/reparse-chapter-practice-pdfs");
+      return response.json();
+    },
+    onSuccess: (data: { message: string; results: { filename: string; oldCount: number; newCount: number; status: string }[] }) => {
+      const successResults = data.results.filter(r => r.status === "success");
+      const changedResults = successResults.filter(r => r.oldCount !== r.newCount);
+      
+      toast({
+        title: "Chapter Practice PDFs Re-parsed",
+        description: `${successResults.length} PDFs processed. ${changedResults.length} had question count changes.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/chapter-practice-pdfs"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Re-parse Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const updateStudentMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: typeof editFormData }) => {
       const response = await apiRequest("PATCH", `/api/admin/students/${id}`, data);
@@ -1064,14 +1088,26 @@ export default function AdminPage() {
 
         {/* Chapter Practice PDFs Section */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-violet-600" />
-              Chapter Practice PDFs
-            </CardTitle>
-            <CardDescription>
-              PDFs for Chapter Practice feature. Format: grade_board_Chapter_Plan_subject.pdf (e.g., 8th_MP_Chapter_Plan_Mathematics.pdf)
-            </CardDescription>
+          <CardHeader className="flex flex-row items-start justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-violet-600" />
+                Chapter Practice PDFs
+              </CardTitle>
+              <CardDescription>
+                PDFs for Chapter Practice feature. Format: grade_board_Chapter_Plan_subject.pdf (e.g., 8th_MP_Chapter_Plan_Mathematics.pdf)
+              </CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => reparseChapterPracticeMutation.mutate()}
+              disabled={reparseChapterPracticeMutation.isPending || !chapterPracticePdfs || chapterPracticePdfs.length === 0}
+              data-testid="button-reparse-chapter-practice-pdfs"
+            >
+              <RotateCcw className={`h-4 w-4 mr-2 ${reparseChapterPracticeMutation.isPending ? 'animate-spin' : ''}`} />
+              {reparseChapterPracticeMutation.isPending ? "Re-parsing..." : "Re-parse All"}
+            </Button>
           </CardHeader>
           <CardContent>
             {chapterPracticePdfsLoading ? (
