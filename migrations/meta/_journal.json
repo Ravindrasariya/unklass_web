@@ -15,6 +15,13 @@
       "when": 1766688610771,
       "tag": "0001_mean_vargas",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1767001348057,
+      "tag": "0002_zippy_warbound",
+      "breakpoints": true
     }
   ]
 }
