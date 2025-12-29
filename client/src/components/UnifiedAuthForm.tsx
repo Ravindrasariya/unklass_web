@@ -192,9 +192,9 @@ export default function UnifiedAuthForm({ onLogin, onRegister, onBack, defaultMo
                   Back to Home
                 </Button>
 
-                <p className="text-xs text-center text-muted-foreground pt-4" data-testid="text-support-contact">
-                  Facing issue in registration/login? Please contact{" "}
-                  <a href="tel:9981489815" className="font-medium" style={{ color: '#52a7ff' }}>99814 89815</a>
+                <p className="text-xs text-center pt-4" style={{ color: '#52a7ff' }} data-testid="text-support-contact">
+                  <span className="font-bold">Facing issue in registration/login?</span> Please contact{" "}
+                  <a href="tel:9981489815" className="font-medium">99814 89815</a>
                 </p>
               </form>
             </Form>
@@ -356,9 +356,9 @@ export default function UnifiedAuthForm({ onLogin, onRegister, onBack, defaultMo
                 Back to Home
               </Button>
 
-              <p className="text-xs text-center text-muted-foreground pt-4" data-testid="text-support-contact-reg">
-                Facing issue in registration/login? Please contact{" "}
-                <a href="tel:9981489815" className="font-medium" style={{ color: '#52a7ff' }}>99814 89815</a>
+              <p className="text-xs text-center pt-4" style={{ color: '#52a7ff' }} data-testid="text-support-contact-reg">
+                <span className="font-bold">Facing issue in registration/login?</span> Please contact{" "}
+                <a href="tel:9981489815" className="font-medium">99814 89815</a>
               </p>
             </form>
           </Form>
