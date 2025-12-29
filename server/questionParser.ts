@@ -872,15 +872,16 @@ function parseChapterQuestions(chapterContent: string, chapterNum: number): Pars
       
       // Valid question: has reasonable length and is not a fragment
       if (qNum > 0 && qNum <= 100 && text.length > 15 && !isFragment(text)) {
-        // Check for MCQ indicators (options or answer markers)
-        const hasMCQIndicators = 
-          /\([aA]\)|\([bB]\)|[aA]\.|[bB]\./i.test(text) ||  // Options
-          /Answer\s*[:=]/i.test(text) ||                     // Answer marker
+        // Check for answer indicators (MCQ options, answer markers, or explanations)
+        const hasAnswerIndicators = 
+          /\([aA]\)|\([bB]\)|[aA]\.|[bB]\./i.test(text) ||  // MCQ options
+          /Answer\s*[:\s\/=]/i.test(text) ||                 // Answer marker (including "Answer /")
+          /Explanation\s*[:=]/i.test(text) ||                // Explanation marker
           /Options?\s*[:=]/i.test(text) ||                   // Options marker
           /Correct\s*(?:Answer|Option)/i.test(text) ||       // Correct answer
-          /उत्तर|विकल्प/i.test(text);                        // Hindi markers
+          /उत्तर|विकल्प|व्याख्या/i.test(text);               // Hindi markers (answer/options/explanation)
         
-        if (hasMCQIndicators) {
+        if (hasAnswerIndicators) {
           questions.push({
             index: questions.length,
             rawText: text,
