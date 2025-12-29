@@ -44,9 +44,10 @@ export const pdfs = pgTable("pdfs", {
 });
 
 // Quiz sessions table - stores quiz attempts and results (Board Exam)
+// Note: studentId references unified_students but FK constraint removed for migration
 export const quizSessions = pgTable("quiz_sessions", {
   id: serial("id").primaryKey(),
-  studentId: integer("student_id").notNull().references(() => unifiedStudents.id),
+  studentId: integer("student_id").notNull(),
   pdfId: integer("pdf_id").references(() => pdfs.id),
   subject: text("subject").notNull(),
   grade: varchar("grade", { length: 10 }).notNull(),
@@ -72,9 +73,10 @@ export const CPCT_SECTIONS = [
 export type CpctSection = typeof CPCT_SECTIONS[number];
 
 // CPCT Quiz sessions table
+// Note: studentId references unified_students but FK constraint removed for migration
 export const cpctQuizSessions = pgTable("cpct_quiz_sessions", {
   id: serial("id").primaryKey(),
-  studentId: integer("student_id").notNull().references(() => unifiedStudents.id),
+  studentId: integer("student_id").notNull(),
   pdfId: integer("pdf_id").references(() => pdfs.id),
   year: varchar("year", { length: 10 }).notNull(),
   section: varchar("section", { length: 100 }),
@@ -105,9 +107,10 @@ export type NavodayaSection6th = typeof NAVODAYA_SECTIONS_6TH[number];
 export type NavodayaSection9th = typeof NAVODAYA_SECTIONS_9TH[number];
 
 // Navodaya Quiz sessions table
+// Note: studentId references unified_students but FK constraint removed for migration
 export const navodayaQuizSessions = pgTable("navodaya_quiz_sessions", {
   id: serial("id").primaryKey(),
-  studentId: integer("student_id").notNull().references(() => unifiedStudents.id),
+  studentId: integer("student_id").notNull(),
   pdfId: integer("pdf_id").references(() => pdfs.id),
   examGrade: varchar("exam_grade", { length: 10 }).notNull(),
   section: varchar("section", { length: 100 }),
@@ -135,9 +138,10 @@ export type ChapterPracticeSubject = typeof CHAPTER_PRACTICE_SUBJECTS[number];
 export const CHAPTER_PRACTICE_GRADES = ["6th", "7th", "8th", "9th", "10th"] as const;
 
 // Chapter Practice Quiz sessions table
+// Note: studentId references unified_students but FK constraint removed for migration
 export const chapterPracticeQuizSessions = pgTable("chapter_practice_quiz_sessions", {
   id: serial("id").primaryKey(),
-  studentId: integer("student_id").notNull().references(() => unifiedStudents.id),
+  studentId: integer("student_id").notNull(),
   pdfId: integer("pdf_id").references(() => pdfs.id),
   subject: text("subject").notNull(),
   chapterNumber: integer("chapter_number").notNull(),
@@ -299,9 +303,10 @@ export const contactSubmissions = pgTable("contact_submissions", {
 });
 
 // Question pointers table - tracks last question index per student + PDF for sequential picking
+// Note: FK constraints removed for migration - studentId references unified_students
 export const questionPointers = pgTable("question_pointers", {
   id: serial("id").primaryKey(),
-  studentId: integer("student_id").notNull().references(() => unifiedStudents.id),
+  studentId: integer("student_id").notNull(),
   pdfId: integer("pdf_id").notNull().references(() => pdfs.id),
   lastQuestionIndex: integer("last_question_index").notNull().default(0),
   updatedAt: timestamp("updated_at").defaultNow(),
