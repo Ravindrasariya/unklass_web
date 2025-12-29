@@ -2819,6 +2819,37 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     }
   });
 
+  // Debug endpoint: Get detailed chapter question counts
+  app.get("/api/admin/chapter-practice/debug/:pdfId", async (req, res) => {
+    try {
+      const pdfId = parseInt(req.params.pdfId);
+      const pdf = await storage.getPdf(pdfId);
+      
+      if (!pdf) {
+        return res.status(404).json({ error: "PDF not found" });
+      }
+      
+      const { parseQuestionsWithChapters } = await import("./questionParser");
+      const { questions, chapters } = parseQuestionsWithChapters(pdf.content);
+      
+      res.json({
+        pdfId: pdf.id,
+        filename: pdf.filename,
+        totalQuestions: questions.length,
+        chapters: chapters.map(c => ({
+          chapterNumber: c.chapterNumber,
+          chapterName: c.chapterName,
+          questionCount: c.questionCount,
+          startIndex: c.startIndex,
+          endIndex: c.endIndex,
+        })),
+      });
+    } catch (error) {
+      console.error("Error debugging chapter practice:", error);
+      res.status(500).json({ error: "Failed to debug" });
+    }
+  });
+
   // Generate chapter practice quiz (all questions from the chapter)
   // Supports resume: if incomplete session exists for student+chapter, return it
   app.post("/api/chapter-practice/quiz/generate", async (req, res) => {
