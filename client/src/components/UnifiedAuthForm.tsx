@@ -191,6 +191,11 @@ export default function UnifiedAuthForm({ onLogin, onRegister, onBack, defaultMo
                 >
                   Back to Home
                 </Button>
+
+                <p className="text-xs text-center text-muted-foreground pt-4" data-testid="text-support-contact">
+                  Facing issue in registration/login? Please contact{" "}
+                  <a href="tel:9981489815" className="font-medium text-foreground">99814 89815</a>
+                </p>
               </form>
             </Form>
           </CardContent>
@@ -350,6 +355,11 @@ export default function UnifiedAuthForm({ onLogin, onRegister, onBack, defaultMo
               >
                 Back to Home
               </Button>
+
+              <p className="text-xs text-center text-muted-foreground pt-4" data-testid="text-support-contact-reg">
+                Facing issue in registration/login? Please contact{" "}
+                <a href="tel:9981489815" className="font-medium text-foreground">99814 89815</a>
+              </p>
             </form>
           </Form>
         </CardContent>
