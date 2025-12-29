@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertStudentSchema, insertCpctStudentSchema, insertNavodayaStudentSchema, insertContactSubmissionSchema, insertNoticeSchema, insertUnifiedStudentSchema, NAVODAYA_SECTIONS_6TH, NAVODAYA_SECTIONS_9TH, type Question, type ParsedQuestion, type ExamType } from "@shared/schema";
 import { generateQuizQuestions, generateAnswerFeedback, generateCpctQuizQuestions, generateNavodayaQuizQuestions, shuffleAllQuestionOptions, generateMcqsFromEnrichedQuestions, parsedQuestionsToEnriched } from "./openai";
-import { parseQuestionsFromPdfContent, getSequentialQuestions } from "./questionParser";
+import { parseQuestionsFromPdfContent, getSequentialQuestions, parseQuestionsWithChapters } from "./questionParser";
 import multer from "multer";
 import { z } from "zod";
 
@@ -579,7 +579,8 @@ export async function registerRoutes(
       for (const pdf of pdfs) {
         try {
           const oldCount = pdf.totalQuestions || 0;
-          const parsedQuestions = parseQuestionsFromPdfContent(pdf.content);
+          // Use parseQuestionsWithChapters for Chapter Practice PDFs to get chapter-aware parsing
+          const { questions: parsedQuestions } = parseQuestionsWithChapters(pdf.content);
           await storage.updatePdfParsedQuestions(pdf.id, parsedQuestions, parsedQuestions.length);
           
           results.push({

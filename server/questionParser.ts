@@ -100,9 +100,9 @@ function isLikelyQuestionBoundary(content: string, matchPos: number, matchedNum:
   return true;
 }
 
-// Check if text looks like an actual MCQ (has options like A/B/C/D or answer markers)
+// Check if text looks like an actual question (MCQ, numerical, short answer, etc.)
 function looksLikeMCQ(text: string): boolean {
-  // Check for option patterns: (a), (b), A., B., 1), 2), etc.
+  // Check for option patterns: (a), (b), A., B., 1), 2), etc. (MCQ indicators)
   const optionPatterns = [
     /\n\s*\(?[aA]\)?[\s.\):\-]/,           // (a) or A. or a)
     /\n\s*\(?[bB]\)?[\s.\):\-]/,           // (b) or B. or b)
@@ -116,6 +116,18 @@ function looksLikeMCQ(text: string): boolean {
     /(?:Answer|Ans|उत्तर|Correct\s*(?:Answer|Option)?)\s*[:\.\-\s]*[a-dA-D1-4]/i,
     /Correct Answer\s*:/i,
     /सही उत्तर\s*:/,
+    /Answer\s*[:\/]/i,
+    /Explanation\s*:/i,
+  ];
+  
+  // Check for interrogative patterns (numerical/short answer questions)
+  const interrogativePatterns = [
+    /\b(?:Calculate|Find|Determine|Compute|Derive|Prove|Show|Solve|Evaluate|Express|Convert)\b/i,
+    /\b(?:ज्ञात करो|निकालो|परिकलन|गणना करो|सिद्ध करो|हल करो)\b/,
+    /\b(?:What|Which|How|Why|When|Where|Who|Define|Explain|Describe|State|List|Name)\b/i,
+    /\b(?:क्या|कौन|कैसे|क्यों|कब|कहाँ|परिभाषा|व्याख्या|वर्णन)\b/,
+    /\?\s*$/,  // Ends with question mark
+    /\?\s*\n/,  // Question mark followed by newline
   ];
   
   // Must have at least 2 option patterns OR an answer marker
@@ -130,6 +142,11 @@ function looksLikeMCQ(text: string): boolean {
   
   // Check for answer markers
   for (const pattern of answerPatterns) {
+    if (pattern.test(text)) return true;
+  }
+  
+  // Check for interrogative patterns (for numerical/short answer questions)
+  for (const pattern of interrogativePatterns) {
     if (pattern.test(text)) return true;
   }
   
@@ -443,7 +460,10 @@ function isFragment(text: string): boolean {
   
   // Only contains options without question stem (like "(a) 2πrh (b) πr")
   // Real questions should have text before the options
-  if (/^\s*\(?[aA]\)?[\s.\):]/.test(trimmed)) return true;
+  // But don't match questions starting with article "A" (like "A body starting from rest...")
+  // Match option patterns: "(a)", "(A)", "a.", "a)", "A.", "A)" - with or without space after
+  // Pattern requires: optional paren, a/A, then closing marker (./) and NOT followed by space+uppercase (which would indicate article usage in sentence)
+  if (/^\s*\([aA]\)/.test(trimmed) || /^\s*[aA][.\)]\s*[^A-Z]/.test(trimmed) || /^\s*[aA][.\)]$/.test(trimmed)) return true;
   
   // Just a partial answer or explanation
   if (/^Answer\s*:/i.test(trimmed) && trimmed.length < 100) return true;
@@ -1053,14 +1073,18 @@ function parseChapterQuestions(chapterContent: string, chapterNum: number): Pars
       
       // Valid question: has reasonable length and is not a fragment
       if (qNum > 0 && qNum <= 100 && text.length > 15 && !isFragment(text)) {
-        // Check for answer indicators (MCQ options, answer markers, or explanations)
+        // Check for answer indicators (MCQ options, answer markers, explanations, or interrogative keywords)
         const hasAnswerIndicators = 
           /\([aA]\)|\([bB]\)|[aA]\.|[bB]\./i.test(text) ||  // MCQ options
           /Answer\s*[:\s\/=]/i.test(text) ||                 // Answer marker (including "Answer /")
           /Explanation\s*[:=]/i.test(text) ||                // Explanation marker
           /Options?\s*[:=]/i.test(text) ||                   // Options marker
           /Correct\s*(?:Answer|Option)/i.test(text) ||       // Correct answer
-          /उत्तर|विकल्प|व्याख्या/i.test(text);               // Hindi markers (answer/options/explanation)
+          /उत्तर|विकल्प|व्याख्या/i.test(text) ||             // Hindi markers (answer/options/explanation)
+          /\b(?:Calculate|Find|Determine|Compute|Derive|Prove|Show that|Solve|Evaluate)\b/i.test(text) ||  // Numerical question keywords
+          /\b(?:ज्ञात करो|निकालो|परिकलन|गणना करो|सिद्ध करो|हल करो)\b/.test(text) ||  // Hindi numerical keywords
+          /\b(?:What|Which|How|Why|When|Where|Define|Explain|Describe|State|List|Name|Differentiate|Distinguish)\b/i.test(text) ||  // Common question keywords
+          /\?\s*$/m.test(text);  // Ends with question mark
         
         if (hasAnswerIndicators) {
           // Extract structured data from the raw text
