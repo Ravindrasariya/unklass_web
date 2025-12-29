@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertStudentSchema, insertCpctStudentSchema, insertNavodayaStudentSchema, insertContactSubmissionSchema, insertNoticeSchema, insertUnifiedStudentSchema, NAVODAYA_SECTIONS_6TH, NAVODAYA_SECTIONS_9TH, type Question, type ParsedQuestion, type ExamType } from "@shared/schema";
-import { generateQuizQuestions, generateAnswerFeedback, generateCpctQuizQuestions, generateNavodayaQuizQuestions, shuffleAllQuestionOptions } from "./openai";
+import { generateQuizQuestions, generateAnswerFeedback, generateCpctQuizQuestions, generateNavodayaQuizQuestions, shuffleAllQuestionOptions, generateMcqsFromEnrichedQuestions, parsedQuestionsToEnriched } from "./openai";
 import { parseQuestionsFromPdfContent, getSequentialQuestions } from "./questionParser";
 import multer from "multer";
 import { z } from "zod";
@@ -2967,17 +2967,33 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
       
       console.log(`Generating chapter practice quiz for student ${studentId}, chapter "${chapter}": ${chapterQuestions.length} questions`);
       
-      const questionsToSend = chapterQuestions.map(q => q.rawText).join('\n\n---\n\n');
+      // Convert parsed questions to enriched format with answer/explanation
+      const enrichedQuestions = parsedQuestionsToEnriched(chapterQuestions);
+      console.log(`Enriched questions: ${enrichedQuestions.length}, with answers: ${enrichedQuestions.filter(q => q.answer).length}, with explanations: ${enrichedQuestions.filter(q => q.explanation).length}`);
       
-      const generatedQuestions = await generateQuizQuestions(
-        questionsToSend,
-        subject,
-        grade || student.grade,
-        board || student.board,
-        chapterQuestions.length,
-        [],
-        effectiveMedium
-      );
+      // Use the new enriched question MCQ generator
+      let generatedQuestions;
+      try {
+        generatedQuestions = await generateMcqsFromEnrichedQuestions(
+          enrichedQuestions,
+          subject,
+          grade || student.grade,
+          effectiveMedium
+        );
+      } catch (error) {
+        // Fallback to old method if enriched generation fails
+        console.log("Enriched MCQ generation failed, falling back to raw text method");
+        const questionsToSend = chapterQuestions.map(q => q.rawText).join('\n\n---\n\n');
+        generatedQuestions = await generateQuizQuestions(
+          questionsToSend,
+          subject,
+          grade || student.grade,
+          board || student.board,
+          chapterQuestions.length,
+          [],
+          effectiveMedium
+        );
+      }
       
       // Shuffle options to randomize correct answer positions
       const shuffledQuestions = shuffleAllQuestionOptions(generatedQuestions);

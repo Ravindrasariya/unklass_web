@@ -467,12 +467,19 @@ export type Notice = typeof notices.$inferSelect;
 
 export type QuestionPointer = typeof questionPointers.$inferSelect;
 
-// Parsed question structure
+// Question types that can be parsed from PDFs
+export const QUESTION_TYPES = ["mcq", "short_answer", "long_answer", "fill_blank", "true_false", "numerical"] as const;
+export type QuestionType = typeof QUESTION_TYPES[number];
+
+// Parsed question structure - enriched to support all question types
 export const parsedQuestionSchema = z.object({
   index: z.number(),
   rawText: z.string(),
   questionText: z.string().optional(),
   answer: z.string().optional(),
+  explanation: z.string().optional(),
+  questionType: z.enum(QUESTION_TYPES).optional(),
+  options: z.array(z.string()).optional(), // For MCQs that already have options in PDF
 });
 
 export type ParsedQuestion = z.infer<typeof parsedQuestionSchema>;

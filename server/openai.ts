@@ -1,9 +1,18 @@
 import OpenAI from "openai";
-import type { Question } from "@shared/schema";
+import type { Question, ParsedQuestion } from "@shared/schema";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
+
+// Enriched question format for LLM processing
+interface EnrichedQuestionInput {
+  questionText: string;
+  answer?: string;
+  explanation?: string;
+  questionType?: string;
+  options?: string[];
+}
 
 // Fisher-Yates shuffle algorithm for randomizing options
 function shuffleArray<T>(array: T[]): T[] {
@@ -31,6 +40,123 @@ export function shuffleQuestionOptions(question: Question): Question {
 // Shuffle options for an array of questions
 export function shuffleAllQuestionOptions(questions: Question[]): Question[] {
   return questions.map(q => shuffleQuestionOptions(q));
+}
+
+// Convert enriched parsed questions to MCQ format using OpenAI
+export async function generateMcqsFromEnrichedQuestions(
+  enrichedQuestions: EnrichedQuestionInput[],
+  subject: string,
+  grade: string,
+  medium: string = "English"
+): Promise<Question[]> {
+  const languageInstruction = medium === "Hindi" 
+    ? `IMPORTANT: Generate ALL content in Hindi (Devanagari script). Questions, options, and explanations MUST be in Hindi.`
+    : `Generate all content in English.`;
+
+  // Format questions for the LLM with their extracted data
+  const formattedQuestions = enrichedQuestions.map((q, i) => {
+    let questionInfo = `QUESTION ${i + 1}:\n`;
+    questionInfo += `Type: ${q.questionType || 'unknown'}\n`;
+    questionInfo += `Text: ${q.questionText}\n`;
+    if (q.answer) questionInfo += `CORRECT ANSWER (from PDF): ${q.answer}\n`;
+    if (q.explanation) questionInfo += `EXPLANATION (from PDF): ${q.explanation}\n`;
+    if (q.options && q.options.length > 0) {
+      questionInfo += `OPTIONS (from PDF): ${q.options.join(' | ')}\n`;
+    }
+    return questionInfo;
+  }).join('\n---\n');
+
+  const systemPrompt = `You are an EXPERT TEACHER converting educational questions into MCQ format for ${grade} grade ${subject}.
+
+${languageInstruction}
+
+CRITICAL RULES FOR MCQ CONVERSION:
+1. The PDF provides the CORRECT ANSWER - this MUST be one of your 4 options
+2. The PDF provides the EXPLANATION - use it verbatim or enhance it slightly
+3. Generate 3 PLAUSIBLE but INCORRECT options if not already provided
+4. For MCQs already in PDF: extract options exactly as given
+5. For short answers: PDF answer = correct option, create 3 wrong alternatives
+6. For numerical problems: PDF answer = correct option, create 3 similar but wrong values
+7. For True/False: Use ["True", "False", "Cannot be determined", "None of the above"]
+8. For fill-in-the-blank: PDF answer = correct option, create 3 plausible alternatives
+9. For long answers: Focus on the KEY FACT and create options around it
+
+RESPONSE FORMAT (JSON):
+{
+  "questions": [
+    {
+      "question": "Clear question text?",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correctAnswer": 0,
+      "explanation": "Explanation from PDF or enhanced version"
+    }
+  ]
+}
+
+RULES:
+- correctAnswer is 0-3 index pointing to the correct option
+- The option at correctAnswer index MUST match the PDF's answer
+- Use PDF explanation when available, enhance if needed
+- Create wrong options that are plausible but clearly incorrect
+- Preserve question order exactly as provided`;
+
+  const userPrompt = `Convert these ${enrichedQuestions.length} questions to MCQ format. Use the provided answers and explanations from the PDF.
+
+${formattedQuestions}`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.2,
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error("No response from OpenAI");
+    }
+
+    const parsed = JSON.parse(content);
+    let questions: any[] = parsed.questions || parsed.quiz || parsed.data || [];
+    
+    if (!Array.isArray(questions)) {
+      const arrayKey = Object.keys(parsed).find(key => Array.isArray(parsed[key]));
+      questions = arrayKey ? parsed[arrayKey] : [];
+    }
+
+    const validQuestions = questions.filter((q: any) => 
+      q.question && 
+      Array.isArray(q.options) && 
+      q.options.length >= 2 &&
+      (q.correctAnswer !== undefined || q.correct_answer !== undefined)
+    );
+
+    return validQuestions.map((q: any, index: number) => ({
+      id: index + 1,
+      question: q.question,
+      options: q.options.length === 4 ? q.options : [...q.options, ...Array(4 - q.options.length).fill("N/A")].slice(0, 4),
+      correctAnswer: q.correctAnswer ?? q.correct_answer ?? 0,
+      explanation: q.explanation || enrichedQuestions[index]?.explanation || "Review this topic for better understanding.",
+    }));
+  } catch (error) {
+    console.error("Error generating MCQs from enriched questions:", error);
+    throw error;
+  }
+}
+
+// Helper to convert ParsedQuestion array to EnrichedQuestionInput array
+export function parsedQuestionsToEnriched(parsedQuestions: ParsedQuestion[]): EnrichedQuestionInput[] {
+  return parsedQuestions.map(pq => ({
+    questionText: pq.questionText || pq.rawText,
+    answer: pq.answer,
+    explanation: pq.explanation,
+    questionType: pq.questionType,
+    options: pq.options,
+  }));
 }
 
 // Fallback questions when OpenAI is unavailable

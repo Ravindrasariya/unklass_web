@@ -827,6 +827,187 @@ export function parseQuestionsWithChapters(content: string): {
   return { questions: allQuestions, chapters };
 }
 
+// Detect question type from content
+function detectQuestionType(text: string): ParsedQuestion['questionType'] {
+  // MCQ: has options like (a), (b), A., B., etc.
+  if (/\([aA]\)|\([bB]\)|[aA]\.\s|[bB]\.\s|\(A\)|\(B\)/i.test(text)) {
+    return 'mcq';
+  }
+  // True/False
+  if (/True\s*(?:or|\/)\s*False|सही\s*(?:या|\/)\s*गलत/i.test(text)) {
+    return 'true_false';
+  }
+  // Fill in the blank
+  if (/Fill\s+(?:in\s+)?(?:the\s+)?blank|रिक्त\s*स्थान|_____/i.test(text)) {
+    return 'fill_blank';
+  }
+  // Numerical/calculation
+  if (/Calculate|Find\s+the\s+value|Solve|गणना\s*करें|मान\s*ज्ञात/i.test(text)) {
+    return 'numerical';
+  }
+  // Long answer (typically > 200 chars or specific keywords)
+  if (/Explain\s+in\s+detail|Describe\s+in\s+detail|विस्तार\s*से\s*समझाइए/i.test(text) || text.length > 500) {
+    return 'long_answer';
+  }
+  // Default to short answer
+  return 'short_answer';
+}
+
+// Extract MCQ options from text
+function extractMcqOptions(text: string): string[] | undefined {
+  const options: string[] = [];
+  
+  // Pattern for (a), (b), (c), (d) or A., B., C., D. style options
+  const optionPatterns = [
+    /\(([aA])\)\s*([^(]+?)(?=\s*\([bB]\)|$)/g,
+    /\(([bB])\)\s*([^(]+?)(?=\s*\([cC]\)|$)/g,
+    /\(([cC])\)\s*([^(]+?)(?=\s*\([dD]\)|$)/g,
+    /\(([dD])\)\s*([^(]+?)(?=\s*(?:Answer|Correct|Explanation|$))/gi,
+  ];
+  
+  // Try to extract 4 options
+  for (const pattern of optionPatterns) {
+    pattern.lastIndex = 0;
+    const match = pattern.exec(text);
+    if (match && match[2]) {
+      options.push(match[2].trim());
+    }
+  }
+  
+  return options.length >= 2 ? options : undefined;
+}
+
+// Extract answer from text, resolving MCQ keys to actual option text when possible
+function extractAnswer(text: string): string | undefined {
+  // First try to extract the full answer text (for non-MCQ questions)
+  const fullAnswerPatterns = [
+    /Answer\s*[:=\/]\s*(.+?)(?=\s*Explanation|$)/i,
+    /Answer\s*\/\s*Explanation\s*[:=]?\s*(.+?)(?=\s*Explanation\s*:|$)/i,
+    /उत्तर\s*[:=]\s*(.+?)(?=\s*व्याख्या|$)/i,
+  ];
+  
+  for (const pattern of fullAnswerPatterns) {
+    const match = text.match(pattern);
+    if (match && match[1]) {
+      const answer = match[1].trim();
+      // If the answer is just a letter/number (MCQ key), try to resolve it
+      if (/^[a-dA-D1-4]$/.test(answer) || /^\([a-dA-D]\)$/.test(answer)) {
+        const resolved = resolveMcqAnswerKey(text, answer);
+        if (resolved) return resolved;
+      }
+      return answer.substring(0, 500);
+    }
+  }
+  
+  // Try MCQ-specific patterns with answer key
+  const mcqPatterns = [
+    /Correct\s*Answer\s*[:=]\s*\(?([a-dA-D1-4])\)?/i,
+    /Answer\s*[:=]\s*\(?([a-dA-D1-4])\)?(?:\s|$)/i,
+    /सही\s*(?:उत्तर|विकल्प)\s*[:=]\s*\(?([a-dA-D१-४])\)?/i,
+  ];
+  
+  for (const pattern of mcqPatterns) {
+    const match = text.match(pattern);
+    if (match && match[1]) {
+      const key = match[1].trim();
+      // Try to resolve the key to actual option text
+      const resolved = resolveMcqAnswerKey(text, key);
+      if (resolved) return resolved;
+      // Fallback to the key itself
+      return key;
+    }
+  }
+  
+  return undefined;
+}
+
+// Resolve MCQ answer key (a, b, c, d, 1, 2, 3, 4) to actual option text
+function resolveMcqAnswerKey(text: string, key: string): string | undefined {
+  const normalizedKey = key.toLowerCase().replace(/[()]/g, '');
+  
+  // Map letter/number to option index
+  const keyMap: Record<string, number> = {
+    'a': 0, '1': 0,
+    'b': 1, '2': 1,
+    'c': 2, '3': 2,
+    'd': 3, '4': 3,
+  };
+  
+  const optionIndex = keyMap[normalizedKey];
+  if (optionIndex === undefined) return undefined;
+  
+  // Try to extract options from text
+  const optionPatterns = [
+    // (a) Option text, (b) Option text, etc.
+    /\(([aA])\)\s*([^(]+?)(?=\s*\([bB]\)|Correct|Answer|Explanation|$)/,
+    /\(([bB])\)\s*([^(]+?)(?=\s*\([cC]\)|Correct|Answer|Explanation|$)/,
+    /\(([cC])\)\s*([^(]+?)(?=\s*\([dD]\)|Correct|Answer|Explanation|$)/,
+    /\(([dD])\)\s*([^(]+?)(?=\s*Correct|Answer|Explanation|$)/i,
+    // A. Option text, B. Option text, etc.
+    /[aA]\.\s*([^(]+?)(?=\s*[bB]\.|Correct|Answer|$)/,
+    /[bB]\.\s*([^(]+?)(?=\s*[cC]\.|Correct|Answer|$)/,
+    /[cC]\.\s*([^(]+?)(?=\s*[dD]\.|Correct|Answer|$)/,
+    /[dD]\.\s*([^(]+?)(?=\s*Correct|Answer|$)/i,
+  ];
+  
+  // Extract all options
+  const options: string[] = [];
+  
+  // Try extracting with (a), (b), (c), (d) pattern
+  const optionA = text.match(/\([aA]\)\s*([^(]+?)(?=\s*\([bB]\)|Correct|Answer|Explanation|$)/);
+  const optionB = text.match(/\([bB]\)\s*([^(]+?)(?=\s*\([cC]\)|Correct|Answer|Explanation|$)/);
+  const optionC = text.match(/\([cC]\)\s*([^(]+?)(?=\s*\([dD]\)|Correct|Answer|Explanation|$)/);
+  const optionD = text.match(/\([dD]\)\s*([^(]+?)(?=\s*Correct|Answer|Explanation|$)/i);
+  
+  if (optionA) options[0] = optionA[1].trim();
+  if (optionB) options[1] = optionB[1].trim();
+  if (optionC) options[2] = optionC[1].trim();
+  if (optionD) options[3] = optionD[1].trim();
+  
+  if (options[optionIndex]) {
+    return options[optionIndex];
+  }
+  
+  return undefined;
+}
+
+// Extract explanation from text
+function extractExplanation(text: string): string | undefined {
+  // Various explanation patterns
+  const explanationPatterns = [
+    /Explanation\s*[:=]\s*(.+?)$/i,
+    /व्याख्या\s*[:=]\s*(.+?)$/i,
+    /Solution\s*[:=]\s*(.+?)$/i,
+    /Reason\s*[:=]\s*(.+?)$/i,
+    /Because\s*[:=]\s*(.+?)$/i,
+  ];
+  
+  for (const pattern of explanationPatterns) {
+    const match = text.match(pattern);
+    if (match && match[1]) {
+      return match[1].trim().substring(0, 1000); // Limit explanation length
+    }
+  }
+  
+  return undefined;
+}
+
+// Extract question text (the actual question without answer/explanation)
+function extractQuestionText(text: string): string {
+  // Remove answer and explanation parts
+  let questionText = text
+    .replace(/\s*Correct\s*Answer\s*[:=].*/gi, '')
+    .replace(/\s*Answer\s*[:=\/].*/gi, '')
+    .replace(/\s*Explanation\s*[:=].*/gi, '')
+    .replace(/\s*उत्तर\s*[:=].*/gi, '')
+    .replace(/\s*व्याख्या\s*[:=].*/gi, '')
+    .replace(/\s*Solution\s*[:=].*/gi, '')
+    .trim();
+  
+  // For MCQs, keep the question and options but remove answer markers
+  return questionText || text;
+}
+
 // Parse questions from a chapter's content without global deduplication
 function parseChapterQuestions(chapterContent: string, chapterNum: number): ParsedQuestion[] {
   const questions: ParsedQuestion[] = [];
@@ -882,9 +1063,21 @@ function parseChapterQuestions(chapterContent: string, chapterNum: number): Pars
           /उत्तर|विकल्प|व्याख्या/i.test(text);               // Hindi markers (answer/options/explanation)
         
         if (hasAnswerIndicators) {
+          // Extract structured data from the raw text
+          const questionType = detectQuestionType(text);
+          const questionText = extractQuestionText(text);
+          const answer = extractAnswer(text);
+          const explanation = extractExplanation(text);
+          const options = questionType === 'mcq' ? extractMcqOptions(text) : undefined;
+          
           questions.push({
             index: questions.length,
             rawText: text,
+            questionText,
+            answer,
+            explanation,
+            questionType,
+            options,
           });
         }
       }
