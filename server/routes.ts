@@ -2880,6 +2880,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
       
       const session = await storage.createChapterPracticeQuizSession({
         studentId,
+        unifiedStudentId: isUnifiedStudent ? studentId : undefined,
         pdfId: pdf.id,
         subject,
         chapterNumber,
