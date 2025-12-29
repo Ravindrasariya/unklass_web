@@ -569,6 +569,52 @@ export async function registerRoutes(
     }
   });
 
+  // Re-parse all Chapter Practice PDFs with updated parser
+  app.post("/api/admin/reparse-chapter-practice-pdfs", async (req, res) => {
+    try {
+      console.log("Starting re-parse of all Chapter Practice PDFs...");
+      const pdfs = await storage.getChapterPracticePdfs();
+      const results: { id: number; filename: string; oldCount: number; newCount: number; status: string }[] = [];
+      
+      for (const pdf of pdfs) {
+        try {
+          const oldCount = pdf.totalQuestions || 0;
+          const parsedQuestions = parseQuestionsFromPdfContent(pdf.content);
+          await storage.updatePdfParsedQuestions(pdf.id, parsedQuestions, parsedQuestions.length);
+          
+          results.push({
+            id: pdf.id,
+            filename: pdf.filename,
+            oldCount,
+            newCount: parsedQuestions.length,
+            status: "success"
+          });
+          console.log(`Re-parsed ${pdf.filename}: ${oldCount} -> ${parsedQuestions.length} questions`);
+        } catch (pdfError) {
+          console.error(`Error re-parsing ${pdf.filename}:`, pdfError);
+          results.push({
+            id: pdf.id,
+            filename: pdf.filename,
+            oldCount: pdf.totalQuestions || 0,
+            newCount: 0,
+            status: "error"
+          });
+        }
+      }
+      
+      const successCount = results.filter(r => r.status === "success").length;
+      console.log(`Re-parse complete: ${successCount}/${pdfs.length} Chapter Practice PDFs processed successfully`);
+      
+      res.json({
+        message: `Re-parsed ${successCount} of ${pdfs.length} Chapter Practice PDFs`,
+        results
+      });
+    } catch (error) {
+      console.error("Error re-parsing Chapter Practice PDFs:", error);
+      res.status(500).json({ error: "Failed to re-parse Chapter Practice PDFs" });
+    }
+  });
+
   // Get single PDF with content (admin preview)
   app.get("/api/admin/pdfs/:id", async (req, res) => {
     try {

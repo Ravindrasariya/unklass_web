@@ -169,18 +169,9 @@ function extractQuestionsWithPatterns(content: string): { num: number; text: str
     }
   }
   
-  // Step 4: Deduplicate by question number (keep first occurrence by position)
-  const seen = new Set<number>();
-  const deduped: { num: number; text: string; startPos: number }[] = [];
-  
-  for (const q of result) {
-    if (!seen.has(q.num)) {
-      seen.add(q.num);
-      deduped.push(q);
-    }
-  }
-  
-  return deduped.sort((a, b) => a.num - b.num);
+  // Step 4: Return all questions sorted by position (not by number)
+  // Each chapter restarts numbering, so we keep all questions in document order
+  return result;
 }
 
 // Check if a line-by-line match looks like a real question start vs mid-sentence number
@@ -340,12 +331,9 @@ function extractQuestionsLineByLine(content: string): { num: number; text: strin
     }
   }
 
-  const seen = new Set<number>();
-  return questions.filter(q => {
-    if (seen.has(q.num)) return false;
-    seen.add(q.num);
-    return true;
-  }).sort((a, b) => a.num - b.num);
+  // Return all questions in document order (not deduped by number)
+  // Each chapter restarts numbering, so we keep all questions
+  return questions.sort((a, b) => a.lineIndex - b.lineIndex);
 }
 
 function extractAnswerFromText(text: string): { questionText: string; answer: string | undefined } {
