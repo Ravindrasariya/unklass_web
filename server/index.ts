@@ -94,24 +94,6 @@ app.use((req, res, next) => {
     },
     () => {
       log(`serving on port ${port}`);
-      
-      // Run cleanup of old archived PDFs on startup and then every 24 hours
-      const runCleanup = async () => {
-        try {
-          const deleted = await storage.cleanupOldArchivedPdfs();
-          if (deleted > 0) {
-            log(`Cleaned up ${deleted} archived PDF(s) older than 3 months`);
-          }
-        } catch (error) {
-          console.error("Error during archived PDF cleanup:", error);
-        }
-      };
-      
-      // Run immediately on startup
-      runCleanup();
-      
-      // Run every 24 hours (86400000 ms)
-      setInterval(runCleanup, 24 * 60 * 60 * 1000);
     },
   );
 })();

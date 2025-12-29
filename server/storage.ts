@@ -21,7 +21,7 @@ import {
   type ExamType
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, like, sql, desc, gte, lte, lt, isNotNull, or } from "drizzle-orm";
+import { eq, and, like, sql, desc, gte, lte, isNotNull, or } from "drizzle-orm";
 
 // Normalize grade to handle "8th" vs "8", "10th" vs "10", etc.
 function normalizeGrade(grade: string): string[] {
@@ -51,7 +51,6 @@ export interface IStorage {
   getActivePdfs(): Promise<Pdf[]>;
   deletePdf(id: number): Promise<boolean>;
   restorePdf(id: number): Promise<boolean>;
-  cleanupOldArchivedPdfs(): Promise<number>;
 
   // Quiz Sessions
   createQuizSession(session: InsertQuizSession): Promise<QuizSession>;
@@ -318,42 +317,6 @@ export class DatabaseStorage implements IStorage {
       .where(eq(pdfs.id, id))
       .returning();
     return result.length > 0;
-  }
-  
-  async cleanupOldArchivedPdfs(): Promise<number> {
-    // Permanently delete PDFs that have been archived for more than 3 months
-    const threeMonthsAgo = new Date();
-    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-    
-    // Find PDFs to delete
-    const toDelete = await db.select({ id: pdfs.id }).from(pdfs).where(
-      and(
-        eq(pdfs.isArchived, true),
-        lt(pdfs.archivedAt, threeMonthsAgo)
-      )
-    );
-    
-    if (toDelete.length === 0) {
-      return 0;
-    }
-    
-    // Set pdfId to null in quiz sessions to preserve history (orphan the reference)
-    for (const pdf of toDelete) {
-      await db.update(quizSessions).set({ pdfId: null }).where(eq(quizSessions.pdfId, pdf.id));
-      await db.update(cpctQuizSessions).set({ pdfId: null }).where(eq(cpctQuizSessions.pdfId, pdf.id));
-      await db.update(navodayaQuizSessions).set({ pdfId: null }).where(eq(navodayaQuizSessions.pdfId, pdf.id));
-      await db.delete(questionPointers).where(eq(questionPointers.pdfId, pdf.id));
-    }
-    
-    // Now permanently delete the PDFs
-    const deleted = await db.delete(pdfs).where(
-      and(
-        eq(pdfs.isArchived, true),
-        lt(pdfs.archivedAt, threeMonthsAgo)
-      )
-    ).returning();
-    
-    return deleted.length;
   }
 
   // Quiz Sessions
