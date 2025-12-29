@@ -613,140 +613,231 @@ export class DatabaseStorage implements IStorage {
     navodaya: LeaderboardEntry[];
     chapterPractice: LeaderboardEntry[];
   }> {
-    // Board Exam Leaderboard (top 3)
-    const boardExamResults = await db
-      .select({
-        studentId: quizSessions.studentId,
-        studentName: students.name,
-        totalScore: sql<number>`COALESCE(SUM(${quizSessions.score}), 0)`,
-        totalQuestions: sql<number>`COALESCE(SUM(${quizSessions.totalQuestions}), 0)`,
-        testsCompleted: sql<number>`COUNT(*)`,
-      })
-      .from(quizSessions)
-      .innerJoin(students, eq(quizSessions.studentId, students.id))
-      .where(
-        and(
-          isNotNull(quizSessions.score),
-          isNotNull(quizSessions.completedAt),
-          sql`${quizSessions.totalQuestions} > 0`,
-          gte(quizSessions.completedAt, weekStartUtc),
-          lte(quizSessions.completedAt, weekEndUtc)
-        )
+    // Board Exam Leaderboard (top 3) - includes both legacy and unified students
+    // Use raw SQL to UNION legacy students and unified students
+    const boardExamResults = await db.execute(sql`
+      WITH all_board_sessions AS (
+        -- Legacy students
+        SELECT 
+          qs.student_id as student_id,
+          s.name as student_name,
+          qs.score,
+          qs.total_questions,
+          'legacy' as source
+        FROM quiz_sessions qs
+        INNER JOIN students s ON qs.student_id = s.id
+        WHERE qs.score IS NOT NULL 
+          AND qs.completed_at IS NOT NULL
+          AND qs.total_questions > 0
+          AND qs.completed_at >= ${weekStartUtc}
+          AND qs.completed_at <= ${weekEndUtc}
+        
+        UNION ALL
+        
+        -- Unified students
+        SELECT 
+          qs.unified_student_id as student_id,
+          us.name as student_name,
+          qs.score,
+          qs.total_questions,
+          'unified' as source
+        FROM quiz_sessions qs
+        INNER JOIN unified_students us ON qs.unified_student_id = us.id
+        WHERE qs.unified_student_id IS NOT NULL
+          AND qs.score IS NOT NULL 
+          AND qs.completed_at IS NOT NULL
+          AND qs.total_questions > 0
+          AND qs.completed_at >= ${weekStartUtc}
+          AND qs.completed_at <= ${weekEndUtc}
       )
-      .groupBy(quizSessions.studentId, students.name)
-      .orderBy(sql`(COALESCE(SUM(${quizSessions.score}), 0)::float / NULLIF(SUM(${quizSessions.totalQuestions}), 0)) DESC NULLS LAST`)
-      .limit(3);
+      SELECT 
+        student_id,
+        student_name,
+        COALESCE(SUM(score), 0) as total_score,
+        COALESCE(SUM(total_questions), 0) as total_questions,
+        COUNT(*) as tests_completed
+      FROM all_board_sessions
+      GROUP BY student_id, student_name
+      ORDER BY (COALESCE(SUM(score), 0)::float / NULLIF(SUM(total_questions), 0)) DESC NULLS LAST
+      LIMIT 3
+    `);
 
-    const boardExam: LeaderboardEntry[] = boardExamResults.map((row, index) => ({
+    const boardExam: LeaderboardEntry[] = (boardExamResults.rows as any[]).map((row, index) => ({
       rank: index + 1,
-      studentId: row.studentId,
-      studentName: row.studentName,
-      totalScore: Number(row.totalScore),
-      totalQuestions: Number(row.totalQuestions),
-      accuracy: row.totalQuestions > 0 ? Math.round((Number(row.totalScore) / Number(row.totalQuestions)) * 100) : 0,
-      testsCompleted: Number(row.testsCompleted),
+      studentId: row.student_id,
+      studentName: row.student_name,
+      totalScore: Number(row.total_score),
+      totalQuestions: Number(row.total_questions),
+      accuracy: row.total_questions > 0 ? Math.round((Number(row.total_score) / Number(row.total_questions)) * 100) : 0,
+      testsCompleted: Number(row.tests_completed),
     }));
 
-    // CPCT Leaderboard (top 3)
-    const cpctResults = await db
-      .select({
-        studentId: cpctQuizSessions.studentId,
-        studentName: cpctStudents.name,
-        totalScore: sql<number>`COALESCE(SUM(${cpctQuizSessions.score}), 0)`,
-        totalQuestions: sql<number>`COALESCE(SUM(${cpctQuizSessions.totalQuestions}), 0)`,
-        testsCompleted: sql<number>`COUNT(*)`,
-      })
-      .from(cpctQuizSessions)
-      .innerJoin(cpctStudents, eq(cpctQuizSessions.studentId, cpctStudents.id))
-      .where(
-        and(
-          isNotNull(cpctQuizSessions.score),
-          isNotNull(cpctQuizSessions.completedAt),
-          sql`${cpctQuizSessions.totalQuestions} > 0`,
-          gte(cpctQuizSessions.completedAt, weekStartUtc),
-          lte(cpctQuizSessions.completedAt, weekEndUtc)
-        )
+    // CPCT Leaderboard (top 3) - includes both legacy and unified students
+    const cpctResults = await db.execute(sql`
+      WITH all_cpct_sessions AS (
+        -- Legacy students
+        SELECT 
+          cs.student_id as student_id,
+          s.name as student_name,
+          cs.score,
+          cs.total_questions
+        FROM cpct_quiz_sessions cs
+        INNER JOIN cpct_students s ON cs.student_id = s.id
+        WHERE cs.score IS NOT NULL 
+          AND cs.completed_at IS NOT NULL
+          AND cs.total_questions > 0
+          AND cs.completed_at >= ${weekStartUtc}
+          AND cs.completed_at <= ${weekEndUtc}
+        
+        UNION ALL
+        
+        -- Unified students
+        SELECT 
+          cs.unified_student_id as student_id,
+          us.name as student_name,
+          cs.score,
+          cs.total_questions
+        FROM cpct_quiz_sessions cs
+        INNER JOIN unified_students us ON cs.unified_student_id = us.id
+        WHERE cs.unified_student_id IS NOT NULL
+          AND cs.score IS NOT NULL 
+          AND cs.completed_at IS NOT NULL
+          AND cs.total_questions > 0
+          AND cs.completed_at >= ${weekStartUtc}
+          AND cs.completed_at <= ${weekEndUtc}
       )
-      .groupBy(cpctQuizSessions.studentId, cpctStudents.name)
-      .orderBy(sql`(COALESCE(SUM(${cpctQuizSessions.score}), 0)::float / NULLIF(SUM(${cpctQuizSessions.totalQuestions}), 0)) DESC NULLS LAST`)
-      .limit(3);
+      SELECT 
+        student_id,
+        student_name,
+        COALESCE(SUM(score), 0) as total_score,
+        COALESCE(SUM(total_questions), 0) as total_questions,
+        COUNT(*) as tests_completed
+      FROM all_cpct_sessions
+      GROUP BY student_id, student_name
+      ORDER BY (COALESCE(SUM(score), 0)::float / NULLIF(SUM(total_questions), 0)) DESC NULLS LAST
+      LIMIT 3
+    `);
 
-    const cpct: LeaderboardEntry[] = cpctResults.map((row, index) => ({
+    const cpct: LeaderboardEntry[] = (cpctResults.rows as any[]).map((row, index) => ({
       rank: index + 1,
-      studentId: row.studentId,
-      studentName: row.studentName,
-      totalScore: Number(row.totalScore),
-      totalQuestions: Number(row.totalQuestions),
-      accuracy: row.totalQuestions > 0 ? Math.round((Number(row.totalScore) / Number(row.totalQuestions)) * 100) : 0,
-      testsCompleted: Number(row.testsCompleted),
+      studentId: row.student_id,
+      studentName: row.student_name,
+      totalScore: Number(row.total_score),
+      totalQuestions: Number(row.total_questions),
+      accuracy: row.total_questions > 0 ? Math.round((Number(row.total_score) / Number(row.total_questions)) * 100) : 0,
+      testsCompleted: Number(row.tests_completed),
     }));
 
-    // Navodaya Leaderboard (top 3)
-    const navodayaResults = await db
-      .select({
-        studentId: navodayaQuizSessions.studentId,
-        studentName: navodayaStudents.name,
-        totalScore: sql<number>`COALESCE(SUM(${navodayaQuizSessions.score}), 0)`,
-        totalQuestions: sql<number>`COALESCE(SUM(${navodayaQuizSessions.totalQuestions}), 0)`,
-        testsCompleted: sql<number>`COUNT(*)`,
-      })
-      .from(navodayaQuizSessions)
-      .innerJoin(navodayaStudents, eq(navodayaQuizSessions.studentId, navodayaStudents.id))
-      .where(
-        and(
-          isNotNull(navodayaQuizSessions.score),
-          isNotNull(navodayaQuizSessions.completedAt),
-          sql`${navodayaQuizSessions.totalQuestions} > 0`,
-          gte(navodayaQuizSessions.completedAt, weekStartUtc),
-          lte(navodayaQuizSessions.completedAt, weekEndUtc)
-        )
+    // Navodaya Leaderboard (top 3) - includes both legacy and unified students
+    const navodayaResults = await db.execute(sql`
+      WITH all_navodaya_sessions AS (
+        -- Legacy students
+        SELECT 
+          ns.student_id as student_id,
+          s.name as student_name,
+          ns.score,
+          ns.total_questions
+        FROM navodaya_quiz_sessions ns
+        INNER JOIN navodaya_students s ON ns.student_id = s.id
+        WHERE ns.score IS NOT NULL 
+          AND ns.completed_at IS NOT NULL
+          AND ns.total_questions > 0
+          AND ns.completed_at >= ${weekStartUtc}
+          AND ns.completed_at <= ${weekEndUtc}
+        
+        UNION ALL
+        
+        -- Unified students
+        SELECT 
+          ns.unified_student_id as student_id,
+          us.name as student_name,
+          ns.score,
+          ns.total_questions
+        FROM navodaya_quiz_sessions ns
+        INNER JOIN unified_students us ON ns.unified_student_id = us.id
+        WHERE ns.unified_student_id IS NOT NULL
+          AND ns.score IS NOT NULL 
+          AND ns.completed_at IS NOT NULL
+          AND ns.total_questions > 0
+          AND ns.completed_at >= ${weekStartUtc}
+          AND ns.completed_at <= ${weekEndUtc}
       )
-      .groupBy(navodayaQuizSessions.studentId, navodayaStudents.name)
-      .orderBy(sql`(COALESCE(SUM(${navodayaQuizSessions.score}), 0)::float / NULLIF(SUM(${navodayaQuizSessions.totalQuestions}), 0)) DESC NULLS LAST`)
-      .limit(3);
+      SELECT 
+        student_id,
+        student_name,
+        COALESCE(SUM(score), 0) as total_score,
+        COALESCE(SUM(total_questions), 0) as total_questions,
+        COUNT(*) as tests_completed
+      FROM all_navodaya_sessions
+      GROUP BY student_id, student_name
+      ORDER BY (COALESCE(SUM(score), 0)::float / NULLIF(SUM(total_questions), 0)) DESC NULLS LAST
+      LIMIT 3
+    `);
 
-    const navodaya: LeaderboardEntry[] = navodayaResults.map((row, index) => ({
+    const navodaya: LeaderboardEntry[] = (navodayaResults.rows as any[]).map((row, index) => ({
       rank: index + 1,
-      studentId: row.studentId,
-      studentName: row.studentName,
-      totalScore: Number(row.totalScore),
-      totalQuestions: Number(row.totalQuestions),
-      accuracy: row.totalQuestions > 0 ? Math.round((Number(row.totalScore) / Number(row.totalQuestions)) * 100) : 0,
-      testsCompleted: Number(row.testsCompleted),
+      studentId: row.student_id,
+      studentName: row.student_name,
+      totalScore: Number(row.total_score),
+      totalQuestions: Number(row.total_questions),
+      accuracy: row.total_questions > 0 ? Math.round((Number(row.total_score) / Number(row.total_questions)) * 100) : 0,
+      testsCompleted: Number(row.tests_completed),
     }));
 
-    // Chapter Practice Leaderboard (top 3)
-    const chapterPracticeResults = await db
-      .select({
-        studentId: chapterPracticeQuizSessions.studentId,
-        studentName: chapterPracticeStudents.name,
-        totalScore: sql<number>`COALESCE(SUM(${chapterPracticeQuizSessions.score}), 0)`,
-        totalQuestions: sql<number>`COALESCE(SUM(${chapterPracticeQuizSessions.totalQuestions}), 0)`,
-        testsCompleted: sql<number>`COUNT(*)`,
-      })
-      .from(chapterPracticeQuizSessions)
-      .innerJoin(chapterPracticeStudents, eq(chapterPracticeQuizSessions.studentId, chapterPracticeStudents.id))
-      .where(
-        and(
-          isNotNull(chapterPracticeQuizSessions.score),
-          isNotNull(chapterPracticeQuizSessions.completedAt),
-          sql`${chapterPracticeQuizSessions.totalQuestions} > 0`,
-          gte(chapterPracticeQuizSessions.completedAt, weekStartUtc),
-          lte(chapterPracticeQuizSessions.completedAt, weekEndUtc)
-        )
+    // Chapter Practice Leaderboard (top 3) - includes both legacy and unified students
+    const chapterPracticeResults = await db.execute(sql`
+      WITH all_chapter_sessions AS (
+        -- Legacy students
+        SELECT 
+          cps.student_id as student_id,
+          s.name as student_name,
+          cps.score,
+          cps.total_questions
+        FROM chapter_practice_quiz_sessions cps
+        INNER JOIN chapter_practice_students s ON cps.student_id = s.id
+        WHERE cps.score IS NOT NULL 
+          AND cps.completed_at IS NOT NULL
+          AND cps.total_questions > 0
+          AND cps.completed_at >= ${weekStartUtc}
+          AND cps.completed_at <= ${weekEndUtc}
+        
+        UNION ALL
+        
+        -- Unified students
+        SELECT 
+          cps.unified_student_id as student_id,
+          us.name as student_name,
+          cps.score,
+          cps.total_questions
+        FROM chapter_practice_quiz_sessions cps
+        INNER JOIN unified_students us ON cps.unified_student_id = us.id
+        WHERE cps.unified_student_id IS NOT NULL
+          AND cps.score IS NOT NULL 
+          AND cps.completed_at IS NOT NULL
+          AND cps.total_questions > 0
+          AND cps.completed_at >= ${weekStartUtc}
+          AND cps.completed_at <= ${weekEndUtc}
       )
-      .groupBy(chapterPracticeQuizSessions.studentId, chapterPracticeStudents.name)
-      .orderBy(sql`(COALESCE(SUM(${chapterPracticeQuizSessions.score}), 0)::float / NULLIF(SUM(${chapterPracticeQuizSessions.totalQuestions}), 0)) DESC NULLS LAST`)
-      .limit(3);
+      SELECT 
+        student_id,
+        student_name,
+        COALESCE(SUM(score), 0) as total_score,
+        COALESCE(SUM(total_questions), 0) as total_questions,
+        COUNT(*) as tests_completed
+      FROM all_chapter_sessions
+      GROUP BY student_id, student_name
+      ORDER BY (COALESCE(SUM(score), 0)::float / NULLIF(SUM(total_questions), 0)) DESC NULLS LAST
+      LIMIT 3
+    `);
 
-    const chapterPractice: LeaderboardEntry[] = chapterPracticeResults.map((row, index) => ({
+    const chapterPractice: LeaderboardEntry[] = (chapterPracticeResults.rows as any[]).map((row, index) => ({
       rank: index + 1,
-      studentId: row.studentId,
-      studentName: row.studentName,
-      totalScore: Number(row.totalScore),
-      totalQuestions: Number(row.totalQuestions),
-      accuracy: row.totalQuestions > 0 ? Math.round((Number(row.totalScore) / Number(row.totalQuestions)) * 100) : 0,
-      testsCompleted: Number(row.testsCompleted),
+      studentId: row.student_id,
+      studentName: row.student_name,
+      totalScore: Number(row.total_score),
+      totalQuestions: Number(row.total_questions),
+      accuracy: row.total_questions > 0 ? Math.round((Number(row.total_score) / Number(row.total_questions)) * 100) : 0,
+      testsCompleted: Number(row.tests_completed),
     }));
 
     return { boardExam, cpct, navodaya, chapterPractice };

@@ -149,15 +149,28 @@ interface Notice {
   expiresAt: string | null;
 }
 
+interface UnifiedStudentSession {
+  id: number;
+  examType: string;
+  subject: string;
+  score: number | null;
+  totalQuestions: number | null;
+  completedAt: string | null;
+}
+
 interface UnifiedStudent {
   id: number;
   name: string;
-  fatherName: string;
-  location: string;
+  fatherName: string | null;
+  location: string | null;
   mobileNumber: string;
   schoolName: string | null;
-  dateOfBirth: string | null;
   createdAt: string | null;
+  totalQuizzes: number;
+  averageScore: number;
+  examTypesAttempted: string[];
+  subjectsAttempted: string[];
+  sessions: UnifiedStudentSession[];
 }
 
 interface CombinedStudent {
@@ -169,6 +182,8 @@ interface CombinedStudent {
   schoolName?: string | null;
   examTypes: string[];
   source: string;
+  totalQuizzes: number;
+  averageScore: number;
 }
 
 export default function AdminPage() {
@@ -1267,6 +1282,9 @@ export default function AdminPage() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap mb-1">
                                 <p className="font-medium">{student.name}</p>
+                                {student.examTypes.map((examType, i) => (
+                                  <Badge key={i} variant="secondary" className="text-xs">{examType}</Badge>
+                                ))}
                               </div>
                               <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
                                 <div>
@@ -1284,6 +1302,22 @@ export default function AdminPage() {
                                 <div>
                                   <span className="text-muted-foreground">School:</span>{" "}
                                   {student.schoolName || "N/A"}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-4 mt-2 text-sm">
+                                <div className="flex items-center gap-1">
+                                  <span className="text-muted-foreground">Quizzes:</span>
+                                  <span className="font-medium">{student.totalQuizzes}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-muted-foreground">Avg Score:</span>
+                                  <span className={`font-medium ${
+                                    student.averageScore >= 80 ? 'text-green-600 dark:text-green-400' :
+                                    student.averageScore >= 60 ? 'text-yellow-600 dark:text-yellow-400' :
+                                    student.averageScore > 0 ? 'text-red-600 dark:text-red-400' : ''
+                                  }`}>
+                                    {student.totalQuizzes > 0 ? `${student.averageScore}%` : 'N/A'}
+                                  </span>
                                 </div>
                               </div>
                             </div>

@@ -1027,18 +1027,75 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     }
   });
 
-  // Admin: Get all unified registered students
+  // Admin: Get all unified registered students with quiz progress
   app.get("/api/admin/unified-students", async (req, res) => {
     try {
       const allUnifiedStudents = await storage.getAllUnifiedStudents();
-      res.json(allUnifiedStudents);
+      
+      // Aggregate quiz progress for each unified student from all exam types
+      const studentsWithProgress = await Promise.all(
+        allUnifiedStudents.map(async (student) => {
+          // Get quiz sessions from all exam types
+          const [boardSessions, cpctSessions, navodayaSessions, chapterPracticeSessions] = await Promise.all([
+            storage.getUnifiedStudentQuizHistory(student.id, "board"),
+            storage.getUnifiedStudentQuizHistory(student.id, "cpct"),
+            storage.getUnifiedStudentQuizHistory(student.id, "navodaya"),
+            storage.getUnifiedStudentQuizHistory(student.id, "chapter-practice"),
+          ]);
+          
+          // Combine all completed sessions
+          const allSessions = [
+            ...boardSessions.filter((s: any) => s.completedAt).map((s: any) => ({ ...s, examType: 'Board Exam' })),
+            ...cpctSessions.filter((s: any) => s.completedAt).map((s: any) => ({ ...s, examType: 'CPCT' })),
+            ...navodayaSessions.filter((s: any) => s.completedAt).map((s: any) => ({ ...s, examType: 'Navodaya' })),
+            ...chapterPracticeSessions.filter((s: any) => s.completedAt).map((s: any) => ({ ...s, examType: 'Chapter Practice' })),
+          ];
+          
+          const totalQuizzes = allSessions.length;
+          const totalScore = allSessions.reduce((sum, s) => sum + (s.score || 0), 0);
+          const totalQuestions = allSessions.reduce((sum, s) => sum + (s.totalQuestions || 10), 0);
+          const averageScore = totalQuizzes > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
+          
+          // Get exam types attempted
+          const examTypesAttempted = Array.from(new Set(allSessions.map(s => s.examType)));
+          
+          // Get subjects attempted (for board and chapter practice)
+          const subjectsAttempted = Array.from(new Set(
+            allSessions.filter(s => s.subject).map(s => s.subject)
+          ));
+          
+          return {
+            id: student.id,
+            name: student.name,
+            fatherName: student.fatherName,
+            location: student.location,
+            mobileNumber: student.mobileNumber,
+            schoolName: student.schoolName,
+            createdAt: student.createdAt,
+            totalQuizzes,
+            averageScore,
+            examTypesAttempted,
+            subjectsAttempted,
+            sessions: allSessions.slice(0, 20).map(s => ({
+              id: s.id,
+              examType: s.examType,
+              subject: s.subject || s.section || 'N/A',
+              score: s.score,
+              totalQuestions: s.totalQuestions,
+              completedAt: s.completedAt,
+            })),
+          };
+        })
+      );
+      
+      res.json(studentsWithProgress);
     } catch (error) {
       console.error("Error fetching unified students:", error);
       res.status(500).json({ error: "Failed to fetch unified students" });
     }
   });
 
-  // Admin: Get ALL students (unified + legacy) combined with exam type info
+  // Admin: Get ALL students (unified + legacy) combined with exam type info and quiz progress
   app.get("/api/admin/all-registered-students", async (req, res) => {
     try {
       // Get all students from all tables
@@ -1059,10 +1116,39 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         schoolName?: string | null;
         examTypes: string[];
         source: string;
+        totalQuizzes: number;
+        averageScore: number;
       }>();
 
-      // Add unified students first (they take priority)
+      // Add unified students first (they take priority) - with quiz progress
       for (const student of unifiedStudents) {
+        // Get quiz sessions from all exam types for this unified student
+        const [boardSessions, cpctSessions, navodayaSessions, chapterPracticeSessions] = await Promise.all([
+          storage.getUnifiedStudentQuizHistory(student.id, "board"),
+          storage.getUnifiedStudentQuizHistory(student.id, "cpct"),
+          storage.getUnifiedStudentQuizHistory(student.id, "navodaya"),
+          storage.getUnifiedStudentQuizHistory(student.id, "chapter-practice"),
+        ]);
+        
+        const allSessions = [
+          ...boardSessions.filter((s: any) => s.completedAt),
+          ...cpctSessions.filter((s: any) => s.completedAt),
+          ...navodayaSessions.filter((s: any) => s.completedAt),
+          ...chapterPracticeSessions.filter((s: any) => s.completedAt),
+        ];
+        
+        const totalQuizzes = allSessions.length;
+        const totalScore = allSessions.reduce((sum, s) => sum + (s.score || 0), 0);
+        const totalQuestions = allSessions.reduce((sum, s) => sum + (s.totalQuestions || 10), 0);
+        const averageScore = totalQuizzes > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
+        
+        // Determine exam types from actual quiz history
+        const examTypesFromSessions: string[] = [];
+        if (boardSessions.filter((s: any) => s.completedAt).length > 0) examTypesFromSessions.push('Board Exam');
+        if (cpctSessions.filter((s: any) => s.completedAt).length > 0) examTypesFromSessions.push('CPCT');
+        if (navodayaSessions.filter((s: any) => s.completedAt).length > 0) examTypesFromSessions.push('Navodaya');
+        if (chapterPracticeSessions.filter((s: any) => s.completedAt).length > 0) examTypesFromSessions.push('Chapter Practice');
+        
         studentMap.set(student.mobileNumber, {
           id: student.id,
           name: student.name,
@@ -1070,8 +1156,10 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
           location: student.location,
           fatherName: student.fatherName,
           schoolName: student.schoolName,
-          examTypes: ['Unified'],
+          examTypes: examTypesFromSessions.length > 0 ? examTypesFromSessions : ['Registered'],
           source: 'unified',
+          totalQuizzes,
+          averageScore,
         });
       }
 
@@ -1083,6 +1171,14 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
             existing.examTypes.push('Board Exam');
           }
         } else {
+          // Get quiz count for legacy board student
+          const sessions = await storage.getStudentQuizSessions(student.id);
+          const completedSessions = sessions.filter(s => s.completedAt);
+          const totalQuizzes = completedSessions.length;
+          const totalScore = completedSessions.reduce((sum, s) => sum + (s.score || 0), 0);
+          const totalQuestions = completedSessions.reduce((sum, s) => sum + (s.totalQuestions || 10), 0);
+          const averageScore = totalQuizzes > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
+          
           studentMap.set(student.mobileNumber, {
             id: student.id,
             name: student.name,
@@ -1090,6 +1186,8 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
             location: student.location,
             examTypes: ['Board Exam'],
             source: 'board',
+            totalQuizzes,
+            averageScore,
           });
         }
       }
@@ -1102,6 +1200,14 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
             existing.examTypes.push('CPCT');
           }
         } else {
+          // Get quiz count for legacy CPCT student
+          const sessions = await storage.getCpctStudentQuizSessions(student.id);
+          const completedSessions = sessions.filter(s => s.completedAt);
+          const totalQuizzes = completedSessions.length;
+          const totalScore = completedSessions.reduce((sum, s) => sum + (s.score || 0), 0);
+          const totalQuestions = completedSessions.reduce((sum, s) => sum + (s.totalQuestions || 10), 0);
+          const averageScore = totalQuizzes > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
+          
           studentMap.set(student.mobileNumber, {
             id: student.id,
             name: student.name,
@@ -1109,6 +1215,8 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
             location: student.location,
             examTypes: ['CPCT'],
             source: 'cpct',
+            totalQuizzes,
+            averageScore,
           });
         }
       }
@@ -1121,6 +1229,14 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
             existing.examTypes.push('Navodaya');
           }
         } else {
+          // Get quiz count for legacy Navodaya student
+          const sessions = await storage.getNavodayaStudentQuizSessions(student.id);
+          const completedSessions = sessions.filter(s => s.completedAt);
+          const totalQuizzes = completedSessions.length;
+          const totalScore = completedSessions.reduce((sum, s) => sum + (s.score || 0), 0);
+          const totalQuestions = completedSessions.reduce((sum, s) => sum + (s.totalQuestions || 10), 0);
+          const averageScore = totalQuizzes > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
+          
           studentMap.set(student.mobileNumber, {
             id: student.id,
             name: student.name,
@@ -1128,6 +1244,8 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
             location: student.location,
             examTypes: ['Navodaya'],
             source: 'navodaya',
+            totalQuizzes,
+            averageScore,
           });
         }
       }
