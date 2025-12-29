@@ -87,15 +87,25 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Name and mobile number are required" });
       }
       
-      // First try to find in unified_students
-      let student = await storage.getUnifiedStudentByNameAndMobile(name, mobileNumber);
+      // Normalize inputs - trim whitespace
+      const normalizedName = name.trim();
+      const normalizedMobile = mobileNumber.trim();
       
-      if (!student) {
+      // First try to find by mobile number only in unified_students
+      let student = await storage.getUnifiedStudentByMobile(normalizedMobile);
+      
+      if (student) {
+        // Verify name matches (case-insensitive, trimmed)
+        if (student.name.trim().toLowerCase() !== normalizedName.toLowerCase()) {
+          console.log(`Login name mismatch: entered "${normalizedName}", stored "${student.name}"`);
+          return res.status(401).json({ error: "Name does not match the registered name for this mobile number." });
+        }
+      } else {
         // Check legacy tables and auto-migrate if found
-        student = await storage.findAndMigrateLegacyUser(name, mobileNumber);
+        student = await storage.findAndMigrateLegacyUser(normalizedName, normalizedMobile);
         
         if (student) {
-          console.log(`Migrated legacy user ${name} to unified_students (ID: ${student.id})`);
+          console.log(`Migrated legacy user ${normalizedName} to unified_students (ID: ${student.id})`);
         }
       }
       
