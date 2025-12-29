@@ -103,6 +103,42 @@ function isLikelyQuestionBoundary(content: string, matchPos: number, matchedNum:
   return true;
 }
 
+// Check if text looks like an actual MCQ (has options like A/B/C/D or answer markers)
+function looksLikeMCQ(text: string): boolean {
+  // Check for option patterns: (a), (b), A., B., 1), 2), etc.
+  const optionPatterns = [
+    /\n\s*\(?[aA]\)?[\s.\):\-]/,           // (a) or A. or a)
+    /\n\s*\(?[bB]\)?[\s.\):\-]/,           // (b) or B. or b)
+    /\n\s*[ABCD]\.\s/,                      // A. B. C. D.
+    /\([aA]\)\s/,                           // (a) inline
+    /\([bB]\)\s/,                           // (b) inline
+  ];
+  
+  // Check for answer markers
+  const answerPatterns = [
+    /(?:Answer|Ans|उत्तर|Correct\s*(?:Answer|Option)?)\s*[:\.\-\s]*[a-dA-D1-4]/i,
+    /Correct Answer\s*:/i,
+    /सही उत्तर\s*:/,
+  ];
+  
+  // Must have at least 2 option patterns OR an answer marker
+  let optionCount = 0;
+  for (const pattern of optionPatterns) {
+    if (pattern.test(text)) {
+      optionCount++;
+    }
+  }
+  
+  if (optionCount >= 2) return true;
+  
+  // Check for answer markers
+  for (const pattern of answerPatterns) {
+    if (pattern.test(text)) return true;
+  }
+  
+  return false;
+}
+
 function extractQuestionsWithPatterns(content: string): { num: number; text: string; startPos: number }[] {
   // Step 1: Find ALL question start positions using multiple patterns
   // Pattern 1: "Question 1", "Question\t1", "Question | 1", "Q1.", "प्रश्न 1", etc.
@@ -160,7 +196,8 @@ function extractQuestionsWithPatterns(content: string): { num: number; text: str
     // Extract text from after the "Question N" marker to just before the next question
     const text = content.substring(current.matchEnd, nextStart).trim();
     
-    if (text.length > 15 && text.length < 8000) {
+    // Only include if it looks like an actual MCQ (has options or answer markers)
+    if (text.length > 15 && text.length < 8000 && looksLikeMCQ(text)) {
       result.push({
         num: current.num,
         text,
@@ -318,7 +355,8 @@ function extractQuestionsLineByLine(content: string): { num: number; text: strin
           }
         }
         
-        if (text.length > 15 && text.length < 8000) {
+        // Only include if it looks like an actual MCQ
+        if (text.length > 15 && text.length < 8000 && looksLikeMCQ(text)) {
           questions.push({ num, text: text.trim(), lineIndex: i });
         }
         
