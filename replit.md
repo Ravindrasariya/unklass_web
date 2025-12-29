@@ -31,25 +31,22 @@ Preferred communication style: Simple, everyday language.
 - **Database**: PostgreSQL via Drizzle ORM
 - **Schema Location**: `shared/schema.ts` (shared between frontend/backend)
 - **Migrations**: Drizzle Kit with `migrations/` output directory
-- **Tables**:
-  - `unified_students`: Unified student registration (name required; fatherName, location nullable for legacy compatibility; mobileNumber required; schoolName, dateOfBirth optional) - NEW unified auth system
+- **Tables** (Legacy tables removed - unified auth only):
+  - `unified_students`: Single student registration table (name, fatherName, location, mobileNumber required; schoolName, dateOfBirth optional)
   - `student_exam_profiles`: Per-exam preferences/selections storage (studentId, examType, lastSelections JSONB)
-  - `students`: Board exam student registration (legacy, still functional)
   - `pdfs`: Uploaded PDF metadata, extracted content, and parsed questions (parsedQuestions JSONB, totalQuestions integer)
-  - `quiz_sessions`: Board exam quiz attempts, generated questions, answers, and scores
-  - `cpct_students`: CPCT student registration (legacy, still functional)
-  - `cpct_quiz_sessions`: CPCT quiz attempts
-  - `navodaya_students`: Navodaya student registration (legacy, still functional)
-  - `navodaya_quiz_sessions`: Navodaya quiz attempts
-  - `question_pointers`: Tracks sequential question progress (studentId, studentType, pdfId, lastQuestionIndex)
+  - `quiz_sessions`: Board exam quiz attempts (FK constraint on studentId removed for migration flexibility)
+  - `cpct_quiz_sessions`: CPCT quiz attempts (FK constraint on studentId removed for migration flexibility)
+  - `navodaya_quiz_sessions`: Navodaya quiz attempts (FK constraint on studentId removed for migration flexibility)
+  - `chapter_practice_quiz_sessions`: Chapter practice quiz attempts (FK constraint on studentId removed for migration flexibility)
+  - `question_pointers`: Tracks sequential question progress (studentId, pdfId, lastQuestionIndex) - FK constraint removed
 
-### Backward Compatibility (Legacy User Migration)
-- **Legacy users don't need to re-register**: Existing students in legacy tables (students, cpctStudents, navodayaStudents, chapterPracticeStudents) can login with name + mobile
-- **Auto-migration on first login**: When a legacy user logs in, the system automatically creates a unified_students record from their legacy data
-- **Profile completion**: Legacy users may have missing fields (fatherName, location) which they can complete via the Profile page
-- **needsProfileCompletion flag**: Login response includes this flag when fatherName or location is missing
-- **ProfilePage**: Shows completion prompt and allows editing fatherName/location for migrated users; once set, these fields become immutable
-- **Implementation**: `findAndMigrateLegacyUser()` in storage.ts searches all legacy tables and creates unified record
+### Unified Auth System (December 2024 Refactor)
+- **Single registration flow**: All students register once with name + mobile number
+- **Exam type parameter**: Uses underscore format (board, cpct, navodaya, chapter_practice)
+- **Profile page**: Students can complete/update fatherName, location after registration
+- **Legacy tables removed**: students, cpctStudents, navodayaStudents, chapterPracticeStudents tables no longer exist in schema
+- **FK constraints**: Temporarily removed on session tables to allow data migration; can be restored after legacy data cleanup
 
 ### API Endpoints
 
@@ -61,11 +58,9 @@ Preferred communication style: Simple, everyday language.
 - `POST /api/auth/student/:id/profile/:examType` - Save exam selections (lastSelections JSONB)
 - `GET /api/auth/student/:id/profiles` - Get all exam profiles for student
 
-#### Legacy Student APIs (still functional)
-- `POST /api/students/register` - Register board exam student (legacy)
-- `GET /api/students/:id` - Get student by ID
-- `POST /api/cpct/students/register` - Register CPCT student (legacy)
-- `POST /api/navodaya/students/register` - Register Navodaya student (legacy)
+#### Legacy Student APIs (REMOVED)
+- All legacy student registration/login routes have been removed
+- Use unified auth routes (/api/auth/*) for all student operations
 
 #### Quiz APIs
 - `POST /api/quiz/generate` - Generate quiz questions for student
