@@ -177,6 +177,25 @@ MCQ CONVERSION RULES:
 12. Wrong options must be plausible but clearly incorrect.
 13. NEVER create questions from topics not in PDF.
 
+SPECIAL QUESTION TYPES TO HANDLE CORRECTLY:
+
+14. **CONSTRUCTION QUESTIONS** (geometry constructions like "Construct quadrilateral ABCD where AB=4cm, BC=3cm..."):
+    - ALL measurements are GIVEN in the question - do NOT turn any measurement into a "find X" question
+    - Instead, ask about STEPS: "What is the first step to construct...", "Which instrument is needed to..."
+    - Or ask about PROPERTIES: "What type of quadrilateral is formed when...", "How many diagonals does this figure have?"
+    - NEVER remove a given measurement and ask students to calculate it
+
+15. **TABLE/CHART CREATION QUESTIONS** ("Draw a pie chart", "Make a frequency table"):
+    - Do NOT just extract one value from the answer table and ask "what is X?"
+    - Instead, ask about CALCULATIONS: "What is the total frequency?", "What angle represents 50% in a pie chart?"
+    - Or ask about INTERPRETATION: "Which category has the highest frequency?", "What percentage does 90 degrees represent?"
+    - Include relevant data context when asking calculation questions
+
+16. **DATA INTERPRETATION QUESTIONS** (questions referring to tables/graphs/data):
+    - ALWAYS include the relevant data/table in the question text
+    - Format data clearly: "Given: Petrol prices (10L=500, 15L=750, 20L=1000). Find cost of 12L."
+    - Never ask a question that refers to data without including that data
+
 Questions to convert (PRESERVE THIS ORDER in your response):
 ${pdfContent.substring(0, 150000)}`;
 
