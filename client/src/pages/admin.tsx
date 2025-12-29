@@ -1799,12 +1799,6 @@ export default function AdminPage() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
                               <p className="font-medium">{student.name}</p>
-                              <Badge variant="secondary" className="text-xs bg-violet-100 dark:bg-violet-900 text-violet-700 dark:text-violet-300">
-                                {student.grade}
-                              </Badge>
-                              <Badge variant="secondary" className="text-xs bg-violet-100 dark:bg-violet-900 text-violet-700 dark:text-violet-300">
-                                {student.board}
-                              </Badge>
                               {student.schoolName && (
                                 <Badge variant="outline" className="text-xs">
                                   {student.schoolName}
