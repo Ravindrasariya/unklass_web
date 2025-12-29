@@ -2900,9 +2900,10 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
         currentQuestionIndex: 0,
         savedAnswers: {},
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating chapter practice quiz:", error);
-      res.status(500).json({ error: "Failed to generate quiz" });
+      console.error("Error details:", error?.message, error?.stack);
+      res.status(500).json({ error: "Failed to generate quiz", details: error?.message });
     }
   });
 
