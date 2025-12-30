@@ -3048,12 +3048,17 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
           const totalQuestions = completedSessions.reduce((sum, s) => sum + (s.totalQuestions || 10), 0);
           const averageScore = Math.round((totalScore / totalQuestions) * 100);
           
+          // Get most recent session's grade/board for filtering (unified students don't have fixed grade)
+          const mostRecentSession = completedSessions.sort((a, b) => 
+            (b.completedAt?.getTime() || 0) - (a.completedAt?.getTime() || 0)
+          )[0];
+          
           allStudentsWithProgress.push({
             id: student.id,
             name: student.name,
             schoolName: student.schoolName,
-            grade: null, // Unified students don't have fixed grade
-            board: null, // Unified students don't have fixed board
+            grade: mostRecentSession?.grade || null, // Use most recent session's grade
+            board: mostRecentSession?.board || null, // Use most recent session's board
             medium: null,
             location: student.location,
             mobileNumber: student.mobileNumber,
