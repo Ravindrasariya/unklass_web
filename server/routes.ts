@@ -1622,17 +1622,30 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     }
   });
 
-  // Admin: Delete board exam student
+  // Admin: Delete board exam student (supports both legacy and unified students)
   app.delete("/api/admin/students/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
         return res.status(400).json({ error: "Invalid student ID" });
       }
-      const success = await storage.deleteStudent(id);
-      if (!success) {
-        return res.status(404).json({ error: "Student not found" });
+      
+      const isUnified = req.query.isUnified === 'true';
+      
+      if (isUnified) {
+        // Delete unified student and all their quiz sessions
+        const success = await storage.deleteUnifiedStudentById(id);
+        if (!success) {
+          return res.status(404).json({ error: "Student not found" });
+        }
+      } else {
+        // Delete legacy board exam student
+        const success = await storage.deleteStudent(id);
+        if (!success) {
+          return res.status(404).json({ error: "Student not found" });
+        }
       }
+      
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting student:", error);
@@ -1675,17 +1688,30 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     }
   });
 
-  // Admin: Delete CPCT student
+  // Admin: Delete CPCT student (supports both legacy and unified students)
   app.delete("/api/admin/cpct-students/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
         return res.status(400).json({ error: "Invalid student ID" });
       }
-      const success = await storage.deleteCpctStudent(id);
-      if (!success) {
-        return res.status(404).json({ error: "Student not found" });
+      
+      const isUnified = req.query.isUnified === 'true';
+      
+      if (isUnified) {
+        // Delete unified student and all their quiz sessions
+        const success = await storage.deleteUnifiedStudentById(id);
+        if (!success) {
+          return res.status(404).json({ error: "Student not found" });
+        }
+      } else {
+        // Delete legacy CPCT student
+        const success = await storage.deleteCpctStudent(id);
+        if (!success) {
+          return res.status(404).json({ error: "Student not found" });
+        }
       }
+      
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting CPCT student:", error);
@@ -1734,17 +1760,30 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     }
   });
 
-  // Admin: Delete Navodaya student
+  // Admin: Delete Navodaya student (supports both legacy and unified students)
   app.delete("/api/admin/navodaya-students/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
         return res.status(400).json({ error: "Invalid student ID" });
       }
-      const success = await storage.deleteNavodayaStudent(id);
-      if (!success) {
-        return res.status(404).json({ error: "Student not found" });
+      
+      const isUnified = req.query.isUnified === 'true';
+      
+      if (isUnified) {
+        // Delete unified student and all their quiz sessions
+        const success = await storage.deleteUnifiedStudentById(id);
+        if (!success) {
+          return res.status(404).json({ error: "Student not found" });
+        }
+      } else {
+        // Delete legacy Navodaya student
+        const success = await storage.deleteNavodayaStudent(id);
+        if (!success) {
+          return res.status(404).json({ error: "Student not found" });
+        }
       }
+      
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting Navodaya student:", error);

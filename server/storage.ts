@@ -154,6 +154,7 @@ export interface IStorage {
   createUnifiedStudent(student: InsertUnifiedStudent): Promise<UnifiedStudent>;
   updateUnifiedStudent(id: number, updates: Partial<InsertUnifiedStudent>): Promise<UnifiedStudent | undefined>;
   deleteUnifiedStudentCascade(mobileNumber: string): Promise<boolean>;
+  deleteUnifiedStudentById(id: number): Promise<boolean>;
   getAllUnifiedStudents(): Promise<UnifiedStudent[]>;
 
   // Student Exam Profiles (preferences per exam type)
@@ -1161,6 +1162,23 @@ export class DatabaseStorage implements IStorage {
     }
 
     return !!(unifiedStudent || boardStudent || cpctStudent || navodayaStudent || chapterStudent);
+  }
+
+  async deleteUnifiedStudentById(id: number): Promise<boolean> {
+    // Get the unified student to find their mobile for cascade
+    const [unifiedStudent] = await db.select().from(unifiedStudents).where(eq(unifiedStudents.id, id));
+    if (!unifiedStudent) return false;
+    
+    // Delete quiz sessions that reference this unified student via unifiedStudentId
+    await db.delete(quizSessions).where(eq(quizSessions.unifiedStudentId, id));
+    await db.delete(cpctQuizSessions).where(eq(cpctQuizSessions.unifiedStudentId, id));
+    await db.delete(navodayaQuizSessions).where(eq(navodayaQuizSessions.unifiedStudentId, id));
+    await db.delete(chapterPracticeQuizSessions).where(eq(chapterPracticeQuizSessions.unifiedStudentId, id));
+    // Delete exam profiles for this unified student
+    await db.delete(studentExamProfiles).where(eq(studentExamProfiles.studentId, id));
+    // Delete the unified student
+    const result = await db.delete(unifiedStudents).where(eq(unifiedStudents.id, id)).returning();
+    return result.length > 0;
   }
 
   // Student Exam Profiles (preferences per exam type)
