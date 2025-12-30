@@ -561,8 +561,11 @@ export default function AdminPage() {
   });
 
   const deleteStudentMutation = useMutation({
-    mutationFn: async (id: number) => {
-      await apiRequest("DELETE", `/api/admin/students/${id}`);
+    mutationFn: async ({ id, isUnified }: { id: number; isUnified?: boolean }) => {
+      const url = isUnified 
+        ? `/api/admin/students/${id}?isUnified=true`
+        : `/api/admin/students/${id}`;
+      await apiRequest("DELETE", url);
     },
     onSuccess: () => {
       toast({
@@ -582,8 +585,11 @@ export default function AdminPage() {
   });
 
   const deleteCpctStudentMutation = useMutation({
-    mutationFn: async (id: number) => {
-      await apiRequest("DELETE", `/api/admin/cpct-students/${id}`);
+    mutationFn: async ({ id, isUnified }: { id: number; isUnified?: boolean }) => {
+      const url = isUnified 
+        ? `/api/admin/cpct-students/${id}?isUnified=true`
+        : `/api/admin/cpct-students/${id}`;
+      await apiRequest("DELETE", url);
     },
     onSuccess: () => {
       toast({
@@ -603,8 +609,11 @@ export default function AdminPage() {
   });
 
   const deleteNavodayaStudentMutation = useMutation({
-    mutationFn: async (id: number) => {
-      await apiRequest("DELETE", `/api/admin/navodaya-students/${id}`);
+    mutationFn: async ({ id, isUnified }: { id: number; isUnified?: boolean }) => {
+      const url = isUnified 
+        ? `/api/admin/navodaya-students/${id}?isUnified=true`
+        : `/api/admin/navodaya-students/${id}`;
+      await apiRequest("DELETE", url);
     },
     onSuccess: () => {
       toast({
@@ -714,21 +723,21 @@ export default function AdminPage() {
     }
   };
 
-  const handleDeleteStudent = (studentId: number) => {
+  const handleDeleteStudent = (studentId: number, isUnified?: boolean) => {
     if (window.confirm("Are you sure you want to delete this student? This will also delete all their quiz history.")) {
-      deleteStudentMutation.mutate(studentId);
+      deleteStudentMutation.mutate({ id: studentId, isUnified });
     }
   };
 
-  const handleDeleteCpctStudent = (studentId: number) => {
+  const handleDeleteCpctStudent = (studentId: number, isUnified?: boolean) => {
     if (window.confirm("Are you sure you want to delete this CPCT student? This will also delete all their quiz history.")) {
-      deleteCpctStudentMutation.mutate(studentId);
+      deleteCpctStudentMutation.mutate({ id: studentId, isUnified });
     }
   };
 
-  const handleDeleteNavodayaStudent = (studentId: number) => {
+  const handleDeleteNavodayaStudent = (studentId: number, isUnified?: boolean) => {
     if (window.confirm("Are you sure you want to delete this Navodaya student? This will also delete all their quiz history.")) {
-      deleteNavodayaStudentMutation.mutate(studentId);
+      deleteNavodayaStudentMutation.mutate({ id: studentId, isUnified });
     }
   };
 
@@ -1525,7 +1534,7 @@ export default function AdminPage() {
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleDeleteStudent(student.id);
+                                handleDeleteStudent(student.id, (student as any).isUnified);
                               }}
                               disabled={deleteStudentMutation.isPending}
                               data-testid={`button-delete-student-${student.id}`}
@@ -1625,7 +1634,7 @@ export default function AdminPage() {
                                 size="sm"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleDeleteCpctStudent(student.id);
+                                  handleDeleteCpctStudent(student.id, (student as any).isUnified);
                                 }}
                                 disabled={deleteCpctStudentMutation.isPending}
                                 data-testid={`button-delete-cpct-student-${student.id}`}
@@ -1725,7 +1734,7 @@ export default function AdminPage() {
                                 size="sm"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleDeleteNavodayaStudent(student.id);
+                                  handleDeleteNavodayaStudent(student.id, (student as any).isUnified);
                                 }}
                                 disabled={deleteNavodayaStudentMutation.isPending}
                                 data-testid={`button-delete-navodaya-student-${student.id}`}
