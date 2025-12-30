@@ -1434,9 +1434,9 @@ export default function AdminPage() {
                 <div className="space-y-2">
                   {students.map((student) => (
                     <div
-                      key={student.id}
+                      key={`${(student as any).isUnified ? 'unified' : 'legacy'}-${student.id}`}
                       className="border rounded-lg overflow-hidden"
-                      data-testid={`student-row-${student.id}`}
+                      data-testid={`student-row-${(student as any).isUnified ? 'unified' : 'legacy'}-${student.id}`}
                     >
                       <div 
                         className="flex items-center gap-3 p-3 bg-muted/50 cursor-pointer"
@@ -1565,9 +1565,9 @@ export default function AdminPage() {
                   <div className="space-y-2">
                     {cpctStudents.map((student) => (
                       <div
-                        key={student.id}
+                        key={`${(student as any).isUnified ? 'unified' : 'legacy'}-${student.id}`}
                         className="border rounded-lg overflow-hidden"
-                        data-testid={`cpct-student-row-${student.id}`}
+                        data-testid={`cpct-student-row-${(student as any).isUnified ? 'unified' : 'legacy'}-${student.id}`}
                       >
                         <div 
                           className="flex items-center gap-3 p-3 bg-muted/50 cursor-pointer"
@@ -1664,9 +1664,9 @@ export default function AdminPage() {
                   <div className="space-y-2">
                     {navodayaStudents.map((student) => (
                       <div
-                        key={student.id}
+                        key={`${(student as any).isUnified ? 'unified' : 'legacy'}-${student.id}`}
                         className="border rounded-lg overflow-hidden"
-                        data-testid={`navodaya-student-row-${student.id}`}
+                        data-testid={`navodaya-student-row-${(student as any).isUnified ? 'unified' : 'legacy'}-${student.id}`}
                       >
                         <div 
                           className="flex items-center gap-3 p-3 bg-muted/50 cursor-pointer"
