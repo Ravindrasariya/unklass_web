@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -122,13 +122,29 @@ interface ChapterPracticeStudentProgress {
   id: number;
   name: string;
   schoolName: string | null;
-  grade: string;
-  board: string;
-  medium: string;
-  location: string;
+  grade: string | null;
+  board: string | null;
+  medium: string | null;
+  location: string | null;
   mobileNumber: string;
   totalQuizzes: number;
   averageScore: number;
+  isUnified: boolean;
+  sessions: ChapterPracticeStudentSession[];
+}
+
+interface ChapterPracticeStudentByGrade {
+  id: number;
+  name: string;
+  schoolName: string | null;
+  grade: string;
+  board: string | null;
+  medium: string | null;
+  location: string | null;
+  mobileNumber: string;
+  totalQuizzes: number;
+  averageScore: number;
+  isUnified: boolean;
   sessions: ChapterPracticeStudentSession[];
 }
 
@@ -224,7 +240,7 @@ export default function AdminPage() {
   }>({ name: "", grade: "", board: "", location: "", mobileNumber: "" });
   const [studentTab, setStudentTab] = useState<"allRegistered" | "board" | "cpct" | "navodaya" | "chapterPractice">("allRegistered");
   const [chapterPracticeGradeFilter, setChapterPracticeGradeFilter] = useState<string>("all");
-  const [expandedChapterPracticeStudent, setExpandedChapterPracticeStudent] = useState<number | null>(null);
+  const [expandedChapterPracticeStudent, setExpandedChapterPracticeStudent] = useState<string | null>(null);
   const [expandedCpctStudent, setExpandedCpctStudent] = useState<number | null>(null);
   const [expandedNavodayaStudent, setExpandedNavodayaStudent] = useState<number | null>(null);
   const [expandedCombinedStudent, setExpandedCombinedStudent] = useState<string | null>(null);
@@ -333,9 +349,67 @@ export default function AdminPage() {
 
   const CHAPTER_PRACTICE_GRADES = ["6th", "7th", "8th", "9th", "10th"];
 
-  const filteredChapterPracticeStudents = chapterPracticeStudents?.filter(
-    student => chapterPracticeGradeFilter === "all" || student.grade === chapterPracticeGradeFilter
-  );
+  // Transform students into per-grade entries based on their quiz sessions
+  const chapterPracticeStudentsByGrade = useMemo(() => {
+    if (!chapterPracticeStudents) return { byGrade: new Map<string, ChapterPracticeStudentByGrade[]>(), counts: new Map<string, number>() };
+    
+    const byGrade = new Map<string, ChapterPracticeStudentByGrade[]>();
+    const counts = new Map<string, number>();
+    
+    // Initialize grade buckets
+    CHAPTER_PRACTICE_GRADES.forEach(grade => {
+      byGrade.set(grade, []);
+      counts.set(grade, 0);
+    });
+    
+    for (const student of chapterPracticeStudents) {
+      // Group sessions by grade
+      const sessionsByGrade = new Map<string, ChapterPracticeStudentSession[]>();
+      
+      for (const session of student.sessions) {
+        const sessionGrade = session.grade;
+        if (sessionGrade && CHAPTER_PRACTICE_GRADES.includes(sessionGrade)) {
+          if (!sessionsByGrade.has(sessionGrade)) {
+            sessionsByGrade.set(sessionGrade, []);
+          }
+          sessionsByGrade.get(sessionGrade)!.push(session);
+        }
+      }
+      
+      // Create per-grade entry for each grade the student has sessions for
+      for (const [grade, gradeSessions] of Array.from(sessionsByGrade.entries())) {
+        const totalQuizzes = gradeSessions.length;
+        const totalScore = gradeSessions.reduce((sum: number, s: ChapterPracticeStudentSession) => sum + (s.score || 0), 0);
+        const totalQuestions = gradeSessions.reduce((sum: number, s: ChapterPracticeStudentSession) => sum + (s.totalQuestions || 10), 0);
+        const averageScore = totalQuizzes > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
+        
+        const entry: ChapterPracticeStudentByGrade = {
+          id: student.id,
+          name: student.name,
+          schoolName: student.schoolName,
+          grade: grade,
+          board: gradeSessions[0]?.board || student.board,
+          medium: student.medium,
+          location: student.location,
+          mobileNumber: student.mobileNumber,
+          totalQuizzes,
+          averageScore,
+          isUnified: student.isUnified,
+          sessions: gradeSessions,
+        };
+        
+        byGrade.get(grade)!.push(entry);
+        counts.set(grade, (counts.get(grade) || 0) + 1);
+      }
+    }
+    
+    return { byGrade, counts };
+  }, [chapterPracticeStudents]);
+
+  // For "All" tab, use the original aggregate data; for grade tabs, use per-grade entries
+  const filteredChapterPracticeStudents = chapterPracticeGradeFilter === "all"
+    ? chapterPracticeStudents
+    : chapterPracticeStudentsByGrade.byGrade.get(chapterPracticeGradeFilter) || [];
 
   const createNoticeMutation = useMutation({
     mutationFn: async (data: { title: string; subtitle?: string; description?: string; priority?: number }) => {
@@ -1767,7 +1841,7 @@ export default function AdminPage() {
                     All ({chapterPracticeStudents?.length || 0})
                   </Button>
                   {CHAPTER_PRACTICE_GRADES.map(grade => {
-                    const count = chapterPracticeStudents?.filter(s => s.grade === grade).length || 0;
+                    const count = chapterPracticeStudentsByGrade.counts.get(grade) || 0;
                     return (
                       <Button
                         key={grade}
@@ -1793,16 +1867,21 @@ export default function AdminPage() {
                   </p>
                 ) : (
                   <div className="space-y-2">
-                    {filteredChapterPracticeStudents.map((student) => (
+                    {filteredChapterPracticeStudents.map((student) => {
+                      const cardKey = chapterPracticeGradeFilter === "all" 
+                        ? `all-${student.isUnified ? 'u' : 'l'}-${student.id}` 
+                        : `${student.grade}-${student.isUnified ? 'u' : 'l'}-${student.id}`;
+                      const expandKey = cardKey;
+                      return (
                       <div
-                        key={student.id}
+                        key={cardKey}
                         className="border border-violet-200 dark:border-violet-800 rounded-lg overflow-hidden"
                         data-testid={`chapter-practice-student-row-${student.id}`}
                       >
                         <div 
                           className="flex items-center gap-3 p-3 bg-violet-50 dark:bg-violet-950/30 cursor-pointer"
                           onClick={() => setExpandedChapterPracticeStudent(
-                            expandedChapterPracticeStudent === student.id ? null : student.id
+                            expandedChapterPracticeStudent === expandKey ? null : expandKey
                           )}
                         >
                           <div className="flex-1 min-w-0">
@@ -1824,12 +1903,12 @@ export default function AdminPage() {
                           </div>
                           <ChevronDown 
                             className={`h-5 w-5 transition-transform ${
-                              expandedChapterPracticeStudent === student.id ? "rotate-180" : ""
+                              expandedChapterPracticeStudent === expandKey ? "rotate-180" : ""
                             }`} 
                           />
                         </div>
                         
-                        {expandedChapterPracticeStudent === student.id && (
+                        {expandedChapterPracticeStudent === expandKey && (
                           <div className="p-3 border-t border-violet-200 dark:border-violet-800 bg-background">
                             {student.sessions.length > 0 ? (
                               <div className="space-y-1">
@@ -1870,7 +1949,8 @@ export default function AdminPage() {
                           </div>
                         )}
                       </div>
-                    ))}
+                    );
+                    })}
                   </div>
                 )}
               </>
