@@ -681,6 +681,7 @@ export class DatabaseStorage implements IStorage {
         COUNT(*) as tests_completed
       FROM all_board_sessions
       GROUP BY student_id, student_name
+      HAVING COUNT(*) >= 2
       ORDER BY (COALESCE(SUM(score), 0)::float / NULLIF(SUM(total_questions), 0)) DESC NULLS LAST
       LIMIT 3
     `);
@@ -737,6 +738,7 @@ export class DatabaseStorage implements IStorage {
         COUNT(*) as tests_completed
       FROM all_cpct_sessions
       GROUP BY student_id, student_name
+      HAVING COUNT(*) >= 2
       ORDER BY (COALESCE(SUM(score), 0)::float / NULLIF(SUM(total_questions), 0)) DESC NULLS LAST
       LIMIT 3
     `);
@@ -793,6 +795,7 @@ export class DatabaseStorage implements IStorage {
         COUNT(*) as tests_completed
       FROM all_navodaya_sessions
       GROUP BY student_id, student_name
+      HAVING COUNT(*) >= 2
       ORDER BY (COALESCE(SUM(score), 0)::float / NULLIF(SUM(total_questions), 0)) DESC NULLS LAST
       LIMIT 3
     `);
@@ -849,6 +852,7 @@ export class DatabaseStorage implements IStorage {
         COUNT(*) as tests_completed
       FROM all_chapter_sessions
       GROUP BY student_id, student_name
+      HAVING COUNT(*) >= 2
       ORDER BY (COALESCE(SUM(score), 0)::float / NULLIF(SUM(total_questions), 0)) DESC NULLS LAST
       LIMIT 3
     `);
