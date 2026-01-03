@@ -3667,40 +3667,43 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
     res.set('Expires', '0');
     
     try {
-      // IST is UTC+5:30
-      const IST_OFFSET_HOURS = 5;
-      const IST_OFFSET_MINUTES = 30;
+      // IST is UTC+5:30 = 330 minutes ahead
+      const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000; // 5 hours 30 minutes in milliseconds
       
-      // Get current time in UTC
+      // Get current time in IST by adding offset to UTC
       const nowUtc = new Date();
-      
-      // Calculate IST day, hours, minutes from UTC
-      const istTotalMinutes = nowUtc.getUTCHours() * 60 + nowUtc.getUTCMinutes() + IST_OFFSET_HOURS * 60 + IST_OFFSET_MINUTES;
-      const istDayOffset = istTotalMinutes >= 24 * 60 ? 1 : istTotalMinutes < 0 ? -1 : 0;
+      const nowIst = new Date(nowUtc.getTime() + IST_OFFSET_MS);
       
       // Get day of week in IST (0 = Sunday, 1 = Monday, ...)
-      const utcDay = nowUtc.getUTCDay();
-      const istDay = (utcDay + istDayOffset + 7) % 7;
+      const istDayOfWeek = nowIst.getUTCDay();
       
-      // Days since Monday in IST
-      const daysFromMonday = istDay === 0 ? 6 : istDay - 1;
+      // Days since Monday (Monday = 0 days back, Sunday = 6 days back)
+      const daysFromMonday = istDayOfWeek === 0 ? 6 : istDayOfWeek - 1;
       
-      // Monday 00:00:00 IST = Monday 18:30:00 UTC (previous day)
-      // So Monday IST midnight = subtract 5:30 from midnight = previous day 18:30 UTC
-      const mondayUtc = new Date(nowUtc);
-      mondayUtc.setUTCDate(nowUtc.getUTCDate() - daysFromMonday - istDayOffset);
-      mondayUtc.setUTCHours(0 - IST_OFFSET_HOURS, 0 - IST_OFFSET_MINUTES, 0, 0);
+      // Monday 00:00:00 IST
+      const mondayIst = new Date(nowIst);
+      mondayIst.setUTCDate(nowIst.getUTCDate() - daysFromMonday);
+      mondayIst.setUTCHours(0, 0, 0, 0);
       
-      // Sunday 23:59:59.999 IST = Sunday 18:29:59.999 UTC
-      const sundayUtc = new Date(mondayUtc);
-      sundayUtc.setUTCDate(mondayUtc.getUTCDate() + 7);
-      sundayUtc.setUTCMilliseconds(sundayUtc.getUTCMilliseconds() - 1);
+      // Convert Monday IST midnight back to UTC
+      const mondayUtc = new Date(mondayIst.getTime() - IST_OFFSET_MS);
+      
+      // Sunday 23:59:59.999 IST = Monday + 7 days - 1ms
+      const sundayIst = new Date(mondayIst);
+      sundayIst.setUTCDate(mondayIst.getUTCDate() + 7);
+      sundayIst.setUTCMilliseconds(sundayIst.getUTCMilliseconds() - 1);
+      
+      // Convert Sunday IST end back to UTC
+      const sundayUtc = new Date(sundayIst.getTime() - IST_OFFSET_MS);
+      
+      // Debug logging for troubleshooting
+      console.log(`Leaderboard week calculation: now UTC=${nowUtc.toISOString()}, nowIST=${nowIst.toISOString()}, mondayUTC=${mondayUtc.toISOString()}, sundayUTC=${sundayUtc.toISOString()}`);
       
       const leaderboard = await storage.getWeeklyLeaderboard(mondayUtc, sundayUtc);
       
       // Format week range for display in IST
       const formatDateIST = (utcDate: Date) => {
-        const istDate = new Date(utcDate.getTime() + (IST_OFFSET_HOURS * 60 + IST_OFFSET_MINUTES) * 60 * 1000);
+        const istDate = new Date(utcDate.getTime() + IST_OFFSET_MS);
         const day = istDate.getUTCDate();
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         return `${day} ${months[istDate.getUTCMonth()]}`;
@@ -3708,7 +3711,7 @@ IMPORTANT: Generate questions ONLY at ${grade} grade difficulty level. Do NOT us
       
       res.json({
         weekStart: formatDateIST(mondayUtc),
-        weekEnd: formatDateIST(new Date(sundayUtc.getTime() - 1)),
+        weekEnd: formatDateIST(sundayUtc),
         boardExam: leaderboard.boardExam,
         cpct: leaderboard.cpct,
         navodaya: leaderboard.navodaya,
