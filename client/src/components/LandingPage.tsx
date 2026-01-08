@@ -167,7 +167,7 @@ export default function LandingPage({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 flex flex-col">
-      <header className="bg-white/95 backdrop-blur-sm border-b border-gray-100 py-3 md:py-4 px-3 md:px-4 sticky top-0 z-50 shadow-sm">
+      <header className="bg-white/95 backdrop-blur-sm border-b border-gray-100 py-3 md:py-4 px-3 md:px-4 fixed top-0 left-0 right-0 z-50 shadow-sm">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-2 md:gap-4">
           <div className="flex flex-col items-start flex-shrink-0">
             <img 
@@ -256,6 +256,9 @@ export default function LandingPage({
           </nav>
         </div>
       </header>
+
+      {/* Spacer for fixed header */}
+      <div className="h-14 md:h-16" />
 
       <main className="flex-1 flex flex-col">
         <section className="relative bg-gradient-to-br from-sky-400 via-sky-500 to-blue-600 text-white overflow-hidden">
