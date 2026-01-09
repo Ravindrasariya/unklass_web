@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, BookOpen, Monitor, GraduationCap, Shield, School, Bell, Library, User, LogOut, Award } from "lucide-react";
+import { ChevronLeft, ChevronRight, BookOpen, Monitor, GraduationCap, Shield, School, Bell, Library, User, LogOut, Award, Menu, X } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import WeeklyLeaderboard from "./WeeklyLeaderboard";
@@ -108,6 +108,7 @@ export default function LandingPage({
 
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
   const [currentNoticeSlide, setCurrentNoticeSlide] = useState(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -178,19 +179,20 @@ export default function LandingPage({
             />
             <span className="text-[9px] sm:text-[10px] md:text-xs text-gray-600 tracking-tight mt-1 pl-1">Learning Beyond Classroom</span>
           </div>
-          <nav className="flex items-center gap-1 sm:gap-2 md:gap-4 flex-shrink-0">
+          {/* Desktop Navigation - hidden on mobile */}
+          <nav className="hidden md:flex items-center gap-2 md:gap-4 flex-shrink-0">
             <Link href="/">
-              <Button variant="ghost" size="sm" className="text-gray-700 font-medium text-xs sm:text-sm px-2 sm:px-3" data-testid="nav-home">
+              <Button variant="ghost" size="sm" className="text-gray-700 font-medium text-sm px-3" data-testid="nav-home">
                 Home
               </Button>
             </Link>
             <Link href="/about">
-              <Button variant="ghost" size="sm" className="text-gray-700 font-medium text-xs sm:text-sm px-2 sm:px-3" data-testid="nav-about">
+              <Button variant="ghost" size="sm" className="text-gray-700 font-medium text-sm px-3" data-testid="nav-about">
                 About Us
               </Button>
             </Link>
             <Link href="/contact">
-              <Button variant="ghost" size="sm" className="text-gray-700 font-medium text-xs sm:text-sm px-2 sm:px-3" data-testid="nav-contact">
+              <Button variant="ghost" size="sm" className="text-gray-700 font-medium text-sm px-3" data-testid="nav-contact">
                 Contact Us
               </Button>
             </Link>
@@ -232,11 +234,11 @@ export default function LandingPage({
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <div className="flex items-center gap-1 sm:gap-2">
+              <div className="flex items-center gap-2">
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="text-gray-700 font-medium text-xs sm:text-sm px-2 sm:px-3"
+                  className="text-gray-700 font-medium text-sm px-3"
                   onClick={onLoginClick}
                   data-testid="button-login"
                 >
@@ -245,7 +247,7 @@ export default function LandingPage({
                 <Button 
                   variant="default" 
                   size="sm" 
-                  className="text-xs sm:text-sm px-2 sm:px-3"
+                  className="text-sm px-3"
                   onClick={onSignupClick}
                   data-testid="button-signup"
                 >
@@ -254,7 +256,115 @@ export default function LandingPage({
               </div>
             )}
           </nav>
+
+          {/* Mobile Menu Button - visible only on mobile */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            data-testid="button-mobile-menu"
+          >
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
         </div>
+
+        {/* Mobile Menu Panel */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-gray-100 bg-white py-3 px-4" data-testid="mobile-menu-panel">
+            <nav className="flex flex-col gap-2">
+              <Link href="/">
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start text-gray-700 font-medium"
+                  onClick={() => setMobileMenuOpen(false)}
+                  data-testid="mobile-nav-home"
+                >
+                  Home
+                </Button>
+              </Link>
+              <Link href="/about">
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start text-gray-700 font-medium"
+                  onClick={() => setMobileMenuOpen(false)}
+                  data-testid="mobile-nav-about"
+                >
+                  About Us
+                </Button>
+              </Link>
+              <Link href="/contact">
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start text-gray-700 font-medium"
+                  onClick={() => setMobileMenuOpen(false)}
+                  data-testid="mobile-nav-contact"
+                >
+                  Contact Us
+                </Button>
+              </Link>
+              
+              <div className="border-t border-gray-100 my-2" />
+              
+              {unifiedStudent ? (
+                <>
+                  <div className="px-3 py-2 text-sm font-medium text-gray-900">
+                    {unifiedStudent.name}
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start text-gray-700 font-medium"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      onProfileClick?.();
+                    }}
+                    data-testid="mobile-menu-profile"
+                  >
+                    <User className="mr-2 h-4 w-4" />
+                    Profile
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start text-red-600 font-medium"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      onLogout?.();
+                    }}
+                    data-testid="mobile-menu-logout"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
+                  </Button>
+                </>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start text-gray-700 font-medium"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      onLoginClick?.();
+                    }}
+                    data-testid="mobile-button-login"
+                  >
+                    Login
+                  </Button>
+                  <Button 
+                    variant="default" 
+                    className="w-full"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      onSignupClick?.();
+                    }}
+                    data-testid="mobile-button-signup"
+                  >
+                    Sign Up
+                  </Button>
+                </div>
+              )}
+            </nav>
+          </div>
+        )}
       </header>
 
       {/* Spacer for fixed header */}
