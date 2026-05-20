@@ -14,7 +14,8 @@ async function parsePdf(buffer: Buffer): Promise<string> {
   const pdfParseModule = await import("pdf-parse/lib/pdf-parse.js");
   const pdfParse = pdfParseModule.default ?? pdfParseModule;
   const data = await pdfParse(buffer);
-  return data.text;
+  // Strip null bytes (0x00) which PostgreSQL UTF8 encoding rejects
+  return data.text.replace(/\x00/g, "");
 }
 
 // Configure multer for PDF uploads

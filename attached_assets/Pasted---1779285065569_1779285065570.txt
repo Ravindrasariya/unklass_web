@@ -1,0 +1,48 @@
+└────┴──────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+root@srv1686575:/home/unklass/learn# pm2 logs learn-unklass --lines 20
+[TAILING] Tailing last 20 lines for [learn-unklass] process (change the value with --lines option)
+/root/.pm2/logs/learn-unklass-error-2.log last 20 lines:
+2|learn-un |     at async $v.getUnifiedStudentByMobile (/home/unklass/learn/dist/index.cjs:274:3721)
+2|learn-un |     at async /home/unklass/learn/dist/index.cjs:613:3231 {
+2|learn-un |   length: 116,
+2|learn-un |   severity: 'ERROR',
+2|learn-un |   code: '42P01',
+2|learn-un |   detail: undefined,
+2|learn-un |   hint: undefined,
+2|learn-un |   position: '116',
+2|learn-un |   internalPosition: undefined,
+2|learn-un |   internalQuery: undefined,
+2|learn-un |   where: undefined,
+2|learn-un |   schema: undefined,
+2|learn-un |   table: undefined,
+2|learn-un |   column: undefined,
+2|learn-un |   dataType: undefined,
+2|learn-un |   constraint: undefined,
+2|learn-un |   file: 'parse_relation.c',
+2|learn-un |   line: '1449',
+2|learn-un |   routine: 'parserOpenTable'
+2|learn-un | }
+
+/root/.pm2/logs/learn-unklass-out-2.log last 20 lines:
+2|learn-un | 12:31:24 PM [express] GET /api/notices 500 in 18ms :: {"error":"Failed to fetch notices"}
+2|learn-un | 1:38:13 PM [express] POST /api/analytics/visit 500 in 15ms :: {"error":"Failed to track visit"}
+2|learn-un | 1:38:13 PM [express] GET /api/admin/pdfs 500 in 13ms :: {"error":"Failed to fetch PDFs"}
+2|learn-un | 1:38:21 PM [express] POST /api/admin/login 200 in 1ms :: {"success":true}
+2|learn-un | 1:38:21 PM [express] GET /api/admin/unified-students 500 in 35ms :: {"error":"Failed to fetch unified students"}
+2|learn-un | 1:38:21 PM [express] GET /api/admin/cpct-students 500 in 38ms :: {"error":"Failed to fetch students"}
+2|learn-un | 1:38:21 PM [express] GET /api/admin/all-registered-students 500 in 46ms :: {"error":"Failed to fetch students"}
+2|learn-un | 1:38:21 PM [express] GET /api/admin/students 500 in 53ms :: {"error":"Failed to fetch students"}
+2|learn-un | 1:38:22 PM [express] GET /api/admin/analytics/visitors 500 in 29ms :: {"error":"Failed to fetch visitor stats"}
+2|learn-un | 1:38:22 PM [express] GET /api/admin/notices 500 in 30ms :: {"error":"Failed to fetch notices"}
+2|learn-un | 1:38:22 PM [express] GET /api/admin/contact-submissions 500 in 30ms :: {"error":"Failed to fetch contact submissions"}
+2|learn-un | 1:38:22 PM [express] GET /api/admin/chapter-practice-pdfs 500 in 41ms :: {"error":"Failed to fetch Chapter Practice PDFs"}
+2|learn-un | 1:38:22 PM [express] GET /api/admin/chapter-practice-students 500 in 40ms :: {"error":"Failed to fetch students"}
+2|learn-un | 1:38:22 PM [express] GET /api/admin/navodaya-students 500 in 24ms :: {"error":"Failed to fetch students"}
+2|learn-un | 1:39:19 PM [express] POST /api/admin/upload-pdf 500 in 20ms :: {"error":"password authentication failed for user \"learnuser\""}
+2|learn-un | 1:39:28 PM [express] POST /api/admin/upload-pdf 500 in 39ms :: {"error":"password authentication failed for user \"learnuser\""}
+2|learn-un | 1:40:25 PM [express] POST /api/auth/register 400 in 11ms :: {"error":"password authentication failed for user \"learnuser\""}
+2|learn-un | 1:43:40 PM [express] POST /api/auth/register 400 in 15ms :: {"error":"relation \"unified_students\" does not exist"}
+2|learn-un | 1:49:12 PM [express] POST /api/auth/register 400 in 12ms :: {"error":"relation \"unified_students\" does not exist"}
+2|learn-un | 1:50:46 PM [express] serving on port 3002
+
+
